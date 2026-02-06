@@ -7,7 +7,57 @@ version: "1.0.0"
 ---
 
 # Recurring Task Manager
-This library manages recurring tasks using a strict/flexible strategy and handles rolling over unfinished tasks from previous days.
+This library is a robust engine for managing recurring tasks in SilverBullet. It separates the **definition** of your tasks (in a master list) from the **execution** of your tasks (in your daily notes).
+
+## Features
+* **Multiple Frequencies:** Supports daily, weekly, monthly, quarterly, and yearly schedules.
+* **Flexible Strategies:** Choose between "Strict" schedules (bills, events) or "Completion" based schedules (chores that reset only after you do them).
+* **Weekend Logic:** Automatically skips generating tasks on Saturdays and Sundays unless explicitly told otherwise.
+* **Task Rollover:** "Vacuums" up unfinished recurring tasks from previous daily notes and moves them to today so nothing gets lost.
+
+## Usage
+Create a page (default: `RecurringTasks`) to act as your master list. Add tasks using standard Markdown checkboxes with special attributes in brackets.
+
+### 1. Basic Syntax
+The core tag is `[recur: unit_frequency]`.
+* **Units:** `day`, `week`, `month`, `quarter`, `year`
+* **Frequency:** An integer (e.g., `1` for every unit, `2` for every other).
+
+**Examples:**
+* `* [ ] Take out trash [recur: week_1]` (Every week)
+* `* [ ] Pay Quarterly Taxes [recur: quarter_1]` (Every 3 months)
+* `* [ ] Replace Air Filter [recur: month_6]` (Every 6 months)
+
+### 2. Attributes & Options
+You can modify behavior by adding these attributes to the same line:
+
+| Attribute | Format | Description |
+| :--- | :--- | :--- |
+| **Start Date** | `[start: YYYY-MM-DD]` | **Highly Recommended.** Sets the "Anchor" date. The script calculates due dates relative to this specific day. If omitted, it calculates based on the "Epoch" (computer time 0), which can be unpredictable. |
+| **Weekend** | `[include: weekend]` | By default, tasks **will not generate** on Saturday or Sunday. Add this tag to allow tasks to appear on weekends. |
+| **Strategy** | `[strategy: type]` | Controls *how* the next due date is calculated (see below). Defaults to `strict`. |
+
+### 3. Strategies
+#### Strict (Default)
+`[strategy: strict]`
+Use this for **Fixed Schedule** items.
+* **Logic:** "Is today strictly X days/weeks from the Start Date?"
+* **Behavior:** If you miss doing it, the task is still due. If you do it late, the next due date does not change.
+* **Use Case:** Paying rent, Trash day, Birthdays.
+
+#### Completion
+`[strategy: completion]`
+Use this for **Maintenance/Chore** items.
+* **Logic:** "Has it been X days/weeks since I last **completed** this task?"
+* **Behavior:** The script looks at your completed tasks database. If you were supposed to water plants on Monday but did it on Wednesday, the next reminder will be calculated from Wednesday.
+* **Use Case:** Watering plants, haircut, changing oil.
+
+### 4. Master List Examples
+```markdown
+* [ ] 🗑️ Take out Trash [recur: week_1] [start: 2025-01-01] (Strict: Every Wednesday)
+* [ ] 💊 Give Dog Meds [recur: day_1] [include: weekend] (Every single day)
+* [ ] 🪴 Water Office Plants [recur: day_4] [strategy: completion] (4 days after I last did it)
+* [ ] 💰 Pay Mortgage [recur: month_1] [start: 2025-01-01] (Strict: 1st of the month)
 
 ## Setup
 Ensure you have a page named `RecurringTasks` with your master list.
