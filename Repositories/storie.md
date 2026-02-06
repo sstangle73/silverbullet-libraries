@@ -1,6 +1,6 @@
 ---
-tags: meta/library
-name: Library/Storie/RecurringTasks
+tags: meta/repository
+name: Storie
 version: 1.0.0
 ---
 
