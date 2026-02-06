@@ -14,7 +14,7 @@ Ensure you have a page named `RecurringTasks` with your master list.
 
 To configure this library, add a `recurringTasks` block to your `CONFIG` (or `SETTINGS`) page inside a `space-lua` block. You can override any of the defaults shown below:
 
-```space-lua
+```lua
 config.set {
   recurringTasks = {
     -- Page containing your master list
@@ -28,13 +28,13 @@ config.set {
 
     -- How far back to check for incomplete tasks
     maxLookbackDays = 90
-  }
+  },
 }
 ```
 
 I suggest you also add the following button to your CONFIG page (inside the same space-lua block) so you have a clickable action:
 
-```space-lua
+```lua
 actionButton.define { 
   icon = "calendar", 
   description = "Generate Daily Tasks", 
