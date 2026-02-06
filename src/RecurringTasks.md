@@ -10,7 +10,16 @@ version: "1.0.0"
 This library manages recurring tasks using a strict/flexible strategy and handles rolling over unfinished tasks from previous days.
 
 ## Setup
-Ensure you have a page named `RecurringTasks` (or edit the config below) with your master list.
+Ensure you have a page named `RecurringTasks` with your master list.
+You can override the defaults by adding a `recurringTasks` block to your CONFIG page:
+```yaml
+recurringTasks:
+  sourcePage: "RecurringTasks"
+  dailyNotePrefix: "Inbox/"
+  rolloverHeader: "### 🔄 Recurring Tasks"
+  maxLookbackDays: 90
+```
+
 I suggest you add the following button to your toolbar:
 ```space-lua
 actionButton.define { 
@@ -27,12 +36,22 @@ actionButton.define {
 -- ==========================================================
 -- 1. CONFIGURATION
 -- ==========================================================
-local CONFIG = {
-  sourcePage = "RecurringTasks",           -- Page containing your master list
-  dailyNotePrefix = "Inbox/",              -- Folder where daily notes live
-  rolloverHeader = "### 🔄 Recurring Tasks", -- Header to search for/create
-  maxLookbackDays = 90                     -- How far back to vacuum tasks
-}
+-- We define a function to fetch config so we can grab overrides
+local function loadConfig()
+  -- Try to get the 'recurringTasks' object from the user's SETTINGS
+  local userConfig = system.getSpaceConfig("recurringTasks") or {}
+  
+  -- Return a table merging user config with defaults
+  return {
+    sourcePage = userConfig.sourcePage or "RecurringTasks",
+    dailyNotePrefix = userConfig.dailyNotePrefix or "Inbox/",
+    rolloverHeader = userConfig.rolloverHeader or "### 🔄 Recurring Tasks",
+    maxLookbackDays = userConfig.maxLookbackDays or 90
+  }
+end
+
+-- Initialize CONFIG with the loaded values
+local CONFIG = loadConfig()
 
 -- ==========================================================
 -- 2. COMMAND LOGIC
