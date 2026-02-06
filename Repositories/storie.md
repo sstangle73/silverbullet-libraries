@@ -12,7 +12,6 @@ Use the `Library: Install` command with the URL to this page.
 
 ## Contents
 ```#meta/library/remote
----
 name: "RecurringTasks"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/RecurringTasks.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/RecurringTasks.md
