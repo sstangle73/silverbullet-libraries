@@ -1,6 +1,6 @@
 ---
 tags: meta/library
-name: "RecurringTasks"
+name: "Library/Storie/RecurringTasks"
 description: "Generates recurring tasks based on a master list and handles daily rollovers."
 author: "Steven Storie"
 version: "1.0.0"
