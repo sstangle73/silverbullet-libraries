@@ -11,7 +11,18 @@ This library manages recurring tasks using a strict/flexible strategy and handle
 
 ## Setup
 Ensure you have a page named `RecurringTasks` (or edit the config below) with your master list.
+I suggest you add the following button to your toolbar:
+```space-lua
+actionButton.define { 
+  icon = "calendar", 
+  description = "Generate Daily Tasks", 
+  run = function() 
+    editor.invokeCommand("Tasks: Generate for Today") 
+  end 
+}
+```
 
+## Code
 ```space-lua
 -- ==========================================================
 -- 1. CONFIGURATION
@@ -279,14 +290,4 @@ command.define({
     end
   end
 })
-
--- ==========================================================
--- 3. UI BUTTON
--- ==========================================================
-actionButton.define { 
-  icon = "calendar", 
-  description = "Generate Daily Tasks", 
-  run = function() 
-    editor.invokeCommand("Tasks: Generate for Today") 
-  end 
-}
+```
