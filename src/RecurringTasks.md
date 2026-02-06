@@ -11,16 +11,29 @@ This library manages recurring tasks using a strict/flexible strategy and handle
 
 ## Setup
 Ensure you have a page named `RecurringTasks` with your master list.
-You can override the defaults by adding a `recurringTasks` block to your CONFIG page:
-```yaml
-recurringTasks:
-  sourcePage: "RecurringTasks"
-  dailyNotePrefix: "Inbox/"
-  rolloverHeader: "### 🔄 Recurring Tasks"
-  maxLookbackDays: 90
+
+To configure this library, add a `recurringTasks` block to your `CONFIG` (or `SETTINGS`) page inside a `space-lua` block. You can override any of the defaults shown below:
+
+```space-lua
+config.set {
+  recurringTasks = {
+    -- Page containing your master list
+    sourcePage = "RecurringTasks",
+
+    -- Folder where daily notes live (include trailing slash)
+    dailyNotePrefix = "Inbox/",
+
+    -- Header to search for (or create if missing)
+    rolloverHeader = "### 🔄 Recurring Tasks",
+
+    -- How far back to check for incomplete tasks
+    maxLookbackDays = 90
+  }
+}
 ```
 
-I suggest you add the following button to your toolbar:
+I suggest you also add the following button to your CONFIG page (inside the same space-lua block) so you have a clickable action:
+
 ```space-lua
 actionButton.define { 
   icon = "calendar", 
@@ -34,33 +47,24 @@ actionButton.define {
 ## Code
 ```space-lua
 -- ==========================================================
--- 1. CONFIGURATION
--- ==========================================================
--- We define a function to fetch config so we can grab overrides
-local function loadConfig()
-  -- Try to get the 'recurringTasks' object from the user's SETTINGS
-  local userConfig = system.getSpaceConfig("recurringTasks") or {}
-  
-  -- Return a table merging user config with defaults
-  return {
-    sourcePage = userConfig.sourcePage or "RecurringTasks",
-    dailyNotePrefix = userConfig.dailyNotePrefix or "Inbox/",
-    rolloverHeader = userConfig.rolloverHeader or "### 🔄 Recurring Tasks",
-    maxLookbackDays = userConfig.maxLookbackDays or 90
-  }
-end
-
--- Initialize CONFIG with the loaded values
-local CONFIG = loadConfig()
-
--- ==========================================================
--- 2. COMMAND LOGIC
+-- COMMAND LOGIC
 -- ==========================================================
 command.define({
   name = "Tasks: Generate for Today",
   run = function()
 
-    -- A. DATE HELPERS
+    -- 1. DYNAMIC CONFIGURATION
+    -- We fetch the config inside the run function so it updates instantly
+    local userConfig = system.getSpaceConfig("recurringTasks") or {}
+    
+    local CONFIG = {
+      sourcePage = userConfig.sourcePage or "RecurringTasks",
+      dailyNotePrefix = userConfig.dailyNotePrefix or "Inbox/",
+      rolloverHeader = userConfig.rolloverHeader or "### 🔄 Recurring Tasks",
+      maxLookbackDays = userConfig.maxLookbackDays or 90
+    }
+
+    -- 2. DATE HELPERS
     local function parseDate(str)
       if not str then return nil end
       local y, m, d = str:match("(%d+)%-(%d+)%-(%d+)")
@@ -80,15 +84,15 @@ command.define({
     local tasksToAdd = {}
     local completionCache = {}
 
-    -- B. READ SOURCE PAGE
+    -- 3. READ SOURCE PAGE
     local success, pageData = pcall(space.readPage, CONFIG.sourcePage)
     if not success or not pageData then
-      editor.flashNotification("❌ Error: Page '" .. CONFIG.sourcePage .. "' not found.", "error")
+      editor.flashNotification("❌ Error: Page '" .. CONFIG.sourcePage .. "' not found. Check your recurringTasks settings.", "error")
       return
     end
     local content = (type(pageData) == "string") and pageData or (pageData.text or "")
 
-    -- C. BUILD COMPLETION CACHE
+    -- 4. BUILD COMPLETION CACHE
     local qSuccess, completedTasks = pcall(system.invokeFunction, "index.query", [[
       task where completed = true select name, lastModified
     ]])
@@ -105,7 +109,7 @@ command.define({
         end
     end
 
-    -- D. GENERATE TASKS
+    -- 5. GENERATE TASKS
     for line in string.gmatch(content, "[^\r\n]+") do
       local unit, freqStr = line:match("recur.-([a-z]+)_(%d+)")
       
@@ -119,11 +123,11 @@ command.define({
         local strategy = line:match('strategy:%s*["\']?([a-z]+)["\']?') or "strict"
         local includeWeekend = line:match('include:%s*["\']?weekend["\']?')
 
-        -- 1. WEEKEND CHECK
+        -- A. WEEKEND CHECK
         if isWeekend and not includeWeekend then
             -- Skip
         else
-            -- 2. STRATEGY CHECK
+            -- B. STRATEGY CHECK
             if strategy == "completion" then
                 -- Extract clean name
                 local cleanName = line:match("%[[^%]]*%]%s*(.*)") or line
@@ -230,7 +234,7 @@ command.define({
       end
     end
 
-    -- E. VACUUM ROLLOVER
+    -- 6. VACUUM ROLLOVER
     local totalRolledOver = 0
     for i = 1, CONFIG.maxLookbackDays do
         local pastDate = today - (86400 * i)
@@ -268,7 +272,7 @@ command.define({
         end
     end
 
-    -- F. WRITE TO TODAY
+    -- 7. WRITE TO TODAY
     if #tasksToAdd > 0 then
         local dailyPage = CONFIG.dailyNotePrefix .. todayString
         local currentContent = ""
