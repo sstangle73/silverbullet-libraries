@@ -58,6 +58,7 @@ Use this for **Maintenance/Chore** items.
 * [ ] 💊 Give Dog Meds [recur: day_1] [include: weekend] (Every single day)
 * [ ] 🪴 Water Office Plants [recur: day_4] [strategy: completion] (4 days after I last did it)
 * [ ] 💰 Pay Mortgage [recur: month_1] [start: 2025-01-01] (Strict: 1st of the month)
+```
 
 ## Setup
 Ensure you have a page named `RecurringTasks` with your master list.
