@@ -1,80 +1,60 @@
 ---
 tags: meta/library
 name: "Library/Storie/GM Kit"
-description: "Fog-of-war publishing and session tracking for tabletop RPG campaigns. Reveal pages into a read-only player space, mark NPCs met, log decisions, track sessions."
+description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "1.0.0"
+version: "2.0.0"
 ---
 
 # GM Kit
 
-Fog-of-war publishing and session tracking for tabletop RPG campaigns run in
-SilverBullet.
+Run a campaign from one SilverBullet space while keeping **what happened at the
+table** completely separate from **the adventure as written**.
 
-Keep your whole campaign in one space, mark what the party has learned, and push
-just that subset into a **player-facing subfolder** — which a second, read-only
-SilverBullet instance can serve as the players' wiki. One source of truth, no
-second copy to keep in sync.
+Your adventure pages are never touched. Who the party met, who died, where they
+went and what they have learned all live in `State/` in the DM space, so the
+adventure itself stays clean enough to compile into a book.
 
-> **note** Rename me
-> `sstangle73` must be your GitHub username, in **both** the folder path and the
-> `name:` frontmatter key above. They have to match or installation breaks.
+## Layout it expects
 
-## Install
+One DM space containing the others as subfolders, each bind-mounted as its own
+SilverBullet space:
 
-`Library: Install`, then the `share.uri` from this page's frontmatter.
-
-## Setup
-
-Two instances over one folder tree:
-
-```
-mycampaign/          ← DM instance, read-write
-mycampaign/Player/   ← player instance, READ-ONLY
-```
-
-Because `Player/` is inside the DM space, the DM instance can write into it
-directly. Run the player instance read-only so the two clients never fight over
-the same files.
+    dm/            this library lives here
+      Planning/    the adventure, never written to by this library
+      Player/      what the players see, plus their own Notes/
+      State/       play state, written by this library
+      Sessions/    decision logs, written by this library
 
 ## Commands
 
 | Command | Key | Does |
 |---|---|---|
-| `GM: Reveal Page` | | `revealed: true` |
-| `GM: Hide Page` | | `revealed: false` |
-| `GM: Publish to Players` | | Copies every revealed page into the player folder, stripping DM-only sections |
-| `GM: Mark Met` | `Ctrl-Alt-m` | Flags an NPC met, stamps the session, reveals it |
-| `GM: Log Decision` | `Ctrl-Alt-d` | Prompts, appends to this session's log |
+| `GM: Mark Met` | `Ctrl-Alt-m` | Records the party met the NPC on the current page, stamps the session, reveals the page |
+| `GM: Mark Dead` | | Records a death and how it happened |
+| `GM: Mark Visited` | | Records the party visited the current place, reveals it |
+| `GM: Reveal Page` | | Adds the current Planning page to the revealed list |
+| `GM: Hide Page` | | Removes it |
+| `GM: Publish to Players` | | Copies every revealed page into the Player space, stripping `## DM Only` sections |
+| `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
 | `GM: Next Session` | | Increments the session counter |
 
-## Configuration
+## Where the state goes
 
-Override in any `space-lua` block **without** a priority comment — those load
-last, so yours wins:
+- `State/Revealed`: one link per revealed Planning page
+- `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
+- `Sessions/Session N`: decisions, one line each
 
-```lua
-gm.config.playerFolder = "Wiki/"
-gm.config.sessionPage  = "Play/Tracker"
-gm.config.dmHeading    = "Secrets"
-```
+## Players' own notes
 
-## DM-only sections
+Publishing writes into `Player/` and **replaces** what is there, except
+`Player/Notes/`, which it never touches.
 
-Anything under a `## DM Only` heading is stripped on publish, so secrets can sit
-on the same page as player-facing text:
+## Changes from 1.x
 
-```markdown
-# The Tin Woodman
-
-Commander of the army. Tin from the neck down.
-
-## DM Only
-
-The heart in his chest isn't his.
-```
-
-The published page ends at "Tin from the neck down."
+1.x wrote `met` and `revealed` into the adventure pages' own frontmatter, so a
+published adventure shipped with one particular party's history baked in. 2.0
+keeps all of it in `State/`.
 
 ## Implementation
 
@@ -83,12 +63,16 @@ The published page ends at "Tin from the neck down."
 gm = gm or {}
 
 gm.config = {
-  playerFolder = "Player/",
-  sessionPage  = "Campaign/Session Table",
-  dmHeading    = "DM Only",
+  sessionPage    = "Session Table",
+  sessionsFolder = "Sessions/",
+  stateFolder    = "State/",
+  revealedPage   = "State/Revealed",
+  planningPrefix = "Planning/",
+  playerFolder   = "Player/",
+  playerNotes    = "Notes/",
+  dmHeading      = "DM Only",
 }
 
---- Current session number, read from the configured session page.
 function gm.currentSession()
   local r = query[[
     from p = index.pages()
@@ -99,7 +83,6 @@ function gm.currentSession()
   return tonumber(r[1]) or 1
 end
 
---- Set or replace a frontmatter key in raw page text.
 function gm.setFrontmatter(text, key, value)
   local line = key .. ": " .. tostring(value)
   if not text:match("^%-%-%-") then
@@ -112,7 +95,6 @@ function gm.setFrontmatter(text, key, value)
   return (text:gsub("^(%-%-%-\n)", "%1" .. line .. "\n", 1))
 end
 
---- Drop every DM-only section, up to the next top- or second-level heading.
 function gm.stripSecrets(text)
   local out, skipping = {}, false
   for line in (text .. "\n"):gmatch("([^\n]*)\n") do
@@ -126,9 +108,68 @@ function gm.stripSecrets(text)
   return table.concat(out, "\n")
 end
 
---- Patch one frontmatter key on a page, in place.
 function gm.patch(page, key, value)
   space.writePage(page, gm.setFrontmatter(space.readPage(page), key, value))
+end
+
+function gm.readRevealed()
+  local list = {}
+  if not space.pageExists(gm.config.revealedPage) then return list end
+  for name in space.readPage(gm.config.revealedPage):gmatch("%- %[%[([^%]]+)%]%]") do
+    list[#list + 1] = name
+  end
+  return list
+end
+
+function gm.writeRevealed(list)
+  table.sort(list)
+  local lines = {
+    "---", "type: state", "---", "",
+    "# Revealed to players", "",
+    "Planning pages the players have learned about. Managed by GM Kit:",
+    "`GM: Reveal Page`, `GM: Hide Page`, `GM: Publish to Players`.", "",
+  }
+  for _, n in ipairs(list) do lines[#lines + 1] = "- [[" .. n .. "]]" end
+  space.writePage(gm.config.revealedPage, table.concat(lines, "\n") .. "\n")
+end
+
+function gm.setRevealed(page, on)
+  local out, found = {}, false
+  for _, n in ipairs(gm.readRevealed()) do
+    if n == page then
+      found = true
+      if on then out[#out + 1] = n end
+    else
+      out[#out + 1] = n
+    end
+  end
+  if on and not found then out[#out + 1] = page end
+  gm.writeRevealed(out)
+end
+
+function gm.statePath(page)
+  local kind = page:match("/(People)/") or page:match("/(Places)/")
+            or page:match("/(Factions)/") or "Other"
+  return gm.config.stateFolder .. kind .. "/" .. (page:match("([^/]+)$") or page)
+end
+
+function gm.recordState(page, fields)
+  local path = gm.statePath(page)
+  local text
+  if space.pageExists(path) then
+    text = space.readPage(path)
+  else
+    local name = page:match("([^/]+)$") or page
+    text = "---\ntype: state-record\nsubject: \"[[" .. page .. "]]\"\n---\n\n# " ..
+           name .. "\n\nPlay state for [[" .. page .. "]].\n\n## Log\n"
+  end
+  for k, v in pairs(fields) do text = gm.setFrontmatter(text, k, v) end
+  space.writePage(path, text)
+  return path
+end
+
+function gm.log(path, entry)
+  space.writePage(path, space.readPage(path) .. "\n- " .. entry)
 end
 ```
 
@@ -137,15 +178,20 @@ end
 command.define {
   name = "GM: Reveal Page",
   run = function()
-    gm.patch(editor.getCurrentPage(), "revealed", "true")
-    editor.flashNotification "Revealed"
+    local page = editor.getCurrentPage()
+    if not page:startsWith(gm.config.planningPrefix) then
+      editor.flashNotification "Only Planning pages can be revealed"
+      return
+    end
+    gm.setRevealed(page, true)
+    editor.flashNotification("Revealed " .. page)
   end
 }
 
 command.define {
   name = "GM: Hide Page",
   run = function()
-    gm.patch(editor.getCurrentPage(), "revealed", "false")
+    gm.setRevealed(editor.getCurrentPage(), false)
     editor.flashNotification "Hidden"
   end
 }
@@ -153,17 +199,18 @@ command.define {
 command.define {
   name = "GM: Publish to Players",
   run = function()
-    local folder = gm.config.playerFolder
-    local pages = query[[
-      from p = index.pages()
-      where p.revealed == true and not p.name:startsWith(folder)
-    ]]
     local n = 0
-    for _, p in ipairs(pages) do
-      space.writePage(folder .. p.name, gm.stripSecrets(space.readPage(p.name)))
-      n = n + 1
+    for _, page in ipairs(gm.readRevealed()) do
+      if page:startsWith(gm.config.planningPrefix) and space.pageExists(page) then
+        local relative = page:sub(#gm.config.planningPrefix + 1)
+        if relative ~= "index" and not relative:startsWith(gm.config.playerNotes) then
+          space.writePage(gm.config.playerFolder .. relative,
+                          gm.stripSecrets(space.readPage(page)))
+          n = n + 1
+        end
+      end
     end
-    editor.flashNotification("Published " .. n .. " page(s)")
+    editor.flashNotification("Published " .. n .. " page(s) to players")
   end
 }
 
@@ -171,14 +218,33 @@ command.define {
   name = "GM: Mark Met",
   key = "Ctrl-Alt-m",
   run = function()
-    local page = editor.getCurrentPage()
-    local s = gm.currentSession()
-    local text = space.readPage(page)
-    text = gm.setFrontmatter(text, "met", "true")
-    text = gm.setFrontmatter(text, "met_session", s)
-    text = gm.setFrontmatter(text, "revealed", "true")
-    space.writePage(page, text)
+    local page, s = editor.getCurrentPage(), gm.currentSession()
+    local path = gm.recordState(page, { met = "true", met_session = s })
+    gm.log(path, "Session " .. s .. ": met")
+    if page:startsWith(gm.config.planningPrefix) then gm.setRevealed(page, true) end
     editor.flashNotification("Met in session " .. s)
+  end
+}
+
+command.define {
+  name = "GM: Mark Dead",
+  run = function()
+    local page, s = editor.getCurrentPage(), gm.currentSession()
+    local how = editor.prompt "How did they die?" or ""
+    local path = gm.recordState(page, { status = "dead", died_session = s })
+    gm.log(path, "Session " .. s .. ": died" .. (how ~= "" and (" - " .. how) or ""))
+    editor.flashNotification("Death recorded, session " .. s)
+  end
+}
+
+command.define {
+  name = "GM: Mark Visited",
+  run = function()
+    local page, s = editor.getCurrentPage(), gm.currentSession()
+    local path = gm.recordState(page, { visited = "true", visited_session = s })
+    gm.log(path, "Session " .. s .. ": visited")
+    if page:startsWith(gm.config.planningPrefix) then gm.setRevealed(page, true) end
+    editor.flashNotification("Visited in session " .. s)
   end
 }
 
@@ -189,14 +255,12 @@ command.define {
     local what = editor.prompt "What did they decide?"
     if not what or what == "" then return end
     local s = gm.currentSession()
-    local log = "Campaign/Sessions/Session " .. s
+    local log = gm.config.sessionsFolder .. "Session " .. s
     local text
     if space.pageExists(log) then
       text = space.readPage(log)
     else
-      text = "---\ntype: session\nsession: " .. s ..
-             "\nstatus: draft\nrevealed: false\n---\n\n# Session " .. s ..
-             "\n\n## Decisions\n"
+      text = "---\ntype: session\nsession: " .. s .. "\n---\n\n# Session " .. s .. "\n\n## Decisions\n"
     end
     space.writePage(log, text .. "\n- " .. what)
     editor.flashNotification("Logged to " .. log)

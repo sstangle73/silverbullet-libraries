@@ -20,7 +20,7 @@ description: "A manager for recurring tasks"
 name: "GM Kit"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Kit.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Kit.md
-description: "Fog-of-war publishing and session tracking for tabletop RPG campaigns. Reveal pages into a read-only player space, mark NPCs met, log decisions, track sessions."
+description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so they stay publishable. Mark NPCs met or dead, places visited, log decisions."
 ---
 name: "GM Beyond"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Beyond.md
@@ -30,6 +30,6 @@ description: "Live party roster from D&D Beyond public character data. Does not 
 name: "GM Book"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Book.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Book.md
-description: "Compile a campaign space into DM and player manuscripts, transformed for Homebrewery. Requires GM Kit."
+description: "Compile a campaign space into DM and player manuscripts, transformed for Homebrewery."
 ---
 ```

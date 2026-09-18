@@ -1,19 +1,19 @@
 ---
 tags: meta/library
 name: "Library/Storie/GM Book"
-description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book. Requires GM Kit."
+description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # GM Book
 
 Compile a campaign space into a single manuscript, in two editions, ready for
-[Homebrewery](https://homebrewery.naturalcrit.com) to render as a WotC-style
-5e book.
+[Homebrewery](https://homebrewery.naturalcrit.com) to render as a WotC-style 5e
+book.
 
-**Requires [[Library/Storie/GM Kit]]** — it reuses that library's DM-only
-stripping so the player edition and the player wiki hide exactly the same things.
+Self-contained as of 1.1: it no longer needs GM Kit, so it can live inside a
+standalone adventure space.
 
 ## The two editions
 
@@ -22,50 +22,34 @@ stripping so the player edition and the player wiki hide exactly the same things
 | `GM: Build Book (DM)` | `Build/Book DM` | Everything, secrets included |
 | `GM: Build Book (Player)` | `Build/Book Player` | `## DM Only` sections removed |
 
-Same split as the two instances, same source pages. Nothing is maintained twice.
-
 ## Setting the order
 
 Put `book_order` in the frontmatter of any page that belongs in the book. Pages
-without it are skipped, so your dashboards and scratch pages stay out
-automatically.
+without it are skipped, so dashboards and scratch pages stay out automatically.
 
-```yaml
----
-type: campaign
-book_order: 20
----
-```
+    book_order: 20
 
-Leave gaps (10, 20, 30…) so you can insert chapters without renumbering.
+Leave gaps (10, 20, 30) so you can insert chapters without renumbering.
 
 ## Bake before you build
 
-Live `${...}` expressions only exist inside SilverBullet — the markdown file
-holds the *source*, so a query becomes an empty space in a PDF. Run
-`Baked Sections: Update` (`Ctrl-Shift-b`) on any page with queries first.
-
-The builder won't guess at this: it counts pages still holding live expressions
-and names them in the notification rather than silently shipping gaps.
+Live `${...}` expressions only exist inside SilverBullet. Run
+`Baked Sections: Update` on any page with queries first. The builder counts
+pages still holding live expressions and names them, rather than shipping gaps.
 
 ## What it transforms
 
 - Frontmatter stripped
-- `[[Some/Path/Page]]` → `Page`, `[[Page|Label]]` → `Label`
-- Baked-section comment markers removed, rendered bodies kept
-- `> **note** …` blockquotes → Homebrewery `{{note}}` blocks
-- `\page` inserted between chapters
+- `[[Some/Path/Page]]` becomes `Page`; `[[Page|Label]]` becomes `Label`
+- Baked-section markers removed, rendered bodies kept
+- `> **note**` blockquotes become Homebrewery `{{note}}` blocks
+- A page break inserted between chapters
 
 ## Rendering it
 
-**Homebrewery** — paste `Build/Book DM` in. Free, gives you the authentic PHB
-look and a PDF export. Fastest path to something that looks like a real book.
+**Homebrewery**: paste `Build/Book DM` in. Free, authentic PHB look, PDF export.
 
-**Pandoc + a 5e LaTeX template** — if you want the build fully local and
-reproducible in git, point pandoc at the same output. More setup, no web
-dependency, and `make book` becomes a commit-able artifact.
-
-Start with Homebrewery. Move to pandoc only if the web round-trip annoys you.
+**Pandoc with a 5e LaTeX template**: for a fully local, reproducible build.
 
 ## Implementation
 
@@ -75,8 +59,22 @@ gmbook = gmbook or {}
 
 gmbook.config = {
   outputFolder = "Build/",
-  pageBreak    = "\page",
+  pageBreak    = "\\page",
+  dmHeading    = "DM Only",
 }
+
+function gmbook.stripSecrets(text)
+  local out, skipping = {}, false
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    if line:match("^##%s+" .. gmbook.config.dmHeading) then
+      skipping = true
+    elseif skipping and line:match("^##?%s") then
+      skipping = false
+    end
+    if not skipping then out[#out + 1] = line end
+  end
+  return table.concat(out, "\n")
+end
 
 function gmbook.stripFrontmatter(text)
   if text:match("^%-%-%-") then
@@ -86,7 +84,6 @@ function gmbook.stripFrontmatter(text)
   return text
 end
 
---- Wikilinks have no meaning on paper.
 function gmbook.delink(text)
   text = text:gsub("%[%[[^%]|]*|([^%]]*)%]%]", "%1")
   text = text:gsub("%[%[([^%]]*)%]%]", function(p)
@@ -95,14 +92,12 @@ function gmbook.delink(text)
   return text
 end
 
---- Drop baked-section markers, keep the rendered body.
 function gmbook.unbake(text)
   text = text:gsub("<!%-%-#lua.-%-%->\n?", "")
   text = text:gsub("<!%-%-/lua%-%->\n?", "")
   return text
 end
 
---- SilverBullet admonitions to Homebrewery blocks.
 function gmbook.admonitions(text)
   local out, inBlock = {}, false
   for line in (text .. "\n"):gmatch("([^\n]*)\n") do
@@ -132,7 +127,7 @@ function gmbook.build(playerEdition)
     order by p.book_order
   ]]
   if #pages == 0 then
-    editor.flashNotification "No pages have a book_order — nothing to build"
+    editor.flashNotification "No pages have a book_order - nothing to build"
     return
   end
   local parts, unbaked = {}, 0
@@ -140,7 +135,7 @@ function gmbook.build(playerEdition)
     local text = space.readPage(p.name)
     if text:find("%${") then unbaked = unbaked + 1 end
     text = gmbook.stripFrontmatter(text)
-    if playerEdition then text = gm.stripSecrets(text) end
+    if playerEdition then text = gmbook.stripSecrets(text) end
     text = gmbook.unbake(text)
     text = gmbook.delink(text)
     text = gmbook.admonitions(text)
@@ -151,7 +146,7 @@ function gmbook.build(playerEdition)
               (playerEdition and "Book Player" or "Book DM")
   space.writePage(out, table.concat(parts, sep))
   if unbaked > 0 then
-    editor.flashNotification("Built " .. out .. " — but " .. unbaked ..
+    editor.flashNotification("Built " .. out .. " - but " .. unbaked ..
       " page(s) still hold live expressions. Run Baked Sections: Update on them.")
   else
     editor.flashNotification("Built " .. out .. " from " .. #pages .. " pages")
