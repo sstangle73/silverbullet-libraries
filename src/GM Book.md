@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # GM Book
@@ -39,6 +39,15 @@ Put `book_order` in the frontmatter of any page that belongs in the book. Pages 
 
 Leave gaps (10, 20, 30) so you can insert chapters without renumbering.
 
+## A chapter in several pages
+
+A long chapter can be split into a page of its own for each scene or section. Give each of those pages `book_section: true`, and a `book_order` just after its chapter's:
+
+    book_order: 18.01
+    book_section: true
+
+A section carries on the chapter before it. There is no page break ahead of it, and its headings drop a level, so its `#` title prints as a section of that chapter. Number sections with two decimals: with one, YAML reads a tenth section's 18.10 as 18.1, the same as the first.
+
 ## Bake before you build
 
 Live `${...}` expressions only exist inside SilverBullet. Run `Baked Sections: Update` on any page with queries first. The builder names the pages still holding live expressions, rather than shipping gaps.
@@ -57,7 +66,8 @@ An adventure folder can also be part of a larger space, as `Planning/` is when a
 - `[[Some/Path/Page]]` becomes `Page`; `[[Page|Label]]` becomes `Label`
 - Baked-section markers removed, rendered bodies kept
 - `> **note**` and `> **warning**` blockquotes become Homebrewery `{{note}}` boxes. A warning keeps a `warning` class, so a brew's style can set it apart.
-- A page break before every chapter, and wherever a page fills up
+- A section's headings dropped a level
+- A page break before every chapter, though not before a section, and wherever a page fills up
 
 ## Page breaks
 
@@ -203,9 +213,29 @@ function gmbook.pages(root)
   return out
 end
 
-function gmbook.render(text, playerEdition)
+-- A book_section page carries on the chapter before it, so each heading
+-- drops a level. Code blocks are left as they are.
+function gmbook.demote(text)
+  local out, fence = {}, nil
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local mark = line:sub(1, 3)
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      local hashes = line:match("^(#+)%s")
+      if hashes and #hashes < 6 then line = "#" .. line end
+    end
+    out[#out + 1] = line
+  end
+  return table.concat(out, "\n")
+end
+
+function gmbook.render(text, playerEdition, section)
   text = gmbook.stripFrontmatter(text)
   if playerEdition then text = gmbook.stripSecrets(text) end
+  if section then text = gmbook.demote(text) end
   text = gmbook.unbake(text)
   text = gmbook.delink(text)
   return gmbook.admonitions(text)
@@ -228,10 +258,12 @@ function gmbook.compile(editions)
   for _, edition in ipairs(editions) do
     local parts = {}
     for i, text in ipairs(texts) do
-      parts[i] = gmbook.render(text, edition == "player")
+      local section = pages[i].book_section == true
+      if i > 1 then parts[#parts + 1] = section and "\n\n" or sep end
+      parts[#parts + 1] = gmbook.render(text, edition == "player", section)
     end
     local out = gmbook.output(edition, root)
-    local book, sheets = table.concat(parts, sep), nil
+    local book, sheets = table.concat(parts), nil
     if gmbook.config.paginate then book, sheets = gmbook.paginate(book) end
     space.writePage(out, book)
     report.written[#report.written + 1] = { edition = edition, page = out, sheets = sheets }
