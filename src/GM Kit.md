@@ -8,17 +8,13 @@ version: "2.0.0"
 
 # GM Kit
 
-Run a campaign from one SilverBullet space while keeping **what happened at the
-table** completely separate from **the adventure as written**.
+Run a campaign from one SilverBullet space while keeping **what happened at the table** completely separate from **the adventure as written**.
 
-Your adventure pages are never touched. Who the party met, who died, where they
-went and what they have learned all live in `State/` in the DM space, so the
-adventure itself stays clean enough to compile into a book.
+Your adventure pages are never touched. Who the party met, who died, where they went and what they have learned all live in `State/` in the DM space, so the adventure itself stays clean enough to compile into a book.
 
 ## Layout it expects
 
-One DM space containing the others as subfolders, each bind-mounted as its own
-SilverBullet space:
+One DM space containing the others as subfolders, each bind-mounted as its own SilverBullet space:
 
     dm/            this library lives here
       Planning/    the adventure, never written to by this library
@@ -47,14 +43,11 @@ SilverBullet space:
 
 ## Players' own notes
 
-Publishing writes into `Player/` and **replaces** what is there, except
-`Player/Notes/`, which it never touches.
+Publishing writes into `Player/` and **replaces** what is there, except `Player/Notes/`, which it never touches.
 
 ## Changes from 1.x
 
-1.x wrote `met` and `revealed` into the adventure pages' own frontmatter, so a
-published adventure shipped with one particular party's history baked in. 2.0
-keeps all of it in `State/`.
+1.x wrote `met` and `revealed` into the adventure pages' own frontmatter, so a published adventure shipped with one particular party's history baked in. 2.0 keeps all of it in `State/`.
 
 ## Implementation
 

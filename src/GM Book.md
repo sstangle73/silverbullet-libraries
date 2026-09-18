@@ -8,12 +8,9 @@ version: "1.1.0"
 
 # GM Book
 
-Compile a campaign space into a single manuscript, in two editions, ready for
-[Homebrewery](https://homebrewery.naturalcrit.com) to render as a WotC-style 5e
-book.
+Compile a campaign space into a single manuscript, in two editions, ready for [Homebrewery](https://homebrewery.naturalcrit.com) to render as a WotC-style 5e book.
 
-Self-contained as of 1.1: it no longer needs GM Kit, so it can live inside a
-standalone adventure space.
+Self-contained as of 1.1: it no longer needs GM Kit, so it can live inside a standalone adventure space.
 
 ## The two editions
 
@@ -24,8 +21,7 @@ standalone adventure space.
 
 ## Setting the order
 
-Put `book_order` in the frontmatter of any page that belongs in the book. Pages
-without it are skipped, so dashboards and scratch pages stay out automatically.
+Put `book_order` in the frontmatter of any page that belongs in the book. Pages without it are skipped, so dashboards and scratch pages stay out automatically.
 
     book_order: 20
 
@@ -33,9 +29,7 @@ Leave gaps (10, 20, 30) so you can insert chapters without renumbering.
 
 ## Bake before you build
 
-Live `${...}` expressions only exist inside SilverBullet. Run
-`Baked Sections: Update` on any page with queries first. The builder counts
-pages still holding live expressions and names them, rather than shipping gaps.
+Live `${...}` expressions only exist inside SilverBullet. Run `Baked Sections: Update` on any page with queries first. The builder counts pages still holding live expressions and names them, rather than shipping gaps.
 
 ## What it transforms
 
