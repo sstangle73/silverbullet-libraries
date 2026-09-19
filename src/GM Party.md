@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.0.2"
+version: "1.0.3"
 ---
 
 # GM Party
@@ -1008,6 +1008,11 @@ end
 .gmparty-diff {
   font-weight: bold;
   white-space: nowrap;
+}
+
+/* In a narrow table, "Above High" may wrap rather than run off the edge. */
+.gmparty-fight table .gmparty-diff {
+  white-space: normal;
 }
 
 .gmparty-diff-low { color: #2b6cb0; }
