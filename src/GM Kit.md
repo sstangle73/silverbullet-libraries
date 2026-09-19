@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "2.3.1"
+version: "2.4.0"
 ---
 
 # GM Kit
@@ -26,11 +26,13 @@ People, places, factions and items are the Planning pages inside a `People/`, `P
 
 ## Buttons
 
-**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal or hide it. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, and an item adds *Mark found*. Once something is recorded, the bar says when: "✓ Met in session 3". An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
+**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, and an item adds *Mark found*. Once something is recorded, the bar says when: "✓ Met in session 3". An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
 
 **The header.** Three buttons: the session table, *Log a decision* and *Publish to players*.
 
-**Notifications.** Marking, revealing and starting a session each come with *Undo*. A reveal also offers *Publish now*, and hiding a page the players already have offers to delete their copy.
+**Notifications.** Marking, revealing, unrevealing and starting a session each come with *Undo*. A reveal also offers *Publish now*.
+
+**Taking a page back.** *Unreveal* takes a page off the revealed list and deletes the copy the players were sent, so a page revealed or published by mistake is gone from the Player space at once. *Undo* puts both back, and so does revealing it and publishing again. A page that isn't revealed but that the players still have a copy of, say one hidden before 2.4, shows ◐ on its bar, with *Delete their copy*.
 
 **Your own pages.** Every command works as a button, and a command that acts on a page asks which one when you aren't on one:
 
@@ -49,12 +51,12 @@ People, places, factions and items are the Planning pages inside a `People/`, `P
 | `GM: Spend Use` | | Uses one of an item's uses |
 | `GM: Refund Use` | | Gives one back |
 | `GM: Reveal Page` | | Adds a Planning page to the revealed list |
-| `GM: Hide Page` | | Removes it |
+| `GM: Unreveal Page` | | Takes a page back: off the revealed list, and the players' copy deleted |
 | `GM: Publish to Players` | | Copies every revealed page into the Player space, stripping `## DM Only` sections |
 | `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
 | `GM: Next Session` | | Increments the session counter |
 
-On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and hide on any Planning page. Found, use and refund also act at once on a page with a row for just one item. Publishing and starting a session ask first.
+On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and unreveal on any Planning page; off one, `GM: Unreveal Page` lists what the players can see or still have. `GM: Hide Page`, its name before 2.4, still works. Found, use and refund also act at once on a page with a row for just one item. Publishing and starting a session ask first.
 
 ## Items
 
@@ -77,11 +79,17 @@ That page's bar gets a row for the item, "Tube: six grins here", with *Mark foun
 
 ## Players' own notes
 
-Publishing writes into `Player/` and **replaces** what is there, except `Player/Notes/`, which it never touches.
+Publishing writes into `Player/` and **replaces** what is there, except `Player/Notes/`, which it never touches. Nothing in `Player/` is ever deleted except the copy of a page you unreveal.
 
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 2.4
+
+*Unreveal* replaces *Hide*. Hide took a page off the revealed list but left the players their published copy unless you caught a button in its notification; unrevealing deletes that copy too, with *Undo*. The bar says whether a revealed page has been published yet, and marks a page the players still have a copy of after it came off the list.
+
+A space's `CONFIG` page is no longer an adventure page. Before 2.4 it could be revealed, and publishing would then have copied Planning's settings over the Player space's own.
 
 ## Changes in 2.3.1
 
@@ -263,7 +271,7 @@ function gm.writeRevealed(list)
     "Planning pages the players have learned about, kept by GM Kit. " ..
       "Publishing copies each of them into `" .. gm.config.playerFolder .. "`.", "",
     '${widgets.commandButton("Reveal a page…", "GM: Reveal Page")} ' ..
-      '${widgets.commandButton("Hide a page…", "GM: Hide Page")} ' ..
+      '${widgets.commandButton("Unreveal a page…", "GM: Unreveal Page")} ' ..
       '${widgets.commandButton("Publish to players", "GM: Publish to Players")}', "",
   }
   for _, n in ipairs(list) do lines[#lines + 1] = "- [[" .. n .. "]]" end
@@ -289,12 +297,14 @@ function gm.setRevealed(page, on)
   return true
 end
 
--- An adventure page: in Planning, but not its index, libraries or build output.
+-- An adventure page: in Planning, but not its index, its CONFIG, libraries
+-- or build output.
 function gm.isPlanningPage(page)
   local prefix = gm.config.planningPrefix
   if not page or not page:startsWith(prefix) then return false end
   local rel = page:sub(#prefix + 1)
-  return rel ~= "index" and not rel:startsWith("Library/") and not rel:startsWith("Build/")
+  return rel ~= "index" and rel ~= "CONFIG" and not rel:startsWith("Library/")
+    and not rel:startsWith("Build/")
 end
 
 function gm.planningPages()
@@ -328,12 +338,13 @@ function gm.readState(page)
   return gm.frontmatter(space.readPage(path))
 end
 
--- Where publishing puts a page, or nil for the pages it skips.
+-- Where publishing puts a page, or nil for the pages it skips: anything but an
+-- adventure page, so never a space's index, CONFIG or libraries, and never
+-- the players' Notes.
 function gm.playerCopy(page)
-  local prefix = gm.config.planningPrefix
-  if not page:startsWith(prefix) then return nil end
-  local rel = page:sub(#prefix + 1)
-  if rel == "index" or rel:startsWith(gm.config.playerNotes) then return nil end
+  if not gm.isPlanningPage(page) then return nil end
+  local rel = page:sub(#gm.config.planningPrefix + 1)
+  if rel:startsWith(gm.config.playerNotes) then return nil end
   return gm.config.playerFolder .. rel
 end
 
@@ -770,29 +781,52 @@ function gm.reveal(page)
   return true
 end
 
-function gm.hide(page)
-  if not gm.setRevealed(page, false) then
-    gm.notify(gm.name(page) .. " isn't revealed")
+-- Whether the players can see a page: "published" (revealed, and they have
+-- their copy), "revealed" (on the list, not published yet), "stale" (off the
+-- list, but they still have a copy) or "hidden".
+function gm.visibility(page)
+  local copy = gm.playerCopy(page)
+  local has = copy ~= nil and space.pageExists(copy)
+  if gm.isRevealed(page) then
+    return has and "published" or "revealed"
+  end
+  return has and "stale" or "hidden"
+end
+
+-- Takes a page back from the players: off the revealed list, and the copy
+-- they were sent deleted. Undo puts both back.
+function gm.unreveal(page)
+  local name, copy = gm.name(page), gm.playerCopy(page)
+  local copyText = copy and space.pageExists(copy) and space.readPage(copy) or nil
+  local listed = gm.setRevealed(page, false)
+  if not listed and not copyText then
+    gm.notify(name .. " isn't revealed, and the players have no copy of it")
     return false
   end
+  if copyText then space.deletePage(copy) end
   gm.refresh()
-  local message = "Hid " .. gm.name(page) .. " from future publishes."
-  local actions = {
-    { name = "Undo", run = function()
-      gm.setRevealed(page, true)
-      gm.refresh()
-    end },
-  }
-  local copy = gm.playerCopy(page)
-  if copy and space.pageExists(copy) then
-    message = message .. " The players still have the copy published earlier."
-    table.insert(actions, 1, { name = "Delete their copy", run = function()
-      space.deletePage(copy)
-      gm.notify("Deleted " .. copy)
-    end })
+  local message
+  if listed and copyText then
+    message = "Unrevealed " .. name .. ": it's off the revealed list, and the players' copy is deleted."
+  elseif listed then
+    message = "Unrevealed " .. name .. ". It was never published, so the players never had it."
+  else
+    message = "Deleted the players' copy of " .. name .. ", which wasn't revealed any more."
   end
-  gm.notify(message, actions)
+  gm.notify(message, {
+    { name = "Undo", run = function()
+      if listed then gm.setRevealed(page, true) end
+      if copyText then gm.write(copy, copyText) end
+      gm.refresh()
+      gm.notify("Undone: " .. name .. (copyText and " is back with the players" or " is revealed again"))
+    end },
+  })
   return true
+end
+
+-- The name before 2.4.
+function gm.hide(page)
+  return gm.unreveal(page)
 end
 
 function gm.publish()
@@ -904,6 +938,23 @@ local function usesParts(item, state, add, note)
   end
 end
 
+-- What the players can see of a page, with the buttons that change it.
+-- `quiet` leaves out the states where they can see it.
+local function visibilityParts(page, add, note, quiet)
+  local seen = gm.visibility(page)
+  if seen == "stale" then
+    note("◐ Not revealed, but the players still have a copy")
+    add(gm.button("Delete their copy", function() gm.unreveal(page) end))
+    add(gm.button("Reveal", function() gm.reveal(page) end))
+  elseif seen == "hidden" then
+    note("○ Hidden from players")
+    add(gm.button("Reveal", function() gm.reveal(page) end))
+  elseif not quiet then
+    note(seen == "published" and "◉ Revealed to players" or "◉ Revealed, not published yet")
+    add(gm.button("Unreveal", function() gm.unreveal(page) end))
+  end
+end
+
 -- A row on a page's bar for an item the page hands out or shows: found or
 -- not, the uses left, and whether the players can see the item's page.
 function gm.itemRow(item, from, handout)
@@ -915,10 +966,7 @@ function gm.itemRow(item, from, handout)
   if state.found == "true" then
     note("✓ Found in session " .. (state.found_session or "?"))
     usesParts(item, state, add, note)
-    if not gm.isRevealed(item) then
-      note("○ Hidden from players")
-      add(gm.button("Reveal", function() gm.reveal(item) end))
-    end
+    visibilityParts(item, add, note, true)
   else
     if handout then note(handout.text .. " here") end
     add(gm.button("Mark found", function() gm.markFound(item, from) end))
@@ -940,13 +988,7 @@ function gm.bar(page)
   }
   local function add(item) spec[#spec + 1] = item end
   local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
-  if gm.isRevealed(page) then
-    note("◉ Revealed to players")
-    add(gm.button("Hide", function() gm.hide(page) end))
-  else
-    note("○ Hidden from players")
-    add(gm.button("Reveal", function() gm.reveal(page) end))
-  end
+  visibilityParts(page, add, note)
   for _, mark in ipairs({ "met", "dead", "visited", "found" }) do
     local m = gm.marks[mark]
     if can[mark] then
@@ -1005,15 +1047,42 @@ command.define {
   end
 }
 
+-- The open Planning page, or one picked from those the players can see or
+-- still have a copy of.
+local function unrevealCommand()
+  local page = editor.getCurrentPage()
+  if not gm.isPlanningPage(page) then
+    local pages, notes, listed = {}, {}, {}
+    local function hasCopy(n)
+      local copy = gm.playerCopy(n)
+      return copy ~= nil and space.pageExists(copy)
+    end
+    for _, n in ipairs(gm.readRevealed()) do
+      pages[#pages + 1] = n
+      listed[n] = true
+      notes[n] = hasCopy(n) and "Published" or "Revealed, not published yet"
+    end
+    for _, n in ipairs(gm.planningPages()) do
+      if not listed[n] and hasCopy(n) then
+        pages[#pages + 1] = n
+        notes[n] = "Not revealed, but the players still have a copy"
+      end
+    end
+    page = gm.pick("Unreveal", "Which page should the players lose?", pages, notes)
+  end
+  if page then gm.unreveal(page) end
+end
+
+command.define {
+  name = "GM: Unreveal Page",
+  run = unrevealCommand
+}
+
+-- The name before 2.4, so buttons made with it still work.
 command.define {
   name = "GM: Hide Page",
-  run = function()
-    local page = editor.getCurrentPage()
-    if not gm.isPlanningPage(page) then
-      page = gm.pick("Hide", "Which page should publishing leave out?", gm.readRevealed())
-    end
-    if page then gm.hide(page) end
-  end
+  hide = true,
+  run = unrevealCommand
 }
 
 command.define {
