@@ -3,14 +3,14 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "2.2.0"
+version: "2.3.0"
 ---
 
 # GM Kit
 
 Run a campaign from one SilverBullet space while keeping **what happened at the table** completely separate from **the adventure as written**.
 
-Your adventure pages are never touched. Who the party met, who died, where they went and what they have learned all live in `State/` in the DM space, so the adventure itself stays clean enough to compile into a book.
+Your adventure pages are never touched. Who the party met, who died, where they went, what they found and what they have learned all live in `State/` in the DM space, so the adventure itself stays clean enough to compile into a book.
 
 ## Layout it expects
 
@@ -22,11 +22,11 @@ One DM space containing the others as subfolders, each bind-mounted as its own S
       State/       play state, written by this library
       Sessions/    decision logs, written by this library
 
-People, places and factions are the Planning pages inside a `People/`, `Places/` or `Factions/` folder, at any depth.
+People, places, factions and items are the Planning pages inside a `People/`, `Places/`, `Factions/` or `Items/` folder, at any depth.
 
 ## Buttons
 
-**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal or hide it. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, and a place adds *Mark visited*. Once something is recorded, the bar says when: "✓ Met in session 3".
+**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal or hide it. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, and an item adds *Mark found*. Once something is recorded, the bar says when: "✓ Met in session 3". An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
 
 **The header.** Three buttons: the session table, *Log a decision* and *Publish to players*.
 
@@ -45,18 +45,34 @@ People, places and factions are the Planning pages inside a `People/`, `Places/`
 | `GM: Mark Met` | `Ctrl-Alt-m` | Records that the party met a person or faction, stamps the session, reveals the page |
 | `GM: Mark Dead` | | Records a death and how it happened |
 | `GM: Mark Visited` | | Records that the party visited a place, reveals it |
+| `GM: Mark Found` | | Records that the party found an item, starts counting its uses, and offers to reveal it |
+| `GM: Spend Use` | | Uses one of an item's uses |
+| `GM: Refund Use` | | Gives one back |
 | `GM: Reveal Page` | | Adds a Planning page to the revealed list |
 | `GM: Hide Page` | | Removes it |
 | `GM: Publish to Players` | | Copies every revealed page into the Player space, stripping `## DM Only` sections |
 | `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
 | `GM: Next Session` | | Increments the session counter |
 
-On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and hide on any Planning page. Publishing and starting a session ask first.
+On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and hide on any Planning page. Found, use and refund also act at once on a page with a row for just one item. Publishing and starting a session ask first.
+
+## Items
+
+An item is a Planning page in an `Items/` folder. Marking it found records the session but doesn't reveal the page, because a party can carry a thing before it knows what it is. The notification offers *Reveal*, and so does the item's row until you press it.
+
+**Uses.** A page hands out an item when a GM Party count on it names the item:
+
+    It holds ${party.count{"grin", plus = 1, item = "World/Items/Tube"}}.
+
+That page's bar gets a row for the item, "Tube: six grins here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 grins left", with *Use a grin* and *Refund a grin*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses.
+
+**Rules in a scene.** A page that shows an item's rules with `![[World/Items/Tube#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
 
 ## Where the state goes
 
 - `State/Revealed`: one link per revealed Planning page
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
+- `State/Items/<name>`: found, the uses left of those found, and where, with a log
 - `Sessions/Session N`: decisions, one line each
 
 ## Players' own notes
@@ -66,6 +82,10 @@ Publishing writes into `Player/` and **replaces** what is there, except `Player/
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 2.3
+
+Items: *Mark found*, uses counted from the page that hands an item out, *Use* and *Refund* with *Undo*, and a row on the bar of each page that hands out an item or shows its rules. Finding offers to reveal rather than revealing.
 
 ## Changes in 2.2
 
@@ -101,6 +121,7 @@ gm.kinds = {
   People   = { met = true, dead = true },
   Factions = { met = true },
   Places   = { visited = true },
+  Items    = { found = true },
 }
 
 -- "---\n<head>---\n<rest>" as head and rest, or nil without frontmatter.
@@ -285,9 +306,10 @@ function gm.planningPages()
   return out
 end
 
--- "People", "Places" or "Factions", from the page's folder.
+-- "People", "Places", "Factions" or "Items", from the page's folder.
 function gm.kind(page)
   return page:match("/(People)/") or page:match("/(Places)/") or page:match("/(Factions)/")
+    or page:match("/(Items)/")
 end
 
 function gm.statePath(page)
@@ -355,6 +377,13 @@ gm.marks = {
     done = "Visited in session ", reveals = true,
     pick = "Visited", ask = "Where did the party go?",
   },
+  -- A party can carry a thing before it knows what it is, so finding one
+  -- offers to reveal its page instead of revealing it.
+  found = {
+    field = "found", value = "true", session = "found_session",
+    done = "Found in session ", reveals = false, offers = true,
+    pick = "Found", ask = "What did the party find?",
+  },
 }
 
 -- Pages that can take a mark, unmarked first. If Planning has no People,
@@ -410,7 +439,10 @@ function gm.target(label, help, pages, notes)
   return gm.pick(label, help, pages, notes)
 end
 
-function gm.mark(page, mark, detail)
+-- Records a mark. extra can add state fields, replace the log entry, and
+-- add a note to the notification, as finding an item does for its uses.
+function gm.mark(page, mark, detail, extra)
+  extra = extra or {}
   local m, s = gm.marks[mark], gm.currentSession()
   local name, state = gm.name(page), gm.readState(page)
   if state[m.field] == m.value then
@@ -419,20 +451,26 @@ function gm.mark(page, mark, detail)
   end
   local path = gm.statePath(page)
   local before = space.pageExists(path) and space.readPage(path) or nil
-  local entry = "Session " .. s .. ": " .. (mark == "dead" and "died" or mark)
+  local entry = extra.entry or (mark == "dead" and "died" or mark)
   if detail and detail ~= "" then entry = entry .. " - " .. detail end
-  gm.recordState(page, { [m.field] = m.value, [m.session] = s }, entry)
+  local fields = { [m.field] = m.value, [m.session] = s }
+  for k, v in pairs(extra.fields or {}) do fields[k] = v end
+  gm.recordState(page, fields, "Session " .. s .. ": " .. entry)
   local revealed = m.reveals and page:startsWith(gm.config.planningPrefix)
                    and gm.setRevealed(page, true)
   gm.refresh()
-  gm.notify(name .. ": " .. m.done:lower() .. s .. (revealed and ", and revealed" or "") .. ".", {
-    { name = "Undo", run = function()
-      if before then gm.write(path, before) else space.deletePage(path) end
-      if revealed then gm.setRevealed(page, false) end
-      gm.refresh()
-      gm.notify("Undone: " .. name .. " is no longer marked " .. mark)
-    end },
-  })
+  local actions = {}
+  if m.offers and page:startsWith(gm.config.planningPrefix) and not gm.isRevealed(page) then
+    actions[#actions + 1] = { name = "Reveal", run = function() gm.reveal(page) end }
+  end
+  actions[#actions + 1] = { name = "Undo", run = function()
+    if before then gm.write(path, before) else space.deletePage(path) end
+    if revealed then gm.setRevealed(page, false) end
+    gm.refresh()
+    gm.notify("Undone: " .. name .. " is no longer marked " .. mark)
+  end }
+  gm.notify(name .. ": " .. m.done:lower() .. s .. (extra.note or "") ..
+            (revealed and ", and revealed" or "") .. ".", actions)
   return true
 end
 
@@ -442,6 +480,272 @@ function gm.markDead(page)
   local how = editor.prompt("How did " .. gm.name(page) .. " die? (optional)", "")
   if how == nil then return false end
   return gm.mark(page, "dead", how:match("^%s*(.-)%s*$"))
+end
+
+------------------------------------------------------------------ items
+
+-- The Planning page a link in the adventure names: World/Items/Tube, a
+-- path from this space's root, or a name that only one page ends with.
+function gm.resolve(ref)
+  ref = ref:match("^%s*(.-)%s*$"):gsub("%.md$", "")
+  local prefix = gm.config.planningPrefix
+  if space.pageExists(prefix .. ref) then return prefix .. ref end
+  if ref:startsWith(prefix) and space.pageExists(ref) then return ref end
+  local tail, found = "/" .. ref:lower(), nil
+  for _, page in ipairs(gm.planningPages()) do
+    if ("/" .. page:lower()):endsWith(tail) then
+      if found then return nil end
+      found = page
+    end
+  end
+  return found
+end
+
+local function int(n)
+  return string.format("%d", n)
+end
+
+-- "a grin", "an arrow", "a use"
+local function a(noun)
+  local an = noun:match("^[aeiouAEIOU]") and not noun:match("^[uU][^aeiouAEIOU][aeiouAEIOU]")
+  return (an and "an " or "a ") .. noun
+end
+
+-- What a page hands out: each GM Party count on it that names an item, as
+-- { item, page, count, text, unit, units, at }, with the count for the
+-- party as it is now. The count is read by running the expression with a
+-- stand-in for party.count that keeps the rule it is given.
+function gm.handouts(page, text)
+  local out = {}
+  text = text or (space.pageExists(page) and space.readPage(page)) or ""
+  if not (party and party.value) or not text:find("item%s*=") then return out end
+  local nodes = {}
+  local function walk(node)
+    if node.type == "LuaDirective" then
+      nodes[#nodes + 1] = node
+    elseif node.children then
+      for _, child in ipairs(node.children) do walk(child) end
+    end
+  end
+  walk(markdown.parseMarkdown(text))
+  for _, node in ipairs(nodes) do
+    local src = text:sub(node.from + 3, node.to - 1)
+    if src:match("^%s*party%.count%s*[{(]") and src:find("item%s*=") then
+      local rules = {}
+      local stand = setmetatable({
+        count = function(spec)
+          rules[#rules + 1] = spec
+          return ""
+        end,
+      }, { __index = party })
+      pcall(function()
+        spacelua.evalExpression(spacelua.parseExpression(src), { party = stand })
+      end)
+      for _, spec in ipairs(rules) do
+        local item = type(spec) == "table" and type(spec.item) == "string" and gm.resolve(spec.item)
+        local ok, count = pcall(party.value, spec)
+        local shown, face = pcall(party.count, spec)
+        if item and ok and shown then
+          out[#out + 1] = {
+            item = item, page = page, count = count, text = face.markdown, at = node.from,
+            unit = spec[1], units = spec[2] or party.plural(spec[1]),
+          }
+        end
+      end
+    end
+  end
+  return out
+end
+
+-- The items a page shows part of with ![[...]], such as their rules.
+function gm.transcludedItems(text)
+  local out, at, fence = {}, 0, nil
+  if not text:find("![[", 1, true) then return out end
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local mark = line:sub(1, 3)
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      for ref in line:gsub("`[^`]*`", ""):gmatch("!%[%[([^%]|#]+)") do
+        local item = gm.resolve(ref)
+        if item and gm.kind(item) == "Items" then out[#out + 1] = { item = item, at = at } end
+      end
+    end
+    at = at + #line + 1
+  end
+  return out
+end
+
+-- The items a page hands out or shows, in page order and not counting the
+-- page itself, and what the page hands out of each.
+function gm.itemsOn(page)
+  if not space.pageExists(page) then return {}, {} end
+  local text = space.readPage(page)
+  local all, given = {}, {}
+  for _, h in ipairs(gm.handouts(page, text)) do
+    all[#all + 1] = h
+    given[h.item] = given[h.item] or h
+  end
+  for _, t in ipairs(gm.transcludedItems(text)) do all[#all + 1] = t end
+  table.sort(all, function(x, y) return x.at < y.at end)
+  local items, seen = {}, { [page] = true }
+  for _, x in ipairs(all) do
+    if not seen[x.item] then
+      seen[x.item] = true
+      items[#items + 1] = x.item
+    end
+  end
+  return items, given
+end
+
+-- Every page that hands an item out, first by page name.
+function gm.handoutsOf(item)
+  local out = {}
+  for _, page in ipairs(gm.planningPages()) do
+    local text = space.readPage(page)
+    if text:find("item%s*=") then
+      for _, h in ipairs(gm.handouts(page, text)) do
+        if h.item == item then
+          out[#out + 1] = h
+          break
+        end
+      end
+    end
+  end
+  return out
+end
+
+-- Marks an item found. Its uses start at the count on the page it was found
+-- on: `from`, if that page hands it out; else the one page that does, or the
+-- one picked when several do. Nothing handing it out, it has no uses.
+function gm.markFound(item, from)
+  if gm.readState(item).found == "true" then return gm.mark(item, "found") end
+  local choices = {}
+  if from then
+    for _, h in ipairs(gm.handouts(from)) do
+      if h.item == item then
+        choices[1] = h
+        break
+      end
+    end
+  end
+  if #choices == 0 then choices = gm.handoutsOf(item) end
+  local h = choices[1]
+  if #choices > 1 then
+    local pages, notes = {}, {}
+    for i, c in ipairs(choices) do
+      pages[i] = c.page
+      notes[c.page] = c.text
+    end
+    local page = gm.pick("Found", "Where did the party find " .. gm.name(item) .. "?", pages, notes)
+    if not page then return false end
+    for _, c in ipairs(choices) do
+      if c.page == page then h = c end
+    end
+  end
+  if not h then return gm.mark(item, "found") end
+  return gm.mark(item, "found", nil, {
+    fields = {
+      uses = int(h.count), uses_found = int(h.count), unit = h.unit, units = h.units,
+      found_in = '"[[' .. h.page .. ']]"',
+    },
+    entry = "found in [[" .. h.page .. "]], with " .. h.text,
+    note = ", with " .. h.text,
+  })
+end
+
+-- "●●●●○○ 4 of 6 grins left" from a state record or a query's page, or ""
+-- for an item without uses. plain leaves out the pips.
+function gm.usesText(state, plain)
+  local uses, top = tonumber(state.uses), tonumber(state.uses_found)
+  if not uses then return "" end
+  local one, many = state.unit or "use", state.units or "uses"
+  local text
+  if top then
+    text = int(uses) .. " of " .. int(top) .. " " .. (top == 1 and one or many) .. " left"
+  else
+    text = int(uses) .. " " .. (uses == 1 and one or many) .. " left"
+  end
+  if not plain and top and top <= 12 and uses <= top then
+    text = string.rep("●", uses) .. string.rep("○", top - uses) .. " " .. text
+  end
+  return text
+end
+
+-- Spends one of an item's uses (delta -1) or refunds one (+1), with Undo.
+function gm.spend(item, delta)
+  local name, state = gm.name(item), gm.readState(item)
+  local uses, top = tonumber(state.uses), tonumber(state.uses_found)
+  if state.found ~= "true" or not uses then
+    gm.notify(name .. " has no uses to count", nil, "warning")
+    return false
+  end
+  local unit, units = state.unit or "use", state.units or "uses"
+  local after = uses + delta
+  if after < 0 then
+    gm.notify(name .. ": no " .. units .. " left")
+    return false
+  end
+  if top and after > top then
+    gm.notify(name .. ": all " .. int(top) .. " " .. (top == 1 and unit or units) .. " are there already")
+    return false
+  end
+  local path, s = gm.statePath(item), gm.currentSession()
+  local before = gm.read(path)
+  local what = a(unit) .. (delta < 0 and " used" or " refunded")
+  local text = gm.setFrontmatter(before, "uses", int(after))
+  gm.write(path, gm.appendItem(text, "Session " .. s .. ": " .. what .. ", " .. int(after) .. " left"))
+  gm.refresh()
+  gm.notify(name .. ": " .. what .. ". " .. gm.usesText(gm.readState(item), true) .. ".", {
+    { name = "Undo", run = function()
+      gm.write(path, before)
+      gm.refresh()
+      gm.notify("Undone: " .. name .. " is back to " .. gm.usesText(gm.readState(item), true))
+    end },
+  })
+  return true
+end
+
+-- The found items a use can come off (spend) or go back to (refund).
+function gm.withUses(refund)
+  local pages, notes = {}, {}
+  for _, page in ipairs(gm.planningPages()) do
+    if gm.kind(page) == "Items" then
+      local state = gm.readState(page)
+      local uses, top = tonumber(state.uses), tonumber(state.uses_found)
+      if state.found == "true" and uses and (refund and (not top or uses < top) or (not refund and uses > 0)) then
+        pages[#pages + 1] = page
+        notes[page] = gm.usesText(state, true)
+      end
+    end
+  end
+  return pages, notes
+end
+
+-- The item a command acts on: the open page if it is one of `pages`, the
+-- one of them the open page has a row for, or one picked. Also returns the
+-- open page when the item came off its rows, so finding it there takes
+-- that page's count.
+function gm.pickItem(label, help, pages, notes)
+  local current, allowed = editor.getCurrentPage(), {}
+  for _, page in ipairs(pages) do
+    if page == current then return current end
+    allowed[page] = true
+  end
+  if gm.isPlanningPage(current) then
+    local here = {}
+    for _, item in ipairs((gm.itemsOn(current))) do
+      if allowed[item] then here[#here + 1] = item end
+    end
+    if #here == 1 then return here[1], current end
+    if #here > 1 then
+      local item = gm.pick(label, help, here, notes)
+      return item, item and current or nil
+    end
+  end
+  return gm.pick(label, help, pages, notes)
 end
 
 function gm.reveal(page)
@@ -582,6 +886,40 @@ function gm.button(label, run, primary)
   }
 end
 
+-- An item's uses, and the buttons to spend and refund one, added to a bar.
+local function usesParts(item, state, add, note)
+  local uses, top = tonumber(state.uses), tonumber(state.uses_found)
+  if state.found ~= "true" or not uses then return end
+  local unit = state.unit or "use"
+  note(gm.usesText(state))
+  if uses > 0 then add(gm.button("Use " .. a(unit), function() gm.spend(item, -1) end)) end
+  if not top or uses < top then
+    add(gm.button("Refund " .. a(unit), function() gm.spend(item, 1) end))
+  end
+end
+
+-- A row on a page's bar for an item the page hands out or shows: found or
+-- not, the uses left, and whether the players can see the item's page.
+function gm.itemRow(item, from, handout)
+  local state = gm.readState(item)
+  local spec = { class = "gmkit-item" }
+  local function add(x) spec[#spec + 1] = x end
+  local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
+  note("**[[" .. item .. "|" .. gm.name(item) .. "]]**")
+  if state.found == "true" then
+    note("✓ Found in session " .. (state.found_session or "?"))
+    usesParts(item, state, add, note)
+    if not gm.isRevealed(item) then
+      note("○ Hidden from players")
+      add(gm.button("Reveal", function() gm.reveal(item) end))
+    end
+  else
+    if handout then note(handout.text .. " here") end
+    add(gm.button("Mark found", function() gm.markFound(item, from) end))
+  end
+  return dom.div(spec)
+end
+
 -- The bar across the top of an adventure page: what the players can see,
 -- what the party has done, and a button for each thing not yet recorded.
 function gm.bar(page)
@@ -603,21 +941,26 @@ function gm.bar(page)
     note("○ Hidden from players")
     add(gm.button("Reveal", function() gm.reveal(page) end))
   end
-  for _, mark in ipairs({ "met", "dead", "visited" }) do
+  for _, mark in ipairs({ "met", "dead", "visited", "found" }) do
     local m = gm.marks[mark]
     if can[mark] then
       if state[m.field] == m.value then
         note((mark == "dead" and "† " or "✓ ") .. m.done .. (state[m.session] or "?"))
       elseif mark == "dead" then
         add(gm.button("Mark dead…", function() gm.markDead(page) end))
+      elseif mark == "found" then
+        add(gm.button("Mark found", function() gm.markFound(page) end))
       else
         add(gm.button("Mark " .. mark, function() gm.mark(page, mark) end))
       end
     end
   end
+  if can.found then usesParts(page, state, add, note) end
   if space.pageExists(gm.statePath(page)) then
     note("[[" .. gm.statePath(page) .. "|Play state]]")
   end
+  local items, given = gm.itemsOn(page)
+  for _, item in ipairs(items) do add(gm.itemRow(item, page, given[item])) end
   return widget.new { display = "block", html = dom.div(spec) }
 end
 ```
@@ -689,6 +1032,41 @@ command.define {
 }
 
 command.define {
+  name = "GM: Mark Found",
+  run = function()
+    local pages, notes = gm.markable("found")
+    local page, from = gm.pickItem("Found", "What did the party find? Recorded for session " ..
+                                   gm.currentSession() .. ".", pages, notes)
+    if page then gm.markFound(page, from) end
+  end
+}
+
+local function useCommand(refund)
+  return function()
+    local pages, notes = gm.withUses(refund)
+    if #pages == 0 then
+      gm.notify(refund and "Nothing the party found is missing a use" or
+                "Nothing the party found has a use left")
+      return
+    end
+    local item = gm.pickItem(refund and "Refund" or "Use", refund and
+      "Which item gets a use back?" or "Which item did they use? Recorded for session " ..
+      gm.currentSession() .. ".", pages, notes)
+    if item then gm.spend(item, refund and 1 or -1) end
+  end
+end
+
+command.define {
+  name = "GM: Spend Use",
+  run = useCommand(false)
+}
+
+command.define {
+  name = "GM: Refund Use",
+  run = useCommand(true)
+}
+
+command.define {
   name = "GM: Log Decision",
   key = "Ctrl-Alt-d",
   run = function() gm.logDecision() end
@@ -736,6 +1114,17 @@ event.listen {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
+}
+
+/* A row of its own for each item the page hands out or shows. */
+.gmkit-item {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--editor-widget-background-color);
 }
 
 /* The widget's own Copy and Reload overlay would cover the bar's buttons. */

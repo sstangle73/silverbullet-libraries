@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.5.0"
+version: "1.6.0"
 ---
 
 # GM Book
@@ -62,6 +62,21 @@ GM Party does this: on the page its numbers show your party's count, and in prin
 
 A query's table, a button or anything else with no Markdown to give can't print. The builder names the pages that hold one, and prints the expression as code. Bake those first with `Baked Sections: Update`.
 
+## One page shown in another
+
+SilverBullet shows `![[Page]]` inside the page that holds it, or `![[Page#Section]]` for the section under one heading, down to the next heading of the same level. A scene can show an item's rules this way, and the item's page stays the one place they are written. Put each on a line of its own.
+
+A book doesn't print the same text twice. Where the page shown is in the book, the builder prints a pointer to it instead, from that page's title and the section:
+
+    *See Lantern: Rules.*
+
+A page that isn't in the book is printed in place: the section, with its headings moved in under the heading above, its expressions printed, and its `## DM Only` sections left out of the player edition. The player edition also leaves out a pointer to a section it doesn't have. A page or section that can't be found prints nothing, and the build names it.
+
+To print every one in place, or to word the pointer your own way (`%s` is the page and section):
+
+    config.set("gmBook.transclusions", "inline")
+    config.set("gmBook.see", "*For more, see %s.*")
+
 ## Building from a larger space
 
 A build reads the pages that sit beside GM Book's own `Library/` folder, and writes `Build/` there. Installed at `Library/Storie/GM Book`, that is the whole space.
@@ -74,7 +89,8 @@ An adventure folder can also be part of a larger space, as `Planning/` is when a
 
 - Frontmatter stripped
 - Expressions printed, as in *Live values*. A line that held only an expression printing nothing goes too.
-- `[[Some/Path/Page]]` becomes `Page`; `[[Page|Label]]` becomes `Label`
+- `![[Page#Section]]` becomes a pointer to it, or the section itself, as in *One page shown in another*
+- `[[Some/Path/Page]]` becomes `Page`; `[[Page#Section]]` becomes `Page`; `[[Page|Label]]` becomes `Label`
 - Baked-section markers removed, rendered bodies kept
 - `> **note**` and `> **warning**` blockquotes become Homebrewery `{{note}}` boxes. A warning keeps a `warning` class, so a brew's style can set it apart.
 - A section's headings dropped a level
@@ -109,6 +125,10 @@ gmbook.config = {
   paginate     = true,
   -- SilverBullet admonition -> Homebrewery box classes
   admonitions  = { note = "note", warning = "note,warning" },
+  -- ![[Page#Section]] of a page the book prints: "see" points to it, and
+  -- "inline" prints it in place. %s is the page's title and the section.
+  transclusions = "see",
+  see          = "*See %s.*",
 }
 
 gmbook.editions = {
@@ -140,6 +160,9 @@ end
 function gmbook.delink(text)
   text = text:gsub("%[%[[^%]|]*|([^%]]*)%]%]", "%1")
   text = text:gsub("%[%[([^%]]*)%]%]", function(p)
+    local page, heading = p:match("^(.-)#(.*)$")
+    if page == "" then return heading end
+    p = page or p
     return p:match("([^/]+)$") or p
   end)
   return text
@@ -295,9 +318,192 @@ function gmbook.print(text)
   return text, left
 end
 
-function gmbook.render(text, playerEdition, section)
+-- A transclusion alone on its line, ![[Page]] or ![[Page#Section]], as the
+-- page and the section. Media such as images are left alone.
+local MEDIA = { png = true, jpg = true, jpeg = true, gif = true, svg = true, webp = true,
+  pdf = true, mp3 = true, mp4 = true, ogg = true, wav = true, webm = true }
+
+local function transclusionOf(line)
+  local inner = line:match("^%s*!%[%[(.-)%]%]%s*$")
+  if not inner or inner:find("[%[%]]") then return nil end
+  inner = inner:gsub("|.*$", "")
+  local page, heading = inner:match("^(.-)#(.*)$")
+  page = page or inner
+  local ext = page:match("%.(%w+)$")
+  if page == "" or page:find("^%$") or (ext and MEDIA[ext:lower()]) then return nil end
+  page = page:gsub("%.md$", "")
+  return page, (heading ~= "" and heading or nil)
+end
+
+-- The page a link in the book names: relative to the book's folder, as its
+-- pages write links, or a whole path, or the one page whose path ends so.
+function gmbook.resolve(ref, root)
+  for _, name in ipairs({ root .. ref, ref }) do
+    if space.pageExists(name) then return name end
+  end
+  local names = query[[
+    from p = index.pages()
+    select p.name
+  ]]
+  local tail, found = "/" .. ref:lower(), nil
+  for _, name in ipairs(names) do
+    if name:startsWith(root) and ("/" .. name:lower()):endsWith(tail) then
+      if found then return nil end
+      found = name
+    end
+  end
+  return found
+end
+
+-- The section under a heading, as SilverBullet cuts it for ![[Page#Section]]:
+-- from the heading to the next heading of the same level. The whole text
+-- without a heading, and nil if the heading isn't there.
+function gmbook.section(text, heading)
+  if not heading then return text end
+  local out, level, fence = nil, nil, nil
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local mark, hashes, title = line:sub(1, 3), nil, nil
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      hashes, title = line:match("^(#+)%s+(.-)%s*$")
+    end
+    if out then
+      if hashes and #hashes == level then break end
+      out[#out + 1] = line
+    elseif hashes and #hashes <= 6 and title == heading then
+      out, level = { line }, #hashes
+    end
+  end
+  return out and table.concat(out, "\n") or nil
+end
+
+-- A page's title: its first # heading, or the last part of its name.
+local function titleOf(text, name)
+  local fence
+  for line in (gmbook.stripFrontmatter(text) .. "\n"):gmatch("([^\n]*)\n") do
+    local mark = line:sub(1, 3)
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      local title = line:match("^#%s+(.-)%s*$")
+      if title then return title end
+    end
+  end
+  return name:match("([^/]+)$") or name
+end
+
+-- Moves text's headings so the highest of them sits at level `top`.
+local function shiftHeadings(text, top)
+  local lines, highest, fence = {}, nil, nil
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+  for _, line in ipairs(lines) do
+    local mark = line:sub(1, 3)
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      local hashes = line:match("^(#+)%s")
+      if hashes and (not highest or #hashes < highest) then highest = #hashes end
+    end
+  end
+  if not highest or highest == top then return text end
+  fence = nil
+  for i, line in ipairs(lines) do
+    local mark = line:sub(1, 3)
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      local hashes, rest = line:match("^(#+)(%s.*)$")
+      if hashes then
+        lines[i] = string.rep("#", math.max(1, math.min(6, #hashes + top - highest))) .. rest
+      end
+    end
+  end
+  return table.concat(lines, "\n")
+end
+
+-- What a transclusion prints as, as lines: a pointer, the section itself,
+-- or nothing. level is the heading the transclusion sits under.
+local function transcluded(ref, heading, playerEdition, ctx, level, depth)
+  local page = gmbook.resolve(ref, ctx.root)
+  local text = page and ctx.read(page)
+  local body = text and gmbook.section(gmbook.stripFrontmatter(text), heading)
+  if not body then
+    ctx.missing[ctx.from .. " (" .. ref .. (heading and ("#" .. heading) or "") .. ")"] = true
+    return {}
+  end
+  if ctx.mode ~= "inline" and ctx.inBook[page] then
+    if playerEdition and heading and
+        not gmbook.section(gmbook.stripSecrets(gmbook.stripFrontmatter(text)), heading) then
+      return {}  -- the player edition doesn't have that section
+    end
+    local label = titleOf(text, page) .. (heading and (": " .. heading) or "")
+    return { (ctx.see:gsub("%%s", function() return label end)) }
+  end
+  if depth >= 4 then return {} end
+  local left
+  body, left = gmbook.print(body)
+  if #left > 0 then ctx.live[ctx.from] = true end
+  if playerEdition then body = gmbook.stripSecrets(body) end
+  body = gmbook.transclude(body, playerEdition, ctx, depth + 1)
+  body = shiftHeadings(body, math.max(level, 1) + 1)
+  body = body:gsub("^%s*\n", ""):gsub("%s+$", "")
+  local lines = {}
+  for line in (body .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+  return lines
+end
+
+-- Puts each ![[Page]] or ![[Page#Section]] on a line of its own in as what
+-- it prints: see "One page shown in another".
+function gmbook.transclude(text, playerEdition, ctx, depth)
+  if not text:find("![[", 1, true) then return text end
+  local out, fence, level = {}, nil, 0
+  local skipBlank, needBlank = false, false
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local mark, ref, heading = line:sub(1, 3), nil, nil
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      local hashes = line:match("^(#+)%s")
+      if hashes then level = #hashes end
+      ref, heading = transclusionOf(line)
+    end
+    if ref then
+      local lines = transcluded(ref, heading, playerEdition, ctx, level, depth or 0)
+      if #lines == 0 then
+        -- printing nothing, the line goes, and one of the blank lines around it
+        skipBlank = #out == 0 or out[#out] == ""
+      else
+        -- what it prints stands apart from the text around it
+        if #out > 0 and out[#out] ~= "" then out[#out + 1] = "" end
+        for _, l in ipairs(lines) do out[#out + 1] = l end
+        skipBlank, needBlank = false, true
+      end
+    elseif skipBlank and line == "" then
+      skipBlank = false
+    else
+      if needBlank and line ~= "" then out[#out + 1] = "" end
+      skipBlank, needBlank = false, false
+      out[#out + 1] = line
+    end
+  end
+  return table.concat(out, "\n")
+end
+
+function gmbook.render(text, playerEdition, section, ctx)
   text = gmbook.stripFrontmatter(text)
   if playerEdition then text = gmbook.stripSecrets(text) end
+  if ctx then text = gmbook.transclude(text, playerEdition, ctx) end
   if section then text = gmbook.demote(text) end
   text = gmbook.unbake(text)
   text = gmbook.delink(text)
@@ -308,23 +514,32 @@ end
 function gmbook.compile(editions)
   local root = gmbook.root()
   local pages = gmbook.pages(root)
-  local report = { pages = #pages, live = {}, written = {} }
+  local report = { pages = #pages, live = {}, written = {}, missing = {} }
   if #pages == 0 then return report end
-  local texts = {}
+  local texts, cache = {}, {}
+  local ctx = {
+    root = root, inBook = {}, missing = {}, live = {},
+    mode = config.get("gmBook.transclusions", gmbook.config.transclusions),
+    see = config.get("gmBook.see", gmbook.config.see),
+    read = function(name)
+      if cache[name] == nil then cache[name] = space.pageExists(name) and space.readPage(name) or false end
+      return cache[name] or nil
+    end,
+  }
   for i, p in ipairs(pages) do
+    ctx.inBook[p.name] = true
     local text, left = gmbook.print(space.readPage(p.name))
     texts[i] = text
-    if #left > 0 then
-      report.live[#report.live + 1] = p.name:sub(#root + 1)
-    end
+    if #left > 0 then ctx.live[p.name:sub(#root + 1)] = true end
   end
   local sep = "\n\n" .. gmbook.config.pageBreak .. "\n\n"
   for _, edition in ipairs(editions) do
     local parts = {}
     for i, text in ipairs(texts) do
       local section = pages[i].book_section == true
+      ctx.from = pages[i].name:sub(#root + 1)
       if i > 1 then parts[#parts + 1] = section and "\n\n" or sep end
-      parts[#parts + 1] = gmbook.render(text, edition == "player", section)
+      parts[#parts + 1] = gmbook.render(text, edition == "player", section, ctx)
     end
     local out = gmbook.output(edition, root)
     local book, sheets = table.concat(parts), nil
@@ -332,6 +547,12 @@ function gmbook.compile(editions)
     space.writePage(out, book)
     report.written[#report.written + 1] = { edition = edition, page = out, sheets = sheets }
   end
+  for _, p in ipairs(pages) do
+    local name = p.name:sub(#root + 1)
+    if ctx.live[name] then report.live[#report.live + 1] = name end
+  end
+  for what in pairs(ctx.missing) do report.missing[#report.missing + 1] = what end
+  table.sort(report.missing)
   return report
 end
 
@@ -362,6 +583,13 @@ function gmbook.build(editions)
       " expressions with nothing to print, so they print as code: " ..
       table.concat(report.live, ", ") ..
       ". Run Baked Sections: Update on them and build again."
+  end
+  if #report.missing > 0 then
+    kind = "warning"
+    message = message .. " " .. #report.missing .. (#report.missing == 1 and
+      " transclusion names a page or section that can't be found, so it prints nothing: " or
+      " transclusions name pages or sections that can't be found, so they print nothing: ") ..
+      table.concat(report.missing, ", ") .. "."
   end
   editor.flashNotification(message, kind, { timeout = 12000, actions = actions })
   return report

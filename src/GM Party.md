@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.0.3"
+version: "1.1.0"
 ---
 
 # GM Party
@@ -62,6 +62,12 @@ These work anywhere a sentence does, table cells included.
 `min` and `max` bound a count, `round = "down"` rounds a fraction down, and `example = false` leaves off the count for the adventure's party. A second name is the plural where adding an s won't do: `{"wolf", "wolves"}`. `cap = true` starts it with a capital.
 
 Hover over a number on the page to see its rule and what it prints.
+
+**A count that is an item's uses** can name the item, as a link in the adventure would: `item = "World/Items/Tube"`. It changes nothing on the page or in print. GM Kit 2.3 or later reads it: when the party finds the item there, its uses start at this count for the party at that moment.
+
+    It holds ${party.count{"grin", plus = 1, item = "World/Items/Tube"}}.
+
+**The number itself**, for a library that needs it: `party.value{"grin", plus = 1}` is 6 for a party of five, and `party.value(1)` is the party's size plus one. A second argument asks for another size: `party.value({"grin"}, 7)` is 7.
 
 ## One each
 
@@ -132,6 +138,10 @@ Baked Sections alone couldn't do this: they bake whole blocks, never a number in
 The XP Budget per Character and Experience Points by Challenge Rating tables below come from the SRD 5.2.1. A book that prints them carries the same statement:
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## Changes in 1.1
+
+A count can name the item whose uses it is, and `party.value` gives the number behind a count or a story number.
 
 ## Implementation
 
@@ -429,6 +439,16 @@ end
 function party.count(spec)
   local live, _, note = countForms(spec)
   return face(live, note)
+end
+
+-- The number behind a count or a story number, for this party or for size
+-- characters: party.value{"grin", plus = 1} is 6 for a party of five.
+function party.value(spec, size)
+  size = size or party.get().size
+  if type(spec) == "table" and type(spec[1]) == "string" then return countFor(spec, size) end
+  if type(spec) == "number" then spec = { plus = spec } end
+  spec = spec or {}
+  return (spec.times or 1) * size + (spec.plus or 0)
 end
 
 local function eachArgs(count, one, many)

@@ -20,7 +20,7 @@ description: "A manager for recurring tasks"
 name: "GM Kit"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Kit.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Kit.md
-description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so they stay publishable. Mark NPCs met or dead, places visited, log decisions."
+description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so they stay publishable. Mark NPCs met or dead, places visited, items found and their uses left; log decisions."
 ---
 name: "GM Beyond"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Beyond.md
