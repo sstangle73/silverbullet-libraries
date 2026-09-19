@@ -5,7 +5,7 @@ version: 1.0.0
 ---
 
 # Storie Library Repository
-Custom SilverBullet libraries — task management, and a set of tools for running tabletop RPG campaigns.
+Custom SilverBullet libraries — task management, a set of tools for running tabletop RPG campaigns, a switcher for servers with several spaces, and chapter tools for a wiki about a book or a series.
 
 ## Installation
 Use the `Library: Install` command with the URL to this page.
@@ -31,5 +31,20 @@ name: "GM Book"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Book.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Book.md
 description: "Compile a campaign space into DM and player manuscripts, transformed for Homebrewery."
+---
+name: "Space Switcher"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Space%20Switcher.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Space%20Switcher.md
+description: "A strip across the top of every page that names the space you are in and links to your other spaces, for a server with several SilverBullet spaces, nested ones included."
+---
+name: "Chapter Navigation"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Chapter%20Navigation.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Chapter%20Navigation.md
+description: "Previous, contents and next links above and below every chapter page, read from the index, with an optional link to a companion page for the same chapter."
+---
+name: "Appearances"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Appearances.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Appearances.md
+description: "Lists the chapters that name the current page in their frontmatter, grouped by book, for a wiki about a book or a series."
 ---
 ```
