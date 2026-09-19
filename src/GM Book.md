@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.6.1"
+version: "1.6.2"
 ---
 
 # GM Book
@@ -468,7 +468,7 @@ local function transcluded(ref, heading, playerEdition, ctx, level, depth)
   if playerEdition then body = gmbook.stripSecrets(body) end
   body = gmbook.transclude(body, playerEdition, ctx, depth + 1)
   body = shiftHeadings(body, math.max(level, 1) + 1)
-  body = body:gsub("^%s*\n", ""):gsub("%s+$", "")
+  body = (body:gsub("^%s*\n", "")):gsub("%s+$", "")
   local lines = {}
   for line in (body .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
   return lines

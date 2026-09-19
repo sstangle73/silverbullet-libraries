@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "2.3.0"
+version: "2.3.1"
 ---
 
 # GM Kit
@@ -83,6 +83,10 @@ Publishing writes into `Player/` and **replaces** what is there, except `Player/
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
 
+## Changes in 2.3.1
+
+Marks work in SilverBullet. Every mark, and the bar of any page that shows an item's rules, stopped with "attempt to index a userdata value": Space Lua won't call a method straight on the two values `gsub` gives, and plain Lua, where the libraries were tested, quietly keeps the first.
+
 ## Changes in 2.3
 
 Items: *Mark found*, uses counted from the page that hands an item out, *Use* and *Refund* with *Undo*, and a row on the bar of each page that hands out an item or shows its rules. Finding offers to reveal rather than revealing.
@@ -153,10 +157,12 @@ function gm.setFrontmatter(text, key, value)
     return "---\n" .. line .. "\n---\n\n" .. text
   end
   local found = false
-  head = ("\n" .. head):gsub("\n" .. key .. ":[^\n]*", function()
+  -- gsub gives two values, and Space Lua won't call a method on the pair:
+  -- the brackets keep the first.
+  head = (("\n" .. head):gsub("\n" .. key .. ":[^\n]*", function()
     found = true
     return "\n" .. line
-  end, 1):sub(2)
+  end, 1)):sub(2)
   if not found then head = head .. line .. "\n" end
   return "---\n" .. head .. "---\n" .. rest
 end
@@ -568,7 +574,7 @@ function gm.transcludedItems(text)
     elseif mark == "```" or mark == "~~~" then
       fence = mark
     else
-      for ref in line:gsub("`[^`]*`", ""):gmatch("!%[%[([^%]|#]+)") do
+      for ref in (line:gsub("`[^`]*`", "")):gmatch("!%[%[([^%]|#]+)") do
         local item = gm.resolve(ref)
         if item and gm.kind(item) == "Items" then out[#out + 1] = { item = item, at = at } end
       end
