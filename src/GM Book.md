@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.6.0"
+version: "1.6.1"
 ---
 
 # GM Book
@@ -85,12 +85,15 @@ An adventure folder can also be part of a larger space, as `Planning/` is when a
 
     config.set("gmBook", { root = "Adventure/" })
 
+In the larger space, a wiki link written for the adventure folder, such as `[[World/Items/Lantern]]`, isn't the page's full path, so SilverBullet finds it by the end of its path. Any other page whose path ends the same way, such as notes kept at the same path in another folder, matches too, and SilverBullet asks which one you meant. A relative Markdown link, `[Lantern](<../../World/Items/Lantern>)`, starts from the folder of the page it is on, so it opens the same page in either space. The builder prints it as its label.
+
 ## What it transforms
 
 - Frontmatter stripped
 - Expressions printed, as in *Live values*. A line that held only an expression printing nothing goes too.
 - `![[Page#Section]]` becomes a pointer to it, or the section itself, as in *One page shown in another*
 - `[[Some/Path/Page]]` becomes `Page`; `[[Page#Section]]` becomes `Page`; `[[Page|Label]]` becomes `Label`
+- `[Label](<../Some/Page>)`, a link to a page in the space, becomes `Label`. Images and links to websites stay.
 - Baked-section markers removed, rendered bodies kept
 - `> **note**` and `> **warning**` blockquotes become Homebrewery `{{note}}` boxes. A warning keeps a `warning` class, so a brew's style can set it apart.
 - A section's headings dropped a level
@@ -164,6 +167,16 @@ function gmbook.delink(text)
     if page == "" then return heading end
     p = page or p
     return p:match("([^/]+)$") or p
+  end)
+  -- [Label](../Some/Page) is a page in the space, so it prints as its label.
+  -- An image or a link to a website stays as it is.
+  text = text:gsub("(!?)%[([^%]]*)%](%b())", function(bang, label, target)
+    local url = target:sub(2, -2)
+    url = url:match("^<(.*)>$") or url
+    if bang == "" and not url:find("://", 1, true)
+        and not url:match("^mailto:") and not url:match("^tel:") then
+      return label
+    end
   end)
   return text
 end
