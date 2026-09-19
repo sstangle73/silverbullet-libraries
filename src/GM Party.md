@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 # GM Party
@@ -24,14 +24,14 @@ The page side needs nothing else. For print, GM Book 1.5 or later prints each of
 The most specific source wins:
 
 1. **Character pages.** Every page with `type: pc` is a member, at its own `level`. `away: true` sits a character out of tonight's fights and hand-outs.
-2. **A party page.** Before the characters exist, a page with `type: party` gives `size` and `level`. Its `level` also stands in for a character page that has none.
+2. **A party page.** Before the characters exist, a page with `type: party` gives `characters` and `level`. Its `level` also stands in for a character page that has none. The count can't be called `size`: SilverBullet keeps that name for a page's size in bytes, and a page's own attributes win over its frontmatter.
 3. **The adventure's party.** With neither, as in an adventure space on its own, the party is the one the adventure is written for: five, unless the settings say otherwise.
 
 A party page's frontmatter:
 
     ---
     type: party
-    size: 5
+    characters: 5
     level: 1
     ---
 
@@ -246,9 +246,10 @@ end
 ------------------------------------------------------------------ the party
 
 -- The party, from the most specific source there is: the character pages
--- (type: pc), then a page describing the party (type: party, with size and
--- level), then the party the adventure is written for. Read again at most
--- every two seconds, since every number on a page asks for it.
+-- (type: pc), then a page describing the party (type: party, with characters
+-- and level), then the party the adventure is written for. Read again at most
+-- every two seconds, since every number on a page asks for it. A page's own
+-- size, in bytes, would shadow a frontmatter "size", hence "characters".
 function party.get()
   local now = os.time()
   if party.cached and now - party.cached.at < 2 then return party.cached.value end
@@ -275,9 +276,9 @@ function party.get()
     end
   else
     local size = party.setting("book")
-    if home and num(home.size) then
+    if home and num(home.characters) then
       source = "party"
-      size = math.floor(num(home.size))
+      size = math.floor(num(home.characters))
     end
     for i = 1, size do members[i] = { level = level } end
   end
@@ -628,15 +629,24 @@ local function rosterText(roster, article)
   return andList(items)
 end
 
--- Party sizes lo to hi at one level: the column heads for the creatures whose
--- number changes, and a row per size with those numbers, the XP and the
--- difficulty.
-local function sizeRows(spec, level, lo, hi)
+-- The party sizes a table covers: smallest to largest, and one more row for
+-- a party outside that range.
+local function tableSizes(extra)
+  local sizes = {}
+  if extra and extra < party.setting("smallest") then sizes[1] = extra end
+  for n = party.setting("smallest"), party.setting("largest") do sizes[#sizes + 1] = n end
+  if extra and extra > party.setting("largest") then sizes[#sizes + 1] = extra end
+  return sizes
+end
+
+-- Party sizes at one level: the column heads for the creatures whose number
+-- changes, and a row per size with those numbers, the XP and the difficulty.
+local function sizeRows(spec, level, sizes)
   local rosters = {}
-  for n = lo, hi do rosters[n] = party.roster(spec, n) end
+  for _, n in ipairs(sizes) do rosters[n] = party.roster(spec, n) end
   local columns, heads = {}, {}
-  for i, r in ipairs(rosters[lo]) do
-    for n = lo + 1, hi do
+  for i, r in ipairs(rosters[sizes[1]]) do
+    for _, n in ipairs(sizes) do
       if rosters[n][i].count ~= r.count then
         columns[#columns + 1] = i
         heads[#heads + 1] = capital(r.creature.many)
@@ -645,7 +655,7 @@ local function sizeRows(spec, level, lo, hi)
     end
   end
   local rows = {}
-  for n = lo, hi do
+  for _, n in ipairs(sizes) do
     local counts = {}
     for _, i in ipairs(columns) do counts[#counts + 1] = rosters[n][i].count end
     local xp = totalXP(rosters[n])
@@ -721,7 +731,7 @@ function party.fightPrint(spec)
     "**Adjusting the Encounter.** " .. party.adjustments(spec),
   }
   if spec.table ~= false then
-    local heads, rows = sizeRows(spec, level, party.setting("smallest"), party.setting("largest"))
+    local heads, rows = sizeRows(spec, level, tableSizes())
     local head, rule = { "Characters" }, {}
     for _, h in ipairs(heads) do head[#head + 1] = h end
     head[#head + 1] = "XP"
@@ -822,11 +832,9 @@ function party.fightLive(spec)
     for _, w in ipairs(warnings) do items[#items + 1] = dom.li { __rawText = w } end
     add(dom.ul(items))
   end
-  local lo = math.min(party.setting("smallest"), n)
-  local hi = math.max(party.setting("largest"), n)
   local sum = 0
   for _, l in ipairs(levels) do sum = sum + l end
-  local heads, rows = sizeRows(spec, math.floor(sum / n + 0.5), lo, hi)
+  local heads, rows = sizeRows(spec, math.floor(sum / n + 0.5), tableSizes(n))
   local headCells = { dom.th { __rawText = "Characters" } }
   for _, h in ipairs(heads) do headCells[#headCells + 1] = dom.th { __rawText = h } end
   headCells[#headCells + 1] = dom.th { __rawText = "XP" }
@@ -914,10 +922,10 @@ function party.summary()
     lines[#lines + 1] = "**" .. count .. ":** " .. table.concat(names, ", ") .. "."
   elseif p.source == "party" then
     lines[#lines + 1] = "**" .. count .. (#all > 0 and (", " .. levelText(all)) or "") ..
-      ",** from `size` and `level` on [[" .. p.page .. "]], until there are character pages."
+      ",** from `characters` and `level` on [[" .. p.page .. "]], until there are character pages."
   else
     lines[#lines + 1] = "**" .. count .. ",** the party the adventure is written for. " ..
-      "A page with `type: party` and a `size` and `level`, or the character pages, would say otherwise."
+      "A page with `type: party`, `characters` and `level`, or the character pages, would say otherwise."
   end
   if #p.here < p.size then
     lines[#lines + 1] = capital(party.word(#p.here)) .. " here tonight."
