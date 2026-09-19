@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.0.1"
+version: "1.0.2"
 ---
 
 # GM Party
@@ -308,9 +308,12 @@ end
 -- A value on the page: the HTML with its tooltip, and the same text as the
 -- Markdown face, which is what a table, Copy, Baked Sections and GM Kit's
 -- publishing use. A hint passes "" as its Markdown, so it stays on the page.
+-- The HTML goes as text, not an element: SilverBullet shares one result
+-- between identical expressions on a page, and an element can only be in
+-- one place, so the second copy would take it from the first.
 local function face(live, note, class, markdown)
   return widget.new {
-    html = dom.span { class = class or "gmparty-n", title = note, __rawText = live },
+    html = dom.span { class = class or "gmparty-n", title = note, __rawText = live }.outerHTML,
     markdown = markdown or live,
     display = "inline",
   }
@@ -458,7 +461,7 @@ function party.each(count, one, many)
       (shared > count and " or more" or "") .. "."
   end
   return face(text, "One " .. one .. " for each character here tonight, from the top of the list. " ..
-    "The party is " .. whence(p) .. ". Prints nothing.", "gmparty-each", "")
+    "Party of " .. party.word(p.size) .. ", " .. whence(p) .. ". Prints nothing.", "gmparty-each", "")
 end
 
 ------------------------------------------------------------------ the rules
@@ -810,7 +813,7 @@ function party.fightLive(spec)
   })
   if n == 0 then
     add(dom.div { text("Nobody here tonight.") })
-    return widget.new { html = dom.div(parts), markdown = party.fightPrint(spec), display = "block" }
+    return widget.new { html = dom.div(parts).outerHTML, markdown = party.fightPrint(spec), display = "block" }
   end
   local roster = party.roster(spec, n)
   local xp = totalXP(roster)
@@ -849,7 +852,8 @@ function party.fightLive(spec)
     body[#body + 1] = dom.tr(cells)
   end
   add(dom.table { dom.thead { dom.tr(headCells) }, dom.tbody(body) })
-  return widget.new { html = dom.div(parts), markdown = party.fightPrint(spec), display = "block" }
+  -- As text, like face(): identical fights on a page share one result.
+  return widget.new { html = dom.div(parts).outerHTML, markdown = party.fightPrint(spec), display = "block" }
 end
 
 local function checkFight(spec)
