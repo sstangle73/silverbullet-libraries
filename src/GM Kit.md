@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "2.1.0"
+version: "2.2.0"
 ---
 
 # GM Kit
@@ -62,6 +62,14 @@ On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a l
 ## Players' own notes
 
 Publishing writes into `Player/` and **replaces** what is there, except `Player/Notes/`, which it never touches.
+
+## Live values in players' copies
+
+The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 2.2
+
+Publishing puts in the Markdown face of widgets that have one, as above.
 
 ## Changes in 2.1
 
@@ -143,6 +151,32 @@ function gm.stripSecrets(text)
     if not skipping then out[#out + 1] = line end
   end
   return table.concat(out, "\n")
+end
+
+-- A players' copy carries no code the Player space can't run: each ${...}
+-- that gives a widget with a Markdown face goes in as that Markdown. The rest
+-- stays live, so a query in the Player space sees only what was published.
+function gm.print(text)
+  if not text:find("${", 1, true) then return text end
+  local found = {}
+  local function walk(node)
+    if node.type == "LuaDirective" then
+      found[#found + 1] = node
+    elseif node.children then
+      for _, child in ipairs(node.children) do walk(child) end
+    end
+  end
+  walk(markdown.parseMarkdown(text))
+  for i = #found, 1, -1 do
+    local node = found[i]
+    local ok, value = pcall(function()
+      return spacelua.evalExpression(spacelua.parseExpression(text:sub(node.from + 3, node.to - 1)))
+    end)
+    if ok and type(value) == "table" and value._isWidget and type(value.markdown) == "string" then
+      text = text:sub(1, node.from) .. value.markdown .. text:sub(node.to + 1)
+    end
+  end
+  return text
 end
 
 -- Reads a page, saving it first if it is open so no typing is lost.
@@ -476,7 +510,7 @@ function gm.publish()
   local added, updated, same = 0, 0, 0
   for _, page in ipairs(pages) do
     local copy = gm.playerCopy(page)
-    local text = gm.stripSecrets(space.readPage(page))
+    local text = gm.print(gm.stripSecrets(space.readPage(page)))
     if not space.pageExists(copy) then
       gm.write(copy, text)
       added = added + 1

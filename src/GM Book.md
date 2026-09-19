@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # GM Book
@@ -48,9 +48,19 @@ A long chapter can be split into a page of its own for each scene or section. Gi
 
 A section carries on the chapter before it. There is no page break ahead of it, and its headings drop a level, so its `#` title prints as a section of that chapter. Number sections with two decimals: with one, YAML reads a tenth section's 18.10 as 18.1, the same as the first.
 
-## Bake before you build
+## Live values
 
-Live `${...}` expressions only exist inside SilverBullet. Run `Baked Sections: Update` on any page with queries first. The builder names the pages still holding live expressions, rather than shipping gaps.
+A `${...}` expression prints as what it gives. Text and numbers print as they are, so `${1 + 2}` prints 3, and a widget prints its Markdown face.
+
+A library can print something other than what the page shows. The builder evaluates every expression with the tables in `gmbook.printers` standing in for globals of the same name, so a library that puts its own table there decides what its functions print:
+
+    gmbook = gmbook or {}
+    gmbook.printers = gmbook.printers or {}
+    gmbook.printers.mylib = mylib.printed
+
+GM Party does this: on the page its numbers show your party's count, and in print they show the rule behind it.
+
+A query's table, a button or anything else with no Markdown to give can't print. The builder names the pages that hold one, and prints the expression as code. Bake those first with `Baked Sections: Update`.
 
 ## Building from a larger space
 
@@ -63,6 +73,7 @@ An adventure folder can also be part of a larger space, as `Planning/` is when a
 ## What it transforms
 
 - Frontmatter stripped
+- Expressions printed, as in *Live values*. A line that held only an expression printing nothing goes too.
 - `[[Some/Path/Page]]` becomes `Page`; `[[Page|Label]]` becomes `Label`
 - Baked-section markers removed, rendered bodies kept
 - `> **note**` and `> **warning**` blockquotes become Homebrewery `{{note}}` boxes. A warning keeps a `warning` class, so a brew's style can set it apart.
@@ -232,6 +243,58 @@ function gmbook.demote(text)
   return table.concat(out, "\n")
 end
 
+-- Libraries that print something other than what the page shows put a
+-- table here, and it stands in for their global while an expression prints.
+gmbook.printers = gmbook.printers or {}
+
+-- Each ${...} put in as what it prints: text and numbers as they are, a
+-- widget as its Markdown face. Found with SilverBullet's own parser, so it
+-- sees exactly what the page renders. Returns the text, and the expressions
+-- left in because they give nothing to print.
+function gmbook.print(text)
+  if not text:find("${", 1, true) then return text, {} end
+  local found = {}
+  local function walk(node)
+    if node.type == "LuaDirective" then
+      found[#found + 1] = node
+    elseif node.children then
+      for _, child in ipairs(node.children) do walk(child) end
+    end
+  end
+  walk(markdown.parseMarkdown(text))
+  local left = {}
+  for i = #found, 1, -1 do
+    local node = found[i]
+    local source = text:sub(node.from + 3, node.to - 1)
+    local ok, value = pcall(function()
+      return spacelua.evalExpression(spacelua.parseExpression(source), gmbook.printers)
+    end)
+    local out
+    if ok then
+      if type(value) == "string" then
+        out = value
+      elseif type(value) == "number" then
+        out = tostring(value)
+      elseif type(value) == "table" and value._isWidget and type(value.markdown) == "string" then
+        out = value.markdown
+      end
+    end
+    local head, tail = text:sub(1, node.from), text:sub(node.to + 1)
+    if not out then
+      table.insert(left, 1, source)
+    elseif out == "" and (head == "" or head:match("\n[ \t]*$")) and tail:match("^[ \t]*\n") then
+      -- an expression alone on its line, printing nothing: the line goes too
+      head = head:gsub("[ \t]*$", "")
+      tail = tail:gsub("^[ \t]*\n", "", 1)
+      if (head == "" or head:sub(-2) == "\n\n") and tail:sub(1, 1) == "\n" then tail = tail:sub(2) end
+      text = head .. tail
+    else
+      text = head .. out .. tail
+    end
+  end
+  return text, left
+end
+
 function gmbook.render(text, playerEdition, section)
   text = gmbook.stripFrontmatter(text)
   if playerEdition then text = gmbook.stripSecrets(text) end
@@ -249,8 +312,9 @@ function gmbook.compile(editions)
   if #pages == 0 then return report end
   local texts = {}
   for i, p in ipairs(pages) do
-    texts[i] = space.readPage(p.name)
-    if texts[i]:find("%${") then
+    local text, left = gmbook.print(space.readPage(p.name))
+    texts[i] = text
+    if #left > 0 then
       report.live[#report.live + 1] = p.name:sub(#root + 1)
     end
   end
@@ -294,8 +358,8 @@ function gmbook.build(editions)
   if #report.live > 0 then
     kind = "warning"
     message = message .. " " .. #report.live ..
-      (#report.live == 1 and " page still holds" or " pages still hold") ..
-      " live expressions, which print as code: " ..
+      (#report.live == 1 and " page holds" or " pages hold") ..
+      " expressions with nothing to print, so they print as code: " ..
       table.concat(report.live, ", ") ..
       ". Run Baked Sections: Update on them and build again."
   end

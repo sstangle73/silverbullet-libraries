@@ -32,6 +32,11 @@ uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Boo
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Book.md
 description: "Compile a campaign space into DM and player manuscripts, transformed for Homebrewery."
 ---
+name: "GM Party"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Party.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Party.md
+description: "Numbers, hand-outs and fights that follow the party's size: live for your table, general rules in print. 2024 encounter math from the SRD 5.2.1."
+---
 name: "Space Switcher"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Space%20Switcher.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Space%20Switcher.md
