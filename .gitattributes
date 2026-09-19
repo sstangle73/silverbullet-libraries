@@ -1,0 +1,4 @@
+# SilverBullet saves pages with LF line endings, and the spaces that use these
+# libraries keep byte-identical copies of them. Keep every checkout LF as well,
+# whatever core.autocrlf says, so a copied page matches its source exactly.
+* text=auto eol=lf
