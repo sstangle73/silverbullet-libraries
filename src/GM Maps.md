@@ -1,9 +1,9 @@
 ---
 tags: meta/library
 name: "Library/Storie/GM Maps"
-description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan on the wiki, printed as one in the book, and sized to the party. Terrain and creatures are told apart by pattern and glyph, so a map reads in grayscale."
+description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain and creatures are told apart by pattern and glyph, so a map reads in grayscale."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # GM Maps
@@ -12,7 +12,7 @@ Write an encounter area once, as a picture you can read in the source, and let t
 
 | On the page | In print |
 |---|---|
-| A plan at five feet to a square, with the creatures on it, each linked to its Bestiary entry | The same plan, the creatures left off, with its legend under it |
+| A plan at five feet to a square, with the creatures on it, each linked to its Bestiary entry | The same plan, the creatures left off |
 
 This is for the ground a fight happens on, not for dungeons. A map here is one room, one clearing, one yard: the walls, the floor, the ways out, and where the creatures start.
 
@@ -59,6 +59,8 @@ A legend line is a single character, then what kind of square it is, then what i
 
     , rough bramble and root - difficult terrain
 
+**The character is for you, not for the reader.** It says which squares of the grid this line is about, and it is nowhere on the drawing: a wall is hatching, difficult ground is a stipple, a way out is an arrow. So the map draws its own key, and each row of it is the square as the map draws it — a hatched swatch, a stippled one, the arrow pointing the way it points on the grid, the creature's own ring and letter. Nothing asks the reader to match a symbol they cannot see.
+
 | Kind | Drawn as | For |
 |---|---|---|
 | `wall` | hatched, with a heavy edge | Something that blocks: rock, thorn, a building's side |
@@ -93,7 +95,7 @@ Nothing here carries meaning by colour. Walls are hatched, difficult ground is s
 
 ## How it prints
 
-The map on the page is a widget: an SVG plan with the creatures on it, each a link to its Bestiary entry, and a Markdown face that is the same plan with the creatures left off, followed by the legend as a list.
+The map on the page is a widget: an SVG plan with the creatures on it, each a link to its Bestiary entry, and a Markdown face that is the same plan with the creatures left off. The key is inside the drawing either way, so there is one figure to place and nothing to keep in step with it.
 
 That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what GM Kit publishes to the players. So **a map the players can be handed is what a map prints anyway**, in the book and on their own wiki, with nothing having to be stripped out of it. A creature's square is drawn as the ground under it, so that map has no bare squares left where the creatures were standing.
 
@@ -109,12 +111,12 @@ That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what 
 
 The DM's edition then carries both: the map to run the fight from, and the clean one to turn round and show the table. The players' edition and their wiki carry only the clean one, and whether they ever see it is a decision, not something the library makes for you.
 
-The SVG declares its own width and height, so GM Book 1.7 or later measures it and breaks the page around it. A map is never taller than a column; one drawn larger is scaled down to fit.
+The SVG declares its own width and height, key included, so GM Book 1.7 or later measures it and breaks the page around it. A map is never taller than a column; one drawn larger is scaled down to fit. `maps.legendMarkdown` gives the same lines as text for a page that wants to say them in words as well.
 
 | Option | Means |
 |---|---|
 | `tokens` | Creatures in the printed map as well as on the page. Off by default |
-| `legend` | The legend under the map. On by default |
+| `legend` | The key inside the map. On by default |
 | `width` | The map's width in px, for a map that should print narrower than a column |
 
 ## Settings
@@ -565,44 +567,87 @@ end
 
 -- The patterns that tell one kind of square from another without colour: a
 -- hatch for walls, a stipple for difficult ground.
-local function defs(cell, ink, id)
-  local h = round(cell / 4)
+-- One pair of patterns at the scale of a square, and a second at the scale
+-- of a key swatch, so a swatch a few px across still shows enough hatching
+-- and enough dots to read as the squares it stands for.
+local function patterns(size, ink, id, suffix)
+  local h = round(size / 4)
   return table.concat {
-    "<defs>",
-    '<pattern id="', id, '-hatch" width="', h, '" height="', h,
+    '<pattern id="', id, '-hatch', suffix, '" width="', h, '" height="', h,
       '" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">',
       '<line x1="0" y1="0" x2="0" y2="', h, '" stroke="', ink,
-      '" stroke-width="', round(cell / 11), '"/></pattern>',
-    '<pattern id="', id, '-stipple" width="', round(cell / 3), '" height="', round(cell / 3),
-      '" patternUnits="userSpaceOnUse">',
-      '<circle cx="', round(cell / 6), '" cy="', round(cell / 6), '" r="',
-      round(cell / 20), '" fill="', ink, '" opacity="0.6"/></pattern>',
-    "</defs>",
+      '" stroke-width="', round(size / 11), '"/></pattern>',
+    '<pattern id="', id, '-stipple', suffix, '" width="', round(size / 3),
+      '" height="', round(size / 3), '" patternUnits="userSpaceOnUse">',
+      '<circle cx="', round(size / 6), '" cy="', round(size / 6), '" r="',
+      round(size / 20), '" fill="', ink, '" opacity="0.6"/></pattern>',
+  }
+end
+
+local function defs(cell, key, ink, id)
+  return table.concat {
+    "<defs>", patterns(cell, ink, id, ""), patterns(key, ink, id, "k"), "</defs>",
   }
 end
 
 -- An exit's arrow, pointing out of the map through the wall it sits in.
-local function arrow(x, y, cell, r, c, rows, cols, ink)
-  local cx, cy, s = x + cell / 2, y + cell / 2, cell * 0.32
-  local dx, dy = 0, -1
-  if r == rows then dx, dy = 0, 1
-  elseif c == 1 then dx, dy = -1, 0
-  elseif c == cols then dx, dy = 1, 0
-  end
+-- An arrow through a square, pointing the way dx, dy says.
+local function arrowAt(cx, cy, s, dx, dy, ink, weight)
   local tx, ty = cx + dx * s, cy + dy * s
   local bx, by = cx - dx * s, cy - dy * s
   local px, py = -dy * s * 0.8, dx * s * 0.8
   local nx, ny = tx - dx * s * 0.8, ty - dy * s * 0.8
   return table.concat {
     '<line x1="', round(bx), '" y1="', round(by), '" x2="', round(tx), '" y2="', round(ty),
-      '" stroke="', ink, '" stroke-width="', round(cell / 11), '" stroke-linecap="round"/>',
+      '" stroke="', ink, '" stroke-width="', round(weight), '" stroke-linecap="round"/>',
     '<polygon points="', round(tx), ",", round(ty), " ", round(nx + px), ",", round(ny + py),
       " ", round(nx - px), ",", round(ny - py), '" fill="', ink, '"/>',
   }
 end
 
+-- Which way a way out leads: out through the wall it sits in.
+local function exitDir(r, c, rows, cols)
+  if r == rows then return 0, 1 end
+  if c == 1 then return -1, 0 end
+  if c == cols then return 1, 0 end
+  return 0, -1
+end
+
+-- A creature: its legend letter in a ring, the same at any size, so the key
+-- shows exactly what stands on the map.
+local function ringed(cx, cy, size, ch, ink)
+  return table.concat {
+    '<circle cx="', round(cx), '" cy="', round(cy), '" r="', round(size * 0.33),
+      '" fill="#ffffff" stroke="', ink, '" stroke-width="', round(size / 13), '"/>',
+    '<text x="', round(cx), '" y="', round(cy + size * 0.14), '" text-anchor="middle" fill="', ink,
+      '" font-family="Georgia, serif" font-size="', round(size * 0.44), '">', esc(ch), "</text>",
+  }
+end
+
+-- A label broken to fit, at about this font's average character width. An
+-- estimate is enough: it only decides where a long line wraps, and it comes
+-- out the same under every Lua, which is what a built edition needs.
+local function wrapLabel(text, room, size)
+  local per = math.max(8, math.floor(room / (size * 0.47)))
+  if #text <= per then return { text } end
+  local lines, line = {}, ""
+  for word in text:gmatch("%S+") do
+    if line == "" then
+      line = word
+    elseif #line + 1 + #word <= per then
+      line = line .. " " .. word
+    else
+      lines[#lines + 1] = line
+      line = word
+    end
+  end
+  if line ~= "" then lines[#lines + 1] = line end
+  return lines
+end
+
 -- The map as an SVG plan: the squares, the creatures if they are wanted, a
--- scale bar and how far it runs. Returns the SVG, its height and any note.
+-- scale bar, and a key drawn with the same ink and the same patterns as the
+-- squares it explains. Returns the SVG, its height and any note.
 function maps.svg(m, opts)
   opts = opts or {}
   local grid, note = maps.grid(m)
@@ -613,22 +658,41 @@ function maps.svg(m, opts)
   local id = opts.id or patternId(m, grid, opts.tokens)
   local width = opts.width or maps.setting("width")
   local pad, foot = 1, 24
+  local KEY_ROW, KEY_SWATCH, KEY_SIZE = 17, 15, 10.5
+
+  -- what the key explains: every square the map actually draws, in the
+  -- order the legend was written, with the creatures only where they show
+  local keys = {}
+  if opts.legend ~= false then
+    local drawn = {}
+    for r = 1, rows do
+      for c = 1, cols do drawn[grid[r][c]] = true end
+    end
+    for _, ch in ipairs(m.order) do
+      local e = m.legend[ch]
+      if e and drawn[ch] and (opts.tokens or e.kind ~= "token") then
+        keys[#keys + 1] = e
+      end
+    end
+  end
+
   -- a whole number of px to a square, so every line in the drawing lands on
   -- an integer and the text of it is the same in any Lua
   local cell = math.min(34, math.floor((width - pad * 2) / cols))
   local max = opts.maxHeight or 860
-  if cell * rows + pad * 2 + foot > max then
-    cell = math.floor((max - pad * 2 - foot) / rows)
+  local function extra(n) return pad * 2 + foot + n * KEY_ROW end
+  if cell * rows + extra(#keys) > max then
+    cell = math.floor((max - extra(#keys)) / rows)
   end
   if cell < 6 then cell = 6 end
   local gw, gh = cell * cols, cell * rows
-  local height = gh + pad * 2 + foot
+  -- the key gets the whole column to write in, however narrow the grid is
+  local canvas = #keys > 0 and math.max(gw + pad * 2, width) or (gw + pad * 2)
   local out = {}
   local function put(...) out[#out + 1] = table.concat({...}) end
-  put('<svg xmlns="http://www.w3.org/2000/svg" width="', round(gw + pad * 2),
-      '" height="', round(height), '" viewBox="0 0 ', round(gw + pad * 2), " ", round(height),
-      '" style="display:block" role="img" aria-label="', esc(m.title or "Encounter map"), '">')
-  put(defs(cell, ink, id))
+  local svgAt = #out + 1
+  put("")  -- the opening tag, once the key has said how tall this is
+  put(defs(cell, KEY_SWATCH, ink, id))
   local under = ground(m, grid)
   for r = 1, rows do
     for c = 1, cols do
@@ -667,16 +731,10 @@ function maps.svg(m, opts)
       local kind = e and e.kind or "floor"
       local x, y = pad + (c - 1) * cell, pad + (r - 1) * cell
       if kind == "exit" then
-        put(arrow(x, y, cell, r, c, rows, cols, ink))
+        local dx, dy = exitDir(r, c, rows, cols)
+        put(arrowAt(x + cell / 2, y + cell / 2, cell * 0.32, dx, dy, ink, cell / 11))
       elseif kind == "token" and opts.tokens then
-        local cx, cy = round(x + cell / 2), round(y + cell / 2)
-        local body = table.concat {
-          '<circle cx="', cx, '" cy="', cy, '" r="', round(cell * 0.33),
-            '" fill="#ffffff" stroke="', ink, '" stroke-width="', round(cell / 13), '"/>',
-          '<text x="', cx, '" y="', round(cy + cell * 0.14), '" text-anchor="middle" fill="', ink,
-            '" font-family="Georgia, serif" font-size="', round(cell * 0.44), '">', esc(ch),
-            "</text>",
-        }
+        local body = ringed(x + cell / 2, y + cell / 2, cell, ch, ink)
         local _, url = tokenPage(e.page)
         if url and opts.link then
           put('<a href="', esc(url), '"><title>', esc(e.text), "</title>", body, "</a>")
@@ -703,38 +761,91 @@ function maps.svg(m, opts)
   put('<text x="', round(pad + gw), '" y="', round(by + 4), '" text-anchor="end" fill="', ink,
       '" font-family="Georgia, serif" font-size="9.5">',
       esc(round(cols * m.scale) .. " " .. m.units .. " across"), "</text>")
+
+  -- The key. Each row shows the square as the map draws it, because the
+  -- character in the source is not on the drawing: a hatched swatch for a
+  -- wall, a stippled one for difficult ground, the arrow for a way out, the
+  -- creature's own ring and letter. Nothing here asks the reader to match a
+  -- symbol they cannot see.
+  local y = pad + gh + foot
+  for _, e in ipairs(keys) do
+    local cy = y + KEY_SWATCH / 2
+    local swatch
+    if e.kind == "wall" or e.kind == "rough" then
+      swatch = table.concat {
+        '<rect x="', round(pad), '" y="', round(y), '" width="', round(KEY_SWATCH),
+          '" height="', round(KEY_SWATCH), '" fill="url(#', id,
+          e.kind == "wall" and "-hatchk" or "-stipplek", ')"/>',
+        '<rect x="', round(pad), '" y="', round(y), '" width="', round(KEY_SWATCH),
+          '" height="', round(KEY_SWATCH), '" fill="none" stroke="', ink,
+          '" stroke-width="0.6" opacity="0.5"/>',
+      }
+    elseif e.kind == "exit" then
+      local dx, dy = 0, -1
+      for r = 1, rows do
+        for c = 1, cols do
+          if grid[r][c] == e.char then dx, dy = exitDir(r, c, rows, cols) end
+        end
+      end
+      swatch = arrowAt(pad + KEY_SWATCH / 2, cy, KEY_SWATCH * 0.36, dx, dy, ink, 1.6)
+    elseif e.kind == "token" then
+      swatch = ringed(pad + KEY_SWATCH / 2, cy, KEY_SWATCH * 1.45, e.char, ink)
+    else
+      swatch = table.concat {
+        '<rect x="', round(pad), '" y="', round(y), '" width="', round(KEY_SWATCH),
+          '" height="', round(KEY_SWATCH), '" fill="none" stroke="', ink,
+          '" stroke-width="0.6" opacity="0.5"/>',
+      }
+    end
+    local left = pad + KEY_SWATCH + 6
+    local lines = wrapLabel(e.text, canvas - left - pad, KEY_SIZE)
+    local label = {}
+    for i, line in ipairs(lines) do
+      label[#label + 1] = table.concat {
+        '<text x="', round(left), '" y="', round(cy + 3.5 + (i - 1) * (KEY_SIZE + 1.5)),
+          '" fill="', ink, '" font-family="Georgia, serif" font-size="', round(KEY_SIZE), '">',
+          esc(line), "</text>",
+      }
+    end
+    label = table.concat(label)
+    if e.kind == "token" and opts.link then
+      local _, href = tokenPage(e.page)
+      if href then
+        put('<a href="', esc(href), '">', swatch, label, "</a>")
+      else
+        put(swatch, label)
+      end
+    else
+      put(swatch, label)
+    end
+    y = y + KEY_ROW + (#lines - 1) * (KEY_SIZE + 1.5)
+  end
+
+  local height = #keys > 0 and (y + pad) or (gh + pad * 2 + foot)
+  out[svgAt] = table.concat {
+    '<svg xmlns="http://www.w3.org/2000/svg" width="', round(canvas),
+    '" height="', round(height), '" viewBox="0 0 ', round(canvas), " ", round(height),
+    '" style="display:block" role="img" aria-label="', esc(m.title or "Encounter map"), '">',
+  }
   put("</svg>")
   return table.concat(out), round(height), note
 end
 
 ------------------------------------------------------------------ the legend
 
--- The legend as Markdown, in the order it was written.
+-- The legend as text, for a page that wants to say in words what the key
+-- shows in ink: what each kind of square is, without the source character,
+-- which is not on the drawing. The map itself no longer needs this.
 function maps.legendMarkdown(m, opts)
   opts = opts or {}
   local lines = {}
   for _, ch in ipairs(m.order) do
     local e = m.legend[ch]
     if e and (opts.tokens or e.kind ~= "token") then
-      lines[#lines + 1] = "- **" .. ch .. "** — " .. e.text
+      lines[#lines + 1] = "- " .. e.text
     end
   end
   return table.concat(lines, "\n")
-end
-
-local function legendHTML(m, opts)
-  local items = {}
-  for _, ch in ipairs(m.order) do
-    local e = m.legend[ch]
-    if e and (opts.tokens or e.kind ~= "token") then
-      local label = esc(e.text)
-      local _, url = tokenPage(e.page)
-      if url then label = '<a href="' .. esc(url) .. '">' .. label .. "</a>" end
-      items[#items + 1] = '<li><b class="gmmaps-key">' .. esc(ch) .. "</b> " .. label .. "</li>"
-    end
-  end
-  if #items == 0 then return "" end
-  return '<ul class="gmmaps-legend">' .. table.concat(items) .. "</ul>"
 end
 
 ------------------------------------------------------------------ drawing one
@@ -767,39 +878,34 @@ function maps.source(ref)
   return block(text), (page and page.name) or name
 end
 
--- The map on the page and in print. On the page it is an SVG with the
--- creatures on it, each linked to its Bestiary entry; in print it is the
--- same plan without them, and the legend under it.
+-- The map on the page and in print, one drawing either way, with its key
+-- inside it. On the page the creatures are on it and linked to their
+-- Bestiary entries; in print they are left off unless the map is asked for
+-- them, and a link would have nowhere to go.
 function maps.draw(ref, opts)
   if type(ref) == "table" and opts == nil then ref, opts = nil, ref end
   opts = opts or {}
   local source = maps.source(ref)
   if not source then return missing(ref or maps.here()) end
   local m = maps.parse(source, opts.printing)
-  local live, _, note = maps.svg(m, { tokens = true, link = true, width = opts.width })
+  local live, _, note = maps.svg(m, {
+    tokens = true, link = true, width = opts.width, legend = opts.legend,
+  })
   if not live then return missing(ref or maps.here()) end
-  -- print never carries a link: there is nowhere for it to go on paper
   local printed = (maps.svg(m, {
-    tokens = opts.tokens == true, link = false, width = opts.width,
+    tokens = opts.tokens == true, link = false, width = opts.width, legend = opts.legend,
   }))
 
   local html = { '<div class="gmmaps">', live }
-  if opts.legend ~= false then html[#html + 1] = legendHTML(m, { tokens = true }) end
   for _, w in ipairs(m.warn) do
     html[#html + 1] = '<div class="gmmaps-warn">' .. esc(w) .. "</div>"
   end
   if note then html[#html + 1] = '<div class="gmmaps-warn">' .. esc(note) .. "</div>" end
   html[#html + 1] = "</div>"
 
-  local md = { printed }
-  if opts.legend ~= false then
-    local legend = maps.legendMarkdown(m, { tokens = opts.tokens == true })
-    if legend ~= "" then md[#md + 1] = legend end
-  end
-
   return widget.new {
     html = table.concat(html),
-    markdown = table.concat(md, "\n\n"),
+    markdown = printed,
     display = "block",
   }
 end
