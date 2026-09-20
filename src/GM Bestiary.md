@@ -1,0 +1,297 @@
+---
+tags: meta/library
+name: "Library/Storie/GM Bestiary"
+description: "Creature pages that point at official stat blocks: the reference links to a compendium on the page, and cites the book and its entry in print. Wires those pages to GM Party's fights."
+author: "Steven Storie"
+version: "1.0.0"
+---
+
+# GM Bestiary
+
+Describe a creature once, on a page of its own, and say there which published stat block to run it with. On the page the reference is a link to the compendium you run from. In print it is a citation: the book and the entry that holds it, and never a URL.
+
+Copying a stat block into your space is a licensing problem and a maintenance one at the same time. Naming it is what published adventures do, and it is enough: a monster book is alphabetical, so the book and the entry find it.
+
+| On the page | In print |
+|---|---|
+| [Vine Blight](https://www.dndbeyond.com/monsters/5195252-vine-blight) — Monster Manual, *Blights* | Vine Blight — Monster Manual, *Blights* |
+
+## A creature's page
+
+A page with `type: monster` describes one creature. What it is and how it behaves is yours to write; the frontmatter says what to run it as.
+
+    ---
+    type: monster
+    statblock: Vine Blight
+    entry: Blights
+    source: Monster Manual
+    cr: "1/2"
+    ddb: https://www.dndbeyond.com/monsters/5195252-vine-blight
+    ---
+
+| Key | Means |
+|---|---|
+| `statblock` | The published stat block to run it with. Leave it out for a creature with no official match |
+| `entry` | The entry in the book that holds that stat block, where the book files it under another name: a vine blight is under *Blights*, a raven under *Animals* |
+| `source` | The book it is in. The settings give the one to assume |
+| `cr` | Its Challenge Rating, which a fight that uses it is checked against |
+| `ddb` | A link to it, for running from a screen |
+
+Then, wherever the reference belongs on the page:
+
+    ## Run it as
+
+    ${bestiary.ref()}
+
+`bestiary.ref()` reads the page it is on, and the page being printed during a build. `bestiary.ref("World/Monsters/Strangler")` reads another, named as a link in the adventure would write it: a path written for an adventure folder also finds the page in a space that holds that folder.
+
+**A creature with no official match** carries no `statblock`, and its reference reads *Original to this book.* Its stat block belongs on its own page.
+
+## In a fight
+
+GM Party 1.2 or later lets a creature in a fight name its page, and this library tells it what to print:
+
+    ${party.fight { "The old orchard", level = 1, difficulty = "low",
+      {1, "strangler", cr = "1/2", page = "World/Monsters/Strangler"},
+      {6, "creeper", cr = "1/8", step = 2, min = 2, page = "World/Monsters/Creeper"},
+    }}
+
+The fight then carries a line of its own: links on the page, citations in print.
+
+    **The creatures.** Strangler — Monster Manual, *Blights* (vine blight). Creeper — Monster Manual, *Blights* (twig blight).
+
+The stat block's name comes after the citation when the fight calls the creature something else, which is the usual case for a creature the adventure has renamed. A fight whose `cr` disagrees with the one on the creature's page is flagged on the page, and so is a creature whose page isn't there.
+
+## Settings
+
+    config.set("gmBestiary", {
+      type = "monster",
+      source = "Monster Manual",
+      original = "original to this book",
+      lowercase = true,
+    })
+
+`source` is the book to assume for a page that names none. `original` is what a creature with no official stat block reads as. `lowercase` writes a stat block's name in lower case where it appears inside a sentence, which suits creatures named as common nouns; set it false for a book whose creatures are named individuals.
+
+## How it prints
+
+The reference on the page is a widget: HTML with the compendium link, and a Markdown face with the same link, so a table, Copy, Baked Sections and GM Kit's publishing all keep it. GM Book 1.6.3 or later evaluates each expression with `bestiary` standing for `bestiary.printed`, which gives the citation without the URL. This library puts `bestiary.printed` in `gmbook.printers`, where GM Book looks for it, and sets `party.creatureRef`, where GM Party looks.
+
+## Implementation
+
+```space-lua
+-- priority: 10
+bestiary = bestiary or {}
+
+bestiary.config = {
+  type      = "monster",              -- the page type that describes a creature
+  source    = "Monster Manual",       -- the book assumed for a page that names none
+  original  = "original to this book",-- a creature with no official stat block
+  lowercase = true,                   -- a stat block's name inside a sentence
+}
+
+function bestiary.setting(key)
+  local value = config.get("gmBestiary." .. key, nil)
+  if value == nil then value = bestiary.config[key] end
+  return value
+end
+
+local function lower(s)
+  if bestiary.setting("lowercase") then return s:lower() end
+  return s
+end
+
+local function capital(s)
+  return s:sub(1, 1):upper() .. s:sub(2)
+end
+
+------------------------------------------------------------------ the pages
+
+-- Every creature page in the space, by name and by the tail of its path, so
+-- a path written for an adventure folder finds the page in a space that
+-- holds that folder. Read at most once every two seconds.
+function bestiary.all()
+  local now = os.time()
+  if bestiary.cached and now - bestiary.cached.at < 2 then return bestiary.cached.value end
+  local kind = bestiary.setting("type")
+  local pages = query[[
+    from p = index.pages()
+    where p.type == kind
+    order by p.name
+  ]]
+  local byName, byTail = {}, {}
+  for _, p in ipairs(pages) do
+    byName[p.name] = p
+    -- a tail two pages share is no use for finding either
+    local parts = {}
+    for part in p.name:gmatch("[^/]+") do parts[#parts + 1] = part end
+    local tail = ""
+    for i = #parts, 1, -1 do
+      tail = parts[i] .. (tail == "" and "" or ("/" .. tail))
+      byTail[tail] = byTail[tail] == nil and p or false
+    end
+  end
+  local value = { byName = byName, byTail = byTail }
+  bestiary.cached = { at = now, value = value }
+  return value
+end
+
+-- Forget the pages read last, so the next reference reads them again.
+function bestiary.refresh()
+  bestiary.cached = nil
+end
+
+-- The creature page a path names, or nil.
+function bestiary.find(ref)
+  if type(ref) ~= "string" or ref == "" then return nil end
+  local all = bestiary.all()
+  return all.byName[ref] or all.byTail[ref] or nil
+end
+
+-- What a creature page says: its page, its title, and the stat block to run
+-- it with. Nil for a page that isn't there or isn't a creature.
+function bestiary.creature(ref)
+  local p = bestiary.find(ref)
+  if not p then return nil end
+  return {
+    page = p.name,
+    title = p.name:match("([^/]+)$") or p.name,
+    statblock = p.statblock,
+    entry = p.entry,
+    source = p.source or bestiary.setting("source"),
+    cr = p.cr,
+    url = p.ddb,
+  }
+end
+
+------------------------------------------------------------------ the citation
+
+-- "Monster Manual, *Blights*": the book, and the entry that holds the stat
+-- block when the book files it under another name.
+function bestiary.where(c)
+  if not c.statblock then return nil end
+  local out = c.source
+  if c.entry and c.entry ~= c.statblock then out = out .. ", *" .. c.entry .. "*" end
+  return out
+end
+
+-- The citation for a creature a fight calls something of its own: the book
+-- and entry, then the stat block's name where that isn't what the fight
+-- calls it. "Monster Manual, *Blights* (vine blight)".
+function bestiary.cite(c, called)
+  local where = bestiary.where(c)
+  if not where then return bestiary.setting("original") end
+  if called and c.statblock:lower() ~= called:lower() then
+    where = where .. " (" .. lower(c.statblock) .. ")"
+  end
+  return where
+end
+
+-- The reference as the page shows it and as it prints: the stat block's
+-- name, linked to the compendium on the page only, then where to find it.
+local function forms(c)
+  if not c.statblock then
+    local text = capital(bestiary.setting("original")) .. "."
+    return dom.em { __rawText = text }.outerHTML, "*" .. text .. "*", "*" .. text .. "*"
+  end
+  local where = bestiary.where(c)
+  local tail = where and (" — " .. where) or ""
+  local name
+  if c.url then
+    name = dom.a { href = c.url, target = "_blank", rel = "noopener", __rawText = c.statblock }
+  else
+    name = dom.strong { __rawText = c.statblock }
+  end
+  -- the HTML face is not Markdown, so the entry is italicised as an element
+  local said = { class = "gmbestiary-where" }
+  if c.entry and c.entry ~= c.statblock then
+    said[1] = dom.span { __rawText = " — " .. c.source .. ", " }
+    said[2] = dom.em { __rawText = c.entry }
+  else
+    said[1] = dom.span { __rawText = tail }
+  end
+  local html = dom.span { class = "gmbestiary-ref", name, dom.span(said) }.outerHTML
+  local markdown = c.url and ("[" .. c.statblock .. "](" .. c.url .. ")" .. tail)
+    or ("**" .. c.statblock .. "**" .. tail)
+  return html, markdown, c.statblock .. tail
+end
+
+-- The page a reference reads with no page of its own: the one being printed
+-- during a build, or the one open.
+function bestiary.here()
+  return (gmbook and gmbook.printing) or editor.getCurrentPage()
+end
+
+local function missing(ref)
+  local text = "No creature page for " .. tostring(ref) .. "."
+  return widget.new {
+    html = dom.em { class = "gmbestiary-missing", __rawText = text }.outerHTML,
+    markdown = "*" .. text .. "*",
+    display = "inline",
+  }
+end
+
+-- A creature's reference: the stat block to run it with, linked on the page
+-- and cited in print. With no page, the page it is on.
+function bestiary.ref(ref)
+  local c = bestiary.creature(ref or bestiary.here())
+  if not c then return missing(ref or bestiary.here()) end
+  local html, markdown = forms(c)
+  return widget.new { html = html, markdown = markdown, display = "inline" }
+end
+
+------------------------------------------------------------------ in print
+
+-- What a reference prints as: the citation, with no URL in it. GM Book
+-- evaluates an expression with bestiary standing for this table, and finds
+-- it in gmbook.printers.
+bestiary.printed = setmetatable({
+  ref = function(ref)
+    local c = bestiary.creature(ref or bestiary.here())
+    if not c then return nil end
+    return (select(3, forms(c)))
+  end,
+}, { __index = bestiary })
+
+gmbook = gmbook or {}
+gmbook.printers = gmbook.printers or {}
+gmbook.printers.bestiary = bestiary.printed
+
+------------------------------------------------------------------ in a fight
+
+-- A CR a fight gives a creature that its page disagrees with. A fight
+-- writes the CR it spends XP on, and the page writes the stat block's, so
+-- the two drifting apart is worth catching.
+local function crWarning(c, called, cr)
+  if cr == nil or c.cr == nil then return nil end
+  local function norm(v) return (tostring(v):gsub("%s", "")) end
+  if norm(cr) == norm(c.cr) then return nil end
+  return "The " .. called .. " is CR " .. tostring(cr) .. " here, and CR " ..
+    tostring(c.cr) .. " on " .. c.title .. "."
+end
+
+-- What GM Party shows and prints for a creature that names a page: the page
+-- itself, its citation, and a CR here that disagrees with the page's. The
+-- table isn't replaced: GM Party sorts after this page and shares it.
+party = party or {}
+function party.creatureRef(ref, called, cr)
+  local c = bestiary.creature(ref)
+  if not c then return nil end
+  return { page = c.page, cite = bestiary.cite(c, called), warn = crWarning(c, called, cr) }
+end
+```
+
+```space-style
+.gmbestiary-where {
+  color: var(--subtle-color);
+}
+
+.gmbestiary-missing {
+  color: var(--subtle-color);
+}
+
+.gmbestiary-missing::before {
+  content: "⚠ ";
+  font-style: normal;
+}
+```

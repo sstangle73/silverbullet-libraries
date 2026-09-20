@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.6.2"
+version: "1.6.3"
 ---
 
 # GM Book
@@ -59,6 +59,8 @@ A library can print something other than what the page shows. The builder evalua
     gmbook.printers.mylib = mylib.printed
 
 GM Party does this: on the page its numbers show your party's count, and in print they show the rule behind it.
+
+While a page is being printed, `gmbook.printing` is that page's name, so an expression that reads the page it sits on prints from the right one. It is nil outside a build.
 
 A query's table, a button or anything else with no Markdown to give can't print. The builder names the pages that hold one, and prints the expression as code. Bake those first with `Baked Sections: Update`.
 
@@ -283,12 +285,18 @@ end
 -- table here, and it stands in for their global while an expression prints.
 gmbook.printers = gmbook.printers or {}
 
+-- The page being printed, for an expression that reads the one it sits on.
+-- Nil outside a build.
+gmbook.printing = nil
+
 -- Each ${...} put in as what it prints: text and numbers as they are, a
 -- widget as its Markdown face. Found with SilverBullet's own parser, so it
 -- sees exactly what the page renders. Returns the text, and the expressions
 -- left in because they give nothing to print.
-function gmbook.print(text)
+function gmbook.print(text, page)
   if not text:find("${", 1, true) then return text, {} end
+  local printing = gmbook.printing
+  gmbook.printing = page
   local found = {}
   local function walk(node)
     if node.type == "LuaDirective" then
@@ -328,6 +336,7 @@ function gmbook.print(text)
       text = head .. out .. tail
     end
   end
+  gmbook.printing = printing
   return text, left
 end
 
@@ -463,7 +472,7 @@ local function transcluded(ref, heading, playerEdition, ctx, level, depth)
   end
   if depth >= 4 then return {} end
   local left
-  body, left = gmbook.print(body)
+  body, left = gmbook.print(body, page)
   if #left > 0 then ctx.live[ctx.from] = true end
   if playerEdition then body = gmbook.stripSecrets(body) end
   body = gmbook.transclude(body, playerEdition, ctx, depth + 1)
@@ -541,7 +550,7 @@ function gmbook.compile(editions)
   }
   for i, p in ipairs(pages) do
     ctx.inBook[p.name] = true
-    local text, left = gmbook.print(space.readPage(p.name))
+    local text, left = gmbook.print(space.readPage(p.name), p.name)
     texts[i] = text
     if #left > 0 then ctx.live[p.name:sub(#root + 1)] = true end
   end

@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # GM Party
@@ -92,6 +92,22 @@ Each creature is `{count, name, cr = ...}`, with its count for the adventure's p
 | `from = 6` | Only with six or more characters |
 | `upto = 4` | Only with four or fewer |
 | `plural` | The plural, where adding an s won't do |
+| `page` | The page that describes this creature, as a link in the adventure would write it |
+
+**A creature's own page.** `page = "World/Monsters/Strangler"` names it, and the fight gets a line of its own listing the creatures that have one:
+
+    ${party.fight { "The old orchard", level = 1, difficulty = "low",
+      {1, "strangler", cr = "1/2", page = "World/Monsters/Strangler"},
+      {6, "creeper", cr = "1/8", step = 2, min = 2, page = "World/Monsters/Creeper"},
+    }}
+
+On the page each creature is a link to its own, and one whose page isn't there is flagged. In print the line carries whatever a library that reads those pages gives it, and without one it doesn't print at all. To let a library decide, set `party.creatureRef`: it takes the page a creature names, the creature's name and its CR, and gives back `{ page = <the page it found>, cite = <what to print for it>, warn = <something to flag> }`. GM Bestiary 1.0 or later does this, so a creature prints with the book and entry its page cites, and a CR here that disagrees with the one on the page is flagged.
+
+That fight prints its creatures between the encounter and *Adjusting the Encounter*:
+
+    **The creatures.** Strangler — Monster Manual, *Blights* (vine blight). Creeper — Monster Manual, *Blights* (twig blight).
+
+`creatures` names that line, which is *The creatures* by default.
 
 For the whole fight, `difficulty` is what it is meant to be: low, moderate or high. `note` adds a sentence to *Adjusting the Encounter*, `table = false` leaves the table out of print, and `size` writes the fight for a party other than the adventure's.
 
@@ -138,6 +154,10 @@ Baked Sections alone couldn't do this: they bake whole blocks, never a number in
 The XP Budget per Character and Experience Points by Challenge Rating tables below come from the SRD 5.2.1. A book that prints them carries the same statement:
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## Changes in 1.2
+
+A creature in a fight can name the page that describes it. The fight lists those creatures, as links on the page and with whatever `party.creatureRef` gives them in print.
 
 ## Changes in 1.1
 
@@ -593,6 +613,7 @@ function party.creatures(spec)
       out[#out + 1] = {
         count = c[1], one = one, many = c.plural or party.plural(one), xp = xp, cr = c.cr,
         step = c.step or 0, min = c.min, max = c.max, from = c.from, upto = c.upto,
+        page = c.page,
       }
     end
   end
@@ -738,6 +759,77 @@ function party.adjustments(spec)
   return table.concat(out, " ")
 end
 
+------------------------------------------------------------------ creatures with a page
+
+local function text(s, class)
+  return dom.span { class = class, __rawText = s }
+end
+
+-- The creatures of a fight that name a page, each with the page found for it,
+-- its citation and anything to flag.
+--
+-- party.creatureRef is where a library that reads those pages says what they
+-- hold. It takes the page a creature names, as a link in the adventure would
+-- write it, the creature's name and its CR, and gives back
+-- { page = ..., cite = ..., warn = ... }. Without one, a creature's page is
+-- linked if a page of that name is there, and nothing is printed for it. It
+-- is never set to nil here: a library that sets it may have loaded first, and
+-- every block shares the one table.
+local function referenced(spec)
+  local out = {}
+  for _, c in ipairs(party.creatures(spec)) do
+    if c.page then
+      local ref
+      if party.creatureRef then ref = party.creatureRef(c.page, c.one, c.cr) or {}
+      else ref = { page = space.pageExists(c.page) and c.page or nil } end
+      out[#out + 1] = { creature = c, page = ref.page, cite = ref.cite, warn = ref.warn }
+    end
+  end
+  return out
+end
+
+-- A page's address, the way SilverBullet writes it: the space's base URI and
+-- the page name encoded as the browser encodes it, with the slashes put back.
+-- A Lua encoder would get non-ASCII names wrong, since Space Lua strings are
+-- JavaScript strings, not bytes.
+local function pageURL(page)
+  local base = system.getBaseURI()
+  if not base:endsWith("/") then base = base .. "/" end
+  return base .. (js.window.encodeURIComponent(page):gsub("%%2F", "/"))
+end
+
+local function creaturesTitle(spec)
+  return spec.creatures or "The creatures"
+end
+
+-- The line of citations, for print. Nothing without a library to write them.
+local function creaturesPrint(spec)
+  local parts = {}
+  for _, r in ipairs(referenced(spec)) do
+    if r.cite then parts[#parts + 1] = capital(r.creature.one) .. " — " .. r.cite .. "." end
+  end
+  if #parts == 0 then return nil end
+  return "**" .. creaturesTitle(spec) .. ".** " .. table.concat(parts, " ")
+end
+
+-- The same line on the page: each creature a link to its own page.
+local function creaturesLive(spec)
+  local refs = referenced(spec)
+  if #refs == 0 then return nil end
+  local parts = { class = "gmparty-creatures" }
+  parts[#parts + 1] = text(creaturesTitle(spec) .. ": ", "gmparty-note")
+  for i, r in ipairs(refs) do
+    if i > 1 then parts[#parts + 1] = text(" · ", "gmparty-note") end
+    local label = capital(r.creature.one)
+    if r.page then
+      parts[#parts + 1] = dom.a { href = pageURL(r.page), __rawText = label }
+    else
+      parts[#parts + 1] = text(label .. " (no page)", "gmparty-nopage")
+    end
+  end
+  return dom.div(parts)
+end
+
 -- The fight as printed: for the adventure's party, then how to adjust it.
 function party.fightPrint(spec)
   local written, level = writtenFor(spec), spec.level
@@ -750,9 +842,14 @@ function party.fightPrint(spec)
     "**" .. (titleOf(spec) or "Creatures") .. ".** " .. capital(rosterText(roster, true)) ..
       ": " .. what .. " for " .. party.word(written) .. " level " .. string.format("%d", level) ..
       " characters (" .. party.digits(xp) .. " XP).",
-    "",
-    "**Adjusting the Encounter.** " .. party.adjustments(spec),
   }
+  local creatures = creaturesPrint(spec)
+  if creatures then
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = creatures
+  end
+  lines[#lines + 1] = ""
+  lines[#lines + 1] = "**Adjusting the Encounter.** " .. party.adjustments(spec)
   if spec.table ~= false then
     local heads, rows = sizeRows(spec, level, tableSizes())
     local head, rule = { "Characters" }, {}
@@ -804,15 +901,18 @@ function party.warnings(spec, roster, levels, rated)
   if spec.difficulty and rated ~= spec.difficulty then
     out[#out + 1] = "Meant to be " .. LABEL[spec.difficulty] .. ", but for this party it is " .. LABEL[rated] .. "."
   end
+  for _, r in ipairs(referenced(spec)) do
+    if not r.page then
+      out[#out + 1] = "The " .. r.creature.one .. " names a page that isn't there: " .. r.creature.page .. "."
+    elseif r.warn then
+      out[#out + 1] = r.warn
+    end
+  end
   return out
 end
 
 local function chip(rated)
   return dom.span { class = "gmparty-diff gmparty-diff-" .. rated, __rawText = PIPS[rated] .. " " .. LABEL[rated] }
-end
-
-local function text(s, class)
-  return dom.span { class = class, __rawText = s }
 end
 
 -- The fight as the page shows it: for the characters here tonight.
@@ -849,6 +949,8 @@ function party.fightLive(spec)
       party.digits(party.budget(levels, "moderate")) .. " · High " ..
       party.digits(party.budget(levels, "high")) .. " XP", "gmparty-note"),
   })
+  local creatures = creaturesLive(spec)
+  if creatures then add(creatures) end
   local warnings = party.warnings(spec, roster, levels, rated)
   if #warnings > 0 then
     local items = { class = "gmparty-warn" }
@@ -998,6 +1100,11 @@ end
 }
 
 .gmparty-note {
+  color: var(--subtle-color);
+}
+
+.gmparty-nopage {
+  font-style: italic;
   color: var(--subtle-color);
 }
 
