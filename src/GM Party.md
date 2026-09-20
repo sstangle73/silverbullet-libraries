@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.2.0"
+version: "1.2.1"
 ---
 
 # GM Party
@@ -154,6 +154,10 @@ Baked Sections alone couldn't do this: they bake whole blocks, never a number in
 The XP Budget per Character and Experience Points by Challenge Rating tables below come from the SRD 5.2.1. A book that prints them carries the same statement:
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## Changes in 1.2.1
+
+`party.printed.value` gives the adventure's number where `party.value` gives this table's, so a library that draws to a number — [GM Maps](<GM Maps>) sizes a battle map by one — prints the adventure's and shows yours.
 
 ## Changes in 1.2
 
@@ -1006,6 +1010,9 @@ end
 -- gmbook.printers.
 party.printed = setmetatable({
   number = function(spec, cap) return (select(2, numberForms(spec, cap))) end,
+  -- the adventure's number, for a library that draws to it: a map printed
+  -- in the book is the size the adventure is written for, not tonight's
+  value = function(spec) return party.value(spec, party.setting("book")) end,
   n = function(spec) return (select(2, numberForms(spec, false))) end,
   N = function(spec) return (select(2, numberForms(spec, true))) end,
   count = function(spec) return (select(2, countForms(spec))) end,

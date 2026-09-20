@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.6.3"
+version: "1.7.0"
 ---
 
 # GM Book
@@ -106,6 +106,8 @@ In the larger space, a wiki link written for the adventure folder, such as `[[Wo
 Homebrewery never carries text over to the next page. Whatever doesn't fit in a page's two columns runs on into a third column past the right edge, where it is cut off. So the builder lays each page out itself and puts a `\page` before the first block that would not fit.
 
 The layout comes from measurements of Homebrewery's 5ePHB theme on US Letter, taken in Chrome: character widths for each font, line heights, the space between blocks, the drop cap. A page breaks between blocks, never inside a paragraph, list item, quote, table or box, and a heading goes with the text under it. Your own `\page` and `\column` lines are kept. A single block taller than a page still spills, so split it in the source.
+
+**Raw HTML** is Homebrewery's own to lay out, so the builder leaves it out of the count — except where the element says how tall it is, with a `height` in px and `display: block`. Then it is measured at that height and spaced as the paragraph Homebrewery wraps it in, which is how [GM Maps](<GM Maps>) gets a drawn map onto a page without overflowing it.
 
 It is an estimate, so each page keeps `gmbook.layout.slack` (one line) free at the foot. If a page still spills, raise it. The measurements only hold for 5ePHB on Letter. Set `paginate = false` in the config for chapter breaks only.
 
@@ -1022,8 +1024,23 @@ local function parse(text)
       i = i + 1
     elseif l:match("^<") then
       b.kind = "html"
+      local html = { l }
       i = i + 1
-      while i <= n and not lines[i]:match("^%s*$") do i = i + 1 end
+      while i <= n and not lines[i]:match("^%s*$") do
+        html[#html + 1] = lines[i]
+        i = i + 1
+      end
+      -- Raw HTML is Homebrewery's to lay out and can't be measured, except
+      -- where the element declares its own height in px and is displayed as
+      -- a block: an inline SVG map does both, so it can be measured exactly.
+      local h, blocked = nil, false
+      for _, line in ipairs(html) do
+        h = h or tonumber(line:match('^<%a+[^>]-%sheight="(%d+%.?%d*)"'))
+        if line:find("display:%s*block") then blocked = true end
+      end
+      if h and blocked then
+        b.kind, b.h = "drawn", h
+      end
     else
       b.kind, b.text = "p", l
       i = i + 1
@@ -1043,6 +1060,9 @@ end
 -- Space between two sibling blocks, from the theme's p+*, h3+*, *+h3 ...
 -- rules. Boxes are inline-blocks, so a list's bottom margin adds to theirs.
 local function gap(prev, kind)
+  -- a drawn block is a paragraph holding one element, and spaces like one
+  if kind == "drawn" then kind = "p" end
+  if prev == "drawn" then prev = "p" end
   if prev == "note" or prev == "descriptive" then return 17.01 end
   if kind == "hr" then return 0 end
   local m = OWN[kind] or 0
@@ -1228,6 +1248,8 @@ local function measure(b, ctx, prev)
     return {h = 16.667 + 12.281 * n}
   elseif k == "hr" then
     return {h = 1.333}
+  elseif k == "drawn" then
+    return {h = b.h}
   end
   return {h = 0}
 end
@@ -1334,7 +1356,7 @@ local function fitPage(bs, s, trace, pageNo)
       if trace then
         trace[#trace + 1] = {line = b.first, kind = k, page = pageNo, col = col, y = at, h = h}
       end
-      prev = k == "li" and b.list or k
+      prev = k == "li" and b.list or (k == "drawn" and "p" or k)
     end
     placed[#placed + 1] = i
     i = i + 1
