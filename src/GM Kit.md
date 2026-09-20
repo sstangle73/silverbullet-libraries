@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "2.5.0"
+version: "2.6.0"
 ---
 
 # GM Kit
@@ -22,11 +22,13 @@ One DM space containing the others as subfolders, each bind-mounted as its own S
       State/       play state, written by this library
       Sessions/    decision logs, written by this library
 
-People, places, factions and items are the Planning pages inside a `People/`, `Places/`, `Factions/` or `Items/` folder, at any depth.
+People, places, factions and items are the Planning pages inside a `People/`, `Places/`, `Factions/` or `Items/` folder, at any depth. Scenes are named by their type instead, because an adventure keeps its scenes under its acts: see *Scenes*.
 
 ## Buttons
 
-**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, and an item adds *Mark found*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
+**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
+
+**A session's own notes.** A page in `Sessions/` gets a bar of its own instead: the scene before, the scene the session is on, and the scene after. See *Scenes*.
 
 **The header.** Three buttons: the session table, *Log a decision* and *Publish to players*.
 
@@ -48,7 +50,10 @@ People, places, factions and items are the Planning pages inside a `People/`, `P
 | `GM: Mark Dead` | | Records a death and how it happened |
 | `GM: Mark Visited` | | Records that the party visited a place, reveals it |
 | `GM: Mark Found` | | Records that the party found an item, starts counting its uses, and offers to reveal it |
-| `GM: Unmark` | | Takes a mark off again: met, dead, visited or found, and an item's uses with its find |
+| `GM: Mark Scene Planned` | | Records a scene you expect the party to reach this session |
+| `GM: Mark Scene Started` | | Opens a scene at the table |
+| `GM: Mark Scene Finished` | | Closes it, in this session or a later one |
+| `GM: Unmark` | | Takes a mark off again: met, dead, visited or found, and an item's uses with its find; started, and its finish with it |
 | `GM: Spend Use` | | Uses one of an item's uses |
 | `GM: Refund Use` | | Gives one back |
 | `GM: Reveal Page` | | Adds a Planning page to the revealed list |
@@ -57,7 +62,7 @@ People, places, factions and items are the Planning pages inside a `People/`, `P
 | `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
 | `GM: Next Session` | | Increments the session counter |
 
-On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and unreveal on any Planning page; off one, `GM: Unreveal Page` lists what the players can see or still have. `GM: Hide Page`, its name before 2.4, still works. Found, use and refund also act at once on a page with a row for just one item. Publishing and starting a session ask first.
+On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and unreveal on any Planning page; off one, `GM: Unreveal Page` lists what the players can see or still have. `GM: Hide Page`, its name before 2.4, still works. Found, use and refund also act at once on a page with a row for just one item. The scene marks work like the rest: on a scene page they mark that scene, and anywhere else they ask which. Publishing and starting a session ask first.
 
 ## Items
 
@@ -71,13 +76,36 @@ That page's bar gets a row for the item, "Tube: six grins here", with *Mark foun
 
 **Rules in a scene.** A page that shows an item's rules with `![[World/Items/Tube#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
 
+## Scenes
+
+A scene is a Planning page of `type: scene`, wherever it lives, since an adventure keeps its scenes under its acts rather than in one folder. `gm.config.sceneType` names the type.
+
+**Planned, started, finished.** Before a session, *Mark planned* records the scenes you expect the party to reach. At the table *Mark started* opens one and *Mark finished* closes it. The two ends are kept apart because a scene that runs long finishes in the next session: the bar then reads "✓ Played in sessions 1–2", each number linked to its log, where a scene inside one session reads "✓ Played in session 3" and one still running reads "▶ Started in session 3, still going". A scene can only be finished once it is started, and unstarting one takes its finish with it.
+
+Every mark stamps the session you are in, so plan **after** pressing *Next session*, not before.
+
+**Both ways round.** Each mark also writes a line into that session's own log, under `## Scenes`:
+
+    - Started: [[Campaign/Act I/Scene 3|Scene 3 — Off the Road]]
+
+So the notes for a session link the scenes played in it, and each scene's bar links the sessions it was played in. Unmarking writes "Not started after all" rather than taking the line out, the way a state log already reads, and *Undo* takes both back.
+
+**Where you are.** A page in `Sessions/` gets a bar of the scene before, the scene the session is on, and the scene after:
+
+    ← Scene 1 — The Field · **Scene 2 — The Road, and the Town** · Scene 3 — Off the Road →
+
+A session sits on the last scene it started, failing that the first scene planned for it, failing that wherever the session before it left off, so next week's empty notes already point at the right place. The order is the adventure's own, `book_order` and then name, so the scene after the last of one act is the first of the next.
+
+Playing a scene never reveals it: what the players can see of the adventure stays your business.
+
 ## Where the state goes
 
 - `State/Revealed`: one link per revealed Planning page
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
 - `State/Items/<name>`: found, the uses left of those found, and where, with a log
+- `State/Scenes/<act>/<scene>`: planned, started and finished, with a log; the act comes too, so scenes numbered alike in two acts stay apart
 - Each log line names its session and links to it
-- `Sessions/Session N`: decisions, one line each
+- `Sessions/Session N`: the scenes under `## Scenes`, the decisions under `## Decisions`, one line each
 
 ## Players' own notes
 
@@ -86,6 +114,12 @@ Publishing writes into `Player/` and **replaces** what is there, except `Player/
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 2.6
+
+Scenes. A scene is marked *planned* before a session and *started* and *finished* during it, and each mark writes a line into that session's log as well as into the scene's own state, so a session's notes link the scenes played in it and every scene links the sessions it was played in. A session's notes also get a bar of the scene before, the scene it is on and the scene after. A scene's state keeps its act, `State/Scenes/Act I/Scene 3`, so two acts' third scenes don't land on one page.
+
+Session logs keep scenes and decisions in sections of their own, and a decision is added under `## Decisions` rather than at the end of the page.
 
 ## Changes in 2.5
 
@@ -132,14 +166,19 @@ gm.config = {
   playerFolder   = "Player/",
   playerNotes    = "Notes/",
   dmHeading      = "DM Only",
+  sceneType      = "scene",
+  sessionType    = "session",
 }
 
--- The Planning folders GM Kit tracks, and what their pages can be marked.
+-- What GM Kit tracks, and what each kind's pages can be marked. The first
+-- four are Planning folders. A scene is any Planning page of `sceneType`,
+-- because an adventure keeps its scenes under its acts, not in one folder.
 gm.kinds = {
   People   = { met = true, dead = true },
   Factions = { met = true },
   Places   = { visited = true },
   Items    = { found = true },
+  Scenes   = { planned = true, started = true, finished = true },
 }
 
 -- "---\n<head>---\n<rest>" as head and rest, or nil without frontmatter.
@@ -349,13 +388,39 @@ function gm.planningPages()
 end
 
 -- "People", "Places", "Factions" or "Items", from the page's folder.
+-- A page's type, read from the page rather than the index so a page
+-- written a moment ago already counts.
+function gm.pageType(page)
+  if not page or not space.pageExists(page) then return nil end
+  return gm.frontmatter(space.readPage(page)).type
+end
+
+function gm.isScene(page)
+  return gm.isPlanningPage(page) and gm.pageType(page) == gm.config.sceneType
+end
+
+-- The folder decides for people, places, factions and items; for anything
+-- else only the page itself can say, so it is read last and rarely.
 function gm.kind(page)
-  return page:match("/(People)/") or page:match("/(Places)/") or page:match("/(Factions)/")
-    or page:match("/(Items)/")
+  local folder = page:match("/(People)/") or page:match("/(Places)/")
+    or page:match("/(Factions)/") or page:match("/(Items)/")
+  if folder then return folder end
+  if gm.isScene(page) then return "Scenes" end
+  return nil
+end
+
+-- "Act I/Scene 3" for a scene, so scenes numbered alike in two acts don't
+-- land on one state page, and the page's own name for everything else.
+function gm.stateName(page)
+  local act, scene = page:match("([^/]+)/([^/]+)$")
+  if act and scene then return act .. "/" .. scene end
+  return gm.name(page)
 end
 
 function gm.statePath(page)
-  return gm.config.stateFolder .. (gm.kind(page) or "Other") .. "/" .. gm.name(page)
+  local kind = gm.kind(page) or "Other"
+  local name = kind == "Scenes" and gm.stateName(page) or gm.name(page)
+  return gm.config.stateFolder .. kind .. "/" .. name
 end
 
 function gm.readState(page)
@@ -378,6 +443,120 @@ end
 function gm.appendItem(text, item)
   if text:sub(-1) ~= "\n" then text = text .. "\n" end
   return text .. "- " .. item .. "\n"
+end
+
+-- Adds a list item at the end of one `## Heading` section, making the
+-- heading at the end of the page when it isn't there yet. A session log
+-- keeps two sections, and appending to the page would file every line
+-- under whichever of them came last.
+function gm.appendUnder(text, heading, item)
+  if text:sub(-1) ~= "\n" then text = text .. "\n" end
+  local head = "## " .. heading
+  local _, to = text:find("\n" .. head .. "[ \t]*\n")
+  if not to then
+    local trimmed = (text:gsub("[ \t\r\n]+$", ""))
+    return trimmed .. "\n\n" .. head .. "\n\n- " .. item .. "\n"
+  end
+  local rest = text:sub(to + 1)
+  local at = rest:find("^##[^#]") and 0 or rest:find("\n##[^#]")
+  local body = at and rest:sub(1, at) or rest
+  local tail = at and rest:sub(at + 1) or ""
+  body = (body:gsub("^[ \t\r\n]*", ""))
+  body = (body:gsub("[ \t\r\n]*$", ""))
+  body = (body == "" and "" or body .. "\n") .. "- " .. item .. "\n"
+  return text:sub(1, to) .. "\n" .. body .. (tail ~= "" and "\n" .. tail or "")
+end
+
+-- A session's log page and its text, from a template when the session has
+-- none yet. Scenes come first, because they say what the decisions are.
+function gm.sessionLog(s)
+  local page = gm.config.sessionsFolder .. "Session " .. s
+  if space.pageExists(page) then return page, gm.read(page) end
+  return page, "---\ntype: session\nsession: " .. s .. "\n---\n\n# Session " ..
+         s .. "\n\n## Scenes\n\n## Decisions\n"
+end
+
+-- "Scene 3 — Off the Road", or the page's name where it has no title.
+function gm.sceneTitle(page)
+  local name = gm.name(page)
+  local title = space.pageExists(page) and gm.frontmatter(space.readPage(page)).scene_title
+  if title and title ~= "" then return name .. " — " .. title end
+  return name
+end
+
+-- A scene's line in a session's own log, so the notes for a session jump
+-- straight to the scene that was played in it.
+function gm.logScene(s, what, page)
+  local log, text = gm.sessionLog(s)
+  gm.write(log, gm.appendUnder(text, "Scenes",
+    what .. ": [[" .. page .. "|" .. gm.sceneTitle(page) .. "]]"))
+  return log
+end
+
+-- Every scene in the adventure, in the order it is meant to be played:
+-- by `book_order` where the scenes carry one, and by name where they
+-- don't, so an adventure that never compiles to a book still orders.
+function gm.scenes()
+  local t = gm.config.sceneType
+  local rows = query[[
+    from p = index.pages()
+    where p.type == t
+    select { name = p.name, order = p.book_order }
+  ]]
+  table.sort(rows, function(a, b)
+    local x, y = tonumber(a.order), tonumber(b.order)
+    if x and y and x ~= y then return x < y end
+    if x and not y then return true end
+    if y and not x then return false end
+    return a.name < b.name
+  end)
+  local out = {}
+  for i, row in ipairs(rows) do out[i] = row.name end
+  return out
+end
+
+-- The scene a session sits on: the last one it started, failing that the
+-- last one planned for it, failing that wherever the session before it
+-- left off. nil until some scene has been marked at all.
+function gm.sessionScene(s)
+  local want = tostring(s)
+  local started, planned, earlier = nil, nil, nil
+  for _, page in ipairs(gm.scenes()) do
+    local state = gm.readState(page)
+    if state.started == "true" then
+      if tostring(state.started_session) == want then started = page end
+      if (tonumber(state.started_session) or 0) < (tonumber(s) or 0) then earlier = page end
+    end
+    if state.planned == "true" and tostring(state.planned_session) == want
+       and not planned then
+      planned = page
+    end
+  end
+  return started or planned or earlier
+end
+
+-- "3", linked to session 3's log, for a range that says "sessions" once.
+function gm.sessionNumberLink(n)
+  if not n then return "?" end
+  return "[[" .. gm.config.sessionsFolder .. "Session " .. n .. "|" .. n .. "]]"
+end
+
+-- Where a scene stands: planned for a session, played in one, run across
+-- two, or still going. Empty for a scene nobody has marked at all.
+function gm.playedText(state)
+  local from, to = state.started_session, state.finished_session
+  if state.started ~= "true" then
+    if state.planned == "true" then
+      return "Planned for " .. gm.sessionLink(state.planned_session)
+    end
+    return ""
+  end
+  if state.finished ~= "true" then
+    return "Started in " .. gm.sessionLink(from) .. ", still going"
+  end
+  if tostring(to) == tostring(from) then return "Played in " .. gm.sessionLink(from) end
+  return "Played in sessions " .. gm.sessionNumberLink(from) .. "–" ..
+         gm.sessionNumberLink(to)
 end
 
 -- Creates or updates a page's play state and appends to its log.
@@ -432,9 +611,48 @@ gm.marks = {
     pick = "Found", ask = "What did the party find?",
     clears = { "found", "found_session", "found_in", "unit", "units", "uses", "uses_found" },
   },
+  -- Planned before the session, so it stamps the session you are in: press
+  -- Next session first, then plan into it.
+  planned = {
+    field = "planned", value = "true", session = "planned_session",
+    done = "Planned for ", reveals = false, logs = "Planned", scoped = true,
+    empty = "There are no scenes to plan.",
+    pick = "Planned", ask = "Which scene do you expect them to reach?",
+    clears = { "planned", "planned_session" },
+  },
+  -- A scene is played rather than discovered, so it keeps both ends: the
+  -- session it opened in and the one it closed in, which are usually the
+  -- same. `needs` means a scene can only be finished once it is started,
+  -- and `logs` is the word its line takes in that session's own log.
+  started = {
+    field = "started", value = "true", session = "started_session",
+    done = "Started in ", reveals = false, logs = "Started", scoped = true,
+    empty = "There are no scenes to start.",
+    pick = "Started", ask = "Which scene did they start?",
+    -- unstarting a scene lets its finish go too, the way unmarking a find
+    -- forgets its uses, so the two ends can never disagree
+    clears = { "started", "started_session", "finished", "finished_session" },
+  },
+  finished = {
+    field = "finished", value = "true", session = "finished_session",
+    done = "Finished in ", reveals = false, logs = "Finished",
+    needs = "started", scoped = true,
+    empty = "No scene is open. Mark one started first.",
+    pick = "Finished", ask = "Which scene did they finish?",
+    clears = { "finished", "finished_session" },
+  },
 }
 
-gm.markOrder = { "met", "dead", "visited", "found" }
+gm.markOrder = { "met", "dead", "visited", "found", "planned", "started", "finished" }
+
+-- Whether a mark's prerequisite is recorded: a scene has to be started
+-- before it can be finished. Marks without one are always allowed.
+function gm.allows(page, mark, state)
+  local needs = gm.marks[mark].needs
+  if not needs then return true end
+  local n = gm.marks[needs]
+  return (state or gm.readState(page))[n.field] == n.value
+end
 
 -- Pages that can take a mark, unmarked first. If Planning has no People,
 -- Places or Factions folders at all, every Planning page can.
@@ -443,7 +661,7 @@ function gm.markable(mark)
   local open, done, notes = {}, {}, {}
   for _, page in ipairs(all) do
     local kind = gm.kind(page)
-    if kind and gm.kinds[kind][mark] then
+    if kind and gm.kinds[kind][mark] and gm.allows(page, mark) then
       local state = gm.readState(page)
       if state[m.field] == m.value then
         done[#done + 1] = page
@@ -453,7 +671,9 @@ function gm.markable(mark)
       end
     end
   end
-  if #open + #done == 0 then return all, notes end
+  -- A space with no People, Places or Factions folders at all can mark
+  -- any page; a space with no scenes simply has no scene to mark.
+  if #open + #done == 0 and not m.scoped then return all, notes end
   for _, page in ipairs(done) do open[#open + 1] = page end
   return open, notes
 end
@@ -489,6 +709,24 @@ function gm.target(label, help, pages, notes)
   return gm.pick(label, help, pages, notes)
 end
 
+-- Writes a mark's line into the session's own log, and gives back the log
+-- and what it held before, so Undo can put it back or take it away again.
+-- A mark with no `logs` writes nothing and gives back nothing.
+function gm.logged(m, s, page, what)
+  if not m.logs then return nil, nil end
+  local log = gm.config.sessionsFolder .. "Session " .. s
+  local before = space.pageExists(log) and space.readPage(log) or nil
+  gm.logScene(s, what or m.logs, page)
+  return log, before
+end
+
+-- Puts a session's log back the way gm.logged found it, deleting one this
+-- mark brought into being.
+function gm.unlogged(log, before)
+  if not log then return end
+  if before then gm.write(log, before) else space.deletePage(log) end
+end
+
 -- Records a mark. extra can add state fields, replace the log entry, and
 -- add a note to the notification, as finding an item does for its uses.
 function gm.mark(page, mark, detail, extra)
@@ -499,6 +737,10 @@ function gm.mark(page, mark, detail, extra)
     gm.notify(name .. ": already recorded. " .. m.done .. "session " .. (state[m.session] or "?") .. ".")
     return false
   end
+  if not gm.allows(page, mark, state) then
+    gm.notify(name .. " hasn't been marked " .. m.needs .. " yet.")
+    return false
+  end
   local path = gm.statePath(page)
   local before = space.pageExists(path) and space.readPage(path) or nil
   local entry = extra.entry or (mark == "dead" and "died" or mark)
@@ -506,6 +748,7 @@ function gm.mark(page, mark, detail, extra)
   local fields = { [m.field] = m.value, [m.session] = s }
   for k, v in pairs(extra.fields or {}) do fields[k] = v end
   gm.recordState(page, fields, gm.sessionLink(s, true) .. ": " .. entry)
+  local log, logBefore = gm.logged(m, s, page)
   local revealed = m.reveals and page:startsWith(gm.config.planningPrefix)
                    and gm.setRevealed(page, true)
   gm.refresh()
@@ -515,6 +758,7 @@ function gm.mark(page, mark, detail, extra)
   end
   actions[#actions + 1] = { name = "Undo", run = function()
     if before then gm.write(path, before) else space.deletePage(path) end
+    gm.unlogged(log, logBefore)
     if revealed then gm.setRevealed(page, false) end
     gm.refresh()
     gm.notify("Undone: " .. name .. " is no longer marked " .. mark)
@@ -535,16 +779,21 @@ function gm.unmark(page, mark)
     return false
   end
   local before = gm.read(path)
+  local state = gm.readState(page)
+  local alsoFinished = mark == "started" and state.finished == "true"
   local text = before
   for _, key in ipairs(m.clears) do text = gm.clearFrontmatter(text, key) end
-  local was = gm.usesText(gm.readState(page), true)
+  local was = gm.usesText(state, true)
   gm.write(path, gm.appendItem(text, gm.sessionLink(s, true) .. ": not " ..
     (mark == "dead" and "dead" or mark) .. " after all"))
+  local log, logBefore = gm.logged(m, s, page, "Not " .. mark .. " after all")
   gm.refresh()
   gm.notify(name .. ": no longer marked " .. mark ..
-    ((mark == "found" and was ~= "") and ", and its uses with it" or "") .. ".", {
+    ((mark == "found" and was ~= "") and ", and its uses with it" or "") ..
+    (alsoFinished and ", and its finish with it" or "") .. ".", {
     { name = "Undo", run = function()
       gm.write(path, before)
+      gm.unlogged(log, logBefore)
       gm.refresh()
       gm.notify("Undone: " .. name .. " is marked " .. mark .. " again")
     end },
@@ -943,14 +1192,8 @@ function gm.logDecision()
   local what = editor.prompt("What did they decide? (session " .. s .. ")")
   what = what and what:match("^%s*(.-)%s*$") or ""
   if what == "" then return false end
-  local log = gm.config.sessionsFolder .. "Session " .. s
-  local text
-  if space.pageExists(log) then
-    text = gm.read(log)
-  else
-    text = "---\ntype: session\nsession: " .. s .. "\n---\n\n# Session " .. s .. "\n\n## Decisions\n\n"
-  end
-  gm.write(log, gm.appendItem(text, what))
+  local log, text = gm.sessionLog(s)
+  gm.write(log, gm.appendUnder(text, "Decisions", what))
   gm.refresh()
   gm.notify("Logged to " .. log, {
     { name = "Open log", run = function() editor.navigate(log) end },
@@ -1016,6 +1259,36 @@ local function visibilityParts(page, add, note, quiet)
   end
 end
 
+-- A scene's play on its bar: the session it was played in, the sessions it
+-- ran across, or that it is still going, with the button that moves it on.
+-- The two ends are drawn together, since "Started in session 1, finished in
+-- session 1" is a long way of saying one thing.
+local function scenePlayParts(page, state, add, note)
+  local standing = gm.playedText(state)
+  -- three shapes as well as three words, so the three states stay apart
+  -- for a reader who doesn't see the colour of them
+  if standing ~= "" then
+    local glyph = "◇ "
+    if state.finished == "true" then glyph = "✓ "
+    elseif state.started == "true" then glyph = "▶ " end
+    note(glyph .. standing)
+  end
+  if state.started ~= "true" then
+    if state.planned ~= "true" then
+      add(gm.button("Mark planned", function() gm.mark(page, "planned") end))
+    end
+    add(gm.button("Mark started", function() gm.mark(page, "started") end))
+    if state.planned == "true" then
+      add(gm.button("Unmark planned", function() gm.unmark(page, "planned") end))
+    end
+  elseif state.finished ~= "true" then
+    add(gm.button("Mark finished", function() gm.mark(page, "finished") end))
+    add(gm.button("Unmark started", function() gm.unmark(page, "started") end))
+  else
+    add(gm.button("Unmark finished", function() gm.unmark(page, "finished") end))
+  end
+end
+
 -- A row on a page's bar for an item the page hands out or shows: found or
 -- not, the uses left, and whether the players can see the item's page.
 function gm.itemRow(item, from, handout)
@@ -1036,6 +1309,42 @@ function gm.itemRow(item, from, handout)
   return dom.div(spec)
 end
 
+-- Previous, current and next scene, for the top of a session's own notes:
+-- "← The Field · Scene 2 — The Road, and the Town · Off the Road →". The
+-- order is the adventure's, so the next scene can be the next act's first.
+function gm.sessionNav(page)
+  if not space.pageExists(page) then return nil end
+  local here = gm.sessionScene(gm.frontmatter(space.readPage(page)).session)
+  if not here then return nil end
+  local scenes, at = gm.scenes(), nil
+  for i, name in ipairs(scenes) do
+    if name == here then at = i end
+  end
+  if not at then return nil end
+  local function link(name, before, after)
+    return "[[" .. name .. "|" .. (before or "") .. gm.sceneTitle(name) .. (after or "") .. "]]"
+  end
+  local parts = {}
+  if at > 1 then parts[#parts + 1] = link(scenes[at - 1], "← ") end
+  parts[#parts + 1] = "**" .. link(here) .. "**"
+  if at < #scenes then parts[#parts + 1] = link(scenes[at + 1], nil, " →") end
+  return table.concat(parts, " · ")
+end
+
+-- A session's log gets that bar instead of an adventure page's, so the
+-- page you write in during play is one click from the scene you are on.
+function gm.sessionBar(page)
+  page = page or editor.getCurrentPage()
+  if not page or not page:startsWith(gm.config.sessionsFolder) then return nil end
+  if gm.pageType(page) ~= gm.config.sessionType then return nil end
+  local nav = gm.sessionNav(page)
+  if not nav then return nil end
+  return widget.new {
+    display = "block",
+    html = dom.div { class = "gmkit-bar", dom.span { class = "gmkit-bar-note", nav } },
+  }
+end
+
 -- The bar across the top of an adventure page: what the players can see,
 -- what the party has done, and a button for each thing not yet recorded.
 function gm.bar(page)
@@ -1051,12 +1360,14 @@ function gm.bar(page)
   local function add(item) spec[#spec + 1] = item end
   local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
   visibilityParts(page, add, note)
+  local scene = can.started == true
+  if scene then scenePlayParts(page, state, add, note) end
   -- what is recorded, then what to do about it, so an unmark sits after the
   -- uses of a find rather than between them
   local recorded = {}
   for _, mark in ipairs(gm.markOrder) do
     local m = gm.marks[mark]
-    if can[mark] then
+    if can[mark] and not scene then
       if state[m.field] == m.value then
         note((mark == "dead" and "† " or "✓ ") .. m.done .. gm.sessionLink(state[m.session]))
         recorded[#recorded + 1] = mark
@@ -1088,6 +1399,10 @@ local function markCommand(mark)
   return function()
     local m = gm.marks[mark]
     local pages, notes = gm.markable(mark)
+    if #pages == 0 and m.empty then
+      gm.notify(m.empty)
+      return
+    end
     local page = gm.target(m.pick, m.ask .. " Recorded for session " ..
                            gm.currentSession() .. ".", pages, notes)
     if not page then return end
@@ -1183,6 +1498,21 @@ command.define {
                                    gm.currentSession() .. ".", pages, notes)
     if page then gm.markFound(page, from) end
   end
+}
+
+command.define {
+  name = "GM: Mark Scene Planned",
+  run = markCommand("planned")
+}
+
+command.define {
+  name = "GM: Mark Scene Started",
+  run = markCommand("started")
+}
+
+command.define {
+  name = "GM: Mark Scene Finished",
+  run = markCommand("finished")
 }
 
 local function useCommand(refund)
@@ -1286,7 +1616,7 @@ actionButton.define {
 event.listen {
   name = "hooks:renderTopWidgets",
   run = function()
-    local ok, bar = pcall(gm.bar)
+    local ok, bar = pcall(function() return gm.sessionBar() or gm.bar() end)
     if ok then return bar end
     print("GM Kit: " .. tostring(bar))
   end
