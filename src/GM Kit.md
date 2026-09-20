@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "2.4.0"
+version: "2.5.0"
 ---
 
 # GM Kit
@@ -26,11 +26,11 @@ People, places, factions and items are the Planning pages inside a `People/`, `P
 
 ## Buttons
 
-**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, and an item adds *Mark found*. Once something is recorded, the bar says when: "✓ Met in session 3". An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
+**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, and an item adds *Mark found*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
 
 **The header.** Three buttons: the session table, *Log a decision* and *Publish to players*.
 
-**Notifications.** Marking, revealing, unrevealing and starting a session each come with *Undo*. A reveal also offers *Publish now*.
+**Notifications.** Marking, unmarking, revealing, unrevealing and starting a session each come with *Undo*. A reveal also offers *Publish now*. *Undo* only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
 
 **Taking a page back.** *Unreveal* takes a page off the revealed list and deletes the copy the players were sent, so a page revealed or published by mistake is gone from the Player space at once. *Undo* puts both back, and so does revealing it and publishing again. A page that isn't revealed but that the players still have a copy of, say one hidden before 2.4, shows ◐ on its bar, with *Delete their copy*.
 
@@ -48,6 +48,7 @@ People, places, factions and items are the Planning pages inside a `People/`, `P
 | `GM: Mark Dead` | | Records a death and how it happened |
 | `GM: Mark Visited` | | Records that the party visited a place, reveals it |
 | `GM: Mark Found` | | Records that the party found an item, starts counting its uses, and offers to reveal it |
+| `GM: Unmark` | | Takes a mark off again: met, dead, visited or found, and an item's uses with its find |
 | `GM: Spend Use` | | Uses one of an item's uses |
 | `GM: Refund Use` | | Gives one back |
 | `GM: Reveal Page` | | Adds a Planning page to the revealed list |
@@ -66,7 +67,7 @@ An item is a Planning page in an `Items/` folder. Marking it found records the s
 
     It holds ${party.count{"grin", plus = 1, item = "World/Items/Tube"}}.
 
-That page's bar gets a row for the item, "Tube: six grins here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 grins left", with *Use a grin* and *Refund a grin*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses.
+That page's bar gets a row for the item, "Tube: six grins here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 grins left", with *Use a grin* and *Refund a grin*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses. *Unmark found* takes the find back, uses and all, so finding it again counts them afresh.
 
 **Rules in a scene.** A page that shows an item's rules with `![[World/Items/Tube#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
 
@@ -75,6 +76,7 @@ That page's bar gets a row for the item, "Tube: six grins here", with *Mark foun
 - `State/Revealed`: one link per revealed Planning page
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
 - `State/Items/<name>`: found, the uses left of those found, and where, with a log
+- Each log line names its session and links to it
 - `Sessions/Session N`: decisions, one line each
 
 ## Players' own notes
@@ -84,6 +86,10 @@ Publishing writes into `Player/` and **replaces** what is there, except `Player/
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 2.5
+
+*Unmark* takes a mark off a page that was marked by mistake: met, dead, visited, or found with its uses. It is on the bar beside each recorded mark and on every item row, as a command, and it has *Undo* of its own. Before this, once a mark's notification had gone, only editing the state page by hand could undo it. Every log line, and every "found in session 3" on a bar, now links to that session's log.
 
 ## Changes in 2.4
 
@@ -175,6 +181,18 @@ function gm.setFrontmatter(text, key, value)
   return "---\n" .. head .. "---\n" .. rest
 end
 
+-- Takes a key back out of the frontmatter, leaving the rest as it was.
+function gm.clearFrontmatter(text, key)
+  local head, rest = gm.splitFrontmatter(text)
+  if not head then return text end
+  local out = {}
+  for line in head:gmatch("([^\n]*)\n") do
+    if not line:startsWith(key .. ":") then out[#out + 1] = line end
+  end
+  if #out == 0 then return rest end
+  return "---\n" .. table.concat(out, "\n") .. "\n---\n" .. rest
+end
+
 function gm.stripSecrets(text)
   local out, skipping = {}, false
   for line in (text .. "\n"):gmatch("([^\n]*)\n") do
@@ -252,6 +270,14 @@ function gm.currentSession()
   local page = gm.config.sessionPage
   if not space.pageExists(page) then return 1 end
   return tonumber(gm.frontmatter(space.readPage(page)).session) or 1
+end
+
+-- "session 3", linked to that session's log, for a bar, a log line or a
+-- table. cap gives "Session 3", to open a sentence or fill a column.
+function gm.sessionLink(n, cap)
+  local label = (cap and "Session " or "session ") .. tostring(n or "?")
+  if not n then return label end
+  return "[[" .. gm.config.sessionsFolder .. "Session " .. n .. "|" .. label .. "]]"
 end
 
 function gm.readRevealed()
@@ -378,30 +404,37 @@ function gm.log(path, entry)
 end
 
 -- The marks, with the state field each sets and how it reads once set.
+-- `clears` is what an unmark takes off the record again.
 gm.marks = {
   met = {
     field = "met", value = "true", session = "met_session",
-    done = "Met in session ", reveals = true,
+    done = "Met in ", reveals = true,
     pick = "Met", ask = "Who did the party meet?",
+    clears = { "met", "met_session" },
   },
   dead = {
     field = "status", value = "dead", session = "died_session",
-    done = "Died in session ", reveals = false,
+    done = "Died in ", reveals = false,
     pick = "Dead", ask = "Who died?",
+    clears = { "status", "died_session" },
   },
   visited = {
     field = "visited", value = "true", session = "visited_session",
-    done = "Visited in session ", reveals = true,
+    done = "Visited in ", reveals = true,
     pick = "Visited", ask = "Where did the party go?",
+    clears = { "visited", "visited_session" },
   },
   -- A party can carry a thing before it knows what it is, so finding one
   -- offers to reveal its page instead of revealing it.
   found = {
     field = "found", value = "true", session = "found_session",
-    done = "Found in session ", reveals = false, offers = true,
+    done = "Found in ", reveals = false, offers = true,
     pick = "Found", ask = "What did the party find?",
+    clears = { "found", "found_session", "found_in", "unit", "units", "uses", "uses_found" },
   },
 }
+
+gm.markOrder = { "met", "dead", "visited", "found" }
 
 -- Pages that can take a mark, unmarked first. If Planning has no People,
 -- Places or Factions folders at all, every Planning page can.
@@ -414,7 +447,7 @@ function gm.markable(mark)
       local state = gm.readState(page)
       if state[m.field] == m.value then
         done[#done + 1] = page
-        notes[page] = m.done .. (state[m.session] or "?")
+        notes[page] = m.done .. "session " .. (state[m.session] or "?")
       else
         open[#open + 1] = page
       end
@@ -463,7 +496,7 @@ function gm.mark(page, mark, detail, extra)
   local m, s = gm.marks[mark], gm.currentSession()
   local name, state = gm.name(page), gm.readState(page)
   if state[m.field] == m.value then
-    gm.notify(name .. ": already recorded. " .. m.done .. (state[m.session] or "?") .. ".")
+    gm.notify(name .. ": already recorded. " .. m.done .. "session " .. (state[m.session] or "?") .. ".")
     return false
   end
   local path = gm.statePath(page)
@@ -472,7 +505,7 @@ function gm.mark(page, mark, detail, extra)
   if detail and detail ~= "" then entry = entry .. " - " .. detail end
   local fields = { [m.field] = m.value, [m.session] = s }
   for k, v in pairs(extra.fields or {}) do fields[k] = v end
-  gm.recordState(page, fields, "Session " .. s .. ": " .. entry)
+  gm.recordState(page, fields, gm.sessionLink(s, true) .. ": " .. entry)
   local revealed = m.reveals and page:startsWith(gm.config.planningPrefix)
                    and gm.setRevealed(page, true)
   gm.refresh()
@@ -486,8 +519,36 @@ function gm.mark(page, mark, detail, extra)
     gm.refresh()
     gm.notify("Undone: " .. name .. " is no longer marked " .. mark)
   end }
-  gm.notify(name .. ": " .. m.done:lower() .. s .. (extra.note or "") ..
+  gm.notify(name .. ": " .. m.done:lower() .. "session " .. s .. (extra.note or "") ..
             (revealed and ", and revealed" or "") .. ".", actions)
+  return true
+end
+
+-- Takes a mark off again, for one recorded by mistake, with Undo. The log
+-- keeps both lines. An item's uses go with its find, so finding it again
+-- counts them afresh from the page that hands it out.
+function gm.unmark(page, mark)
+  local m, s = gm.marks[mark], gm.currentSession()
+  local name, path = gm.name(page), gm.statePath(page)
+  if gm.readState(page)[m.field] ~= m.value then
+    gm.notify(name .. " isn't marked " .. mark)
+    return false
+  end
+  local before = gm.read(path)
+  local text = before
+  for _, key in ipairs(m.clears) do text = gm.clearFrontmatter(text, key) end
+  local was = gm.usesText(gm.readState(page), true)
+  gm.write(path, gm.appendItem(text, gm.sessionLink(s, true) .. ": not " ..
+    (mark == "dead" and "dead" or mark) .. " after all"))
+  gm.refresh()
+  gm.notify(name .. ": no longer marked " .. mark ..
+    ((mark == "found" and was ~= "") and ", and its uses with it" or "") .. ".", {
+    { name = "Undo", run = function()
+      gm.write(path, before)
+      gm.refresh()
+      gm.notify("Undone: " .. name .. " is marked " .. mark .. " again")
+    end },
+  })
   return true
 end
 
@@ -713,7 +774,7 @@ function gm.spend(item, delta)
   local before = gm.read(path)
   local what = a(unit) .. (delta < 0 and " used" or " refunded")
   local text = gm.setFrontmatter(before, "uses", int(after))
-  gm.write(path, gm.appendItem(text, "Session " .. s .. ": " .. what .. ", " .. int(after) .. " left"))
+  gm.write(path, gm.appendItem(text, gm.sessionLink(s, true) .. ": " .. what .. ", " .. int(after) .. " left"))
   gm.refresh()
   gm.notify(name .. ": " .. what .. ". " .. gm.usesText(gm.readState(item), true) .. ".", {
     { name = "Undo", run = function()
@@ -964,8 +1025,9 @@ function gm.itemRow(item, from, handout)
   local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
   note("**[[" .. item .. "|" .. gm.name(item) .. "]]**")
   if state.found == "true" then
-    note("✓ Found in session " .. (state.found_session or "?"))
+    note("✓ Found in " .. gm.sessionLink(state.found_session))
     usesParts(item, state, add, note)
+    add(gm.button("Unmark found", function() gm.unmark(item, "found") end))
     visibilityParts(item, add, note, true)
   else
     if handout then note(handout.text .. " here") end
@@ -989,11 +1051,15 @@ function gm.bar(page)
   local function add(item) spec[#spec + 1] = item end
   local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
   visibilityParts(page, add, note)
-  for _, mark in ipairs({ "met", "dead", "visited", "found" }) do
+  -- what is recorded, then what to do about it, so an unmark sits after the
+  -- uses of a find rather than between them
+  local recorded = {}
+  for _, mark in ipairs(gm.markOrder) do
     local m = gm.marks[mark]
     if can[mark] then
       if state[m.field] == m.value then
-        note((mark == "dead" and "† " or "✓ ") .. m.done .. (state[m.session] or "?"))
+        note((mark == "dead" and "† " or "✓ ") .. m.done .. gm.sessionLink(state[m.session]))
+        recorded[#recorded + 1] = mark
       elseif mark == "dead" then
         add(gm.button("Mark dead…", function() gm.markDead(page) end))
       elseif mark == "found" then
@@ -1004,6 +1070,9 @@ function gm.bar(page)
     end
   end
   if can.found then usesParts(page, state, add, note) end
+  for _, mark in ipairs(recorded) do
+    add(gm.button("Unmark " .. mark, function() gm.unmark(page, mark) end))
+  end
   if space.pageExists(gm.statePath(page)) then
     note("[[" .. gm.statePath(page) .. "|Play state]]")
   end
@@ -1139,6 +1208,47 @@ command.define {
 command.define {
   name = "GM: Refund Use",
   run = useCommand(true)
+}
+
+command.define {
+  name = "GM: Unmark",
+  run = function()
+    local pages, notes, marked = {}, {}, {}
+    for _, page in ipairs(gm.planningPages()) do
+      local kind = gm.kind(page)
+      local can = kind and gm.kinds[kind] or {}
+      local state, mine, said = gm.readState(page), {}, {}
+      for _, mark in ipairs(gm.markOrder) do
+        local m = gm.marks[mark]
+        if can[mark] and state[m.field] == m.value then
+          mine[#mine + 1] = mark
+          said[#said + 1] = m.done .. "session " .. (state[m.session] or "?")
+        end
+      end
+      if #mine > 0 then
+        pages[#pages + 1] = page
+        marked[page] = mine
+        notes[page] = table.concat(said, ", ")
+      end
+    end
+    if #pages == 0 then
+      gm.notify("Nothing is marked yet")
+      return
+    end
+    local page = gm.target("Unmark", "What was marked by mistake?", pages, notes)
+    if not page then return end
+    local mine = marked[page]
+    local mark = mine[1]
+    if #mine > 1 then
+      local options = {}
+      for i, name in ipairs(mine) do options[i] = { name = name, orderId = i } end
+      local choice = editor.filterBox("Unmark", options,
+        "Which mark comes off " .. gm.name(page) .. "?", "Type to filter")
+      if not choice then return end
+      mark = choice.name
+    end
+    gm.unmark(page, mark)
+  end
 }
 
 command.define {
