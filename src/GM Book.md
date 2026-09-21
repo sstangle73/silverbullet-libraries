@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.7.0"
+version: "1.7.1"
 ---
 
 # GM Book
@@ -83,9 +83,9 @@ To print every one in place, or to word the pointer your own way (`%s` is the pa
 
 A build reads the pages that sit beside GM Book's own `Library/` folder, and writes `Build/` there. Installed at `Library/Storie/GM Book`, that is the whole space.
 
-An adventure folder can also be part of a larger space, as `Planning/` is when a DM space contains it. That space sees this page at `Planning/Library/Storie/GM Book`, so a build started there reads only `Planning/` and writes the same `Planning/Build/` pages as a build from inside. To choose the folder yourself, put this in a `space-lua` block:
+An adventure folder can also be part of a larger space, as `Adventure/` is when a DM space contains it. That space sees this page at `Adventure/Library/Storie/GM Book`, so a build started there reads only `Adventure/` and writes the same `Adventure/Build/` pages as a build from inside. To choose the folder yourself, put this in a `space-lua` block:
 
-    config.set("gmBook", { root = "Adventure/" })
+    config.set("gmBook", { root = "Module/" })
 
 In the larger space, a wiki link written for the adventure folder, such as `[[World/Items/Lantern]]`, isn't the page's full path, so SilverBullet finds it by the end of its path. Any other page whose path ends the same way, such as notes kept at the same path in another folder, matches too, and SilverBullet asks which one you meant. A relative Markdown link, `[Lantern](<../../World/Items/Lantern>)`, starts from the folder of the page it is on, so it opens the same page in either space. The builder prints it as its label.
 

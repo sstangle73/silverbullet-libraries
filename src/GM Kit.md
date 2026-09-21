@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "2.6.0"
+version: "3.0.0"
 ---
 
 # GM Kit
@@ -17,16 +17,16 @@ Your adventure pages are never touched. Who the party met, who died, where they 
 One DM space containing the others as subfolders, each bind-mounted as its own SilverBullet space:
 
     dm/            this library lives here
-      Planning/    the adventure, never written to by this library
+      Adventure/   the adventure, never written to by this library
       Player/      what the players see, plus their own Notes/
       State/       play state, written by this library
       Sessions/    decision logs, written by this library
 
-People, places, factions and items are the Planning pages inside a `People/`, `Places/`, `Factions/` or `Items/` folder, at any depth. Scenes are named by their type instead, because an adventure keeps its scenes under its acts: see *Scenes*.
+People, places, factions and items are the adventure pages inside a `People/`, `Places/`, `Factions/` or `Items/` folder, at any depth. Scenes are named by their type instead, because an adventure keeps its scenes under its acts: see *Scenes*.
 
 ## Buttons
 
-**The GM bar.** In the DM space, every Planning page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
+**The GM bar.** In the DM space, every adventure page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
 
 **A session's own notes.** A page in `Sessions/` gets a bar of its own instead: the scene before, the scene the session is on, and the scene after. See *Scenes*.
 
@@ -56,17 +56,17 @@ People, places, factions and items are the Planning pages inside a `People/`, `P
 | `GM: Unmark` | | Takes a mark off again: met, dead, visited or found, and an item's uses with its find; started, and its finish with it |
 | `GM: Spend Use` | | Uses one of an item's uses |
 | `GM: Refund Use` | | Gives one back |
-| `GM: Reveal Page` | | Adds a Planning page to the revealed list |
+| `GM: Reveal Page` | | Adds an adventure page to the revealed list |
 | `GM: Unreveal Page` | | Takes a page back: off the revealed list, and the players' copy deleted |
 | `GM: Publish to Players` | | Copies every revealed page into the Player space, stripping `## DM Only` sections |
 | `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
 | `GM: Next Session` | | Increments the session counter |
 
-On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and unreveal on any Planning page; off one, `GM: Unreveal Page` lists what the players can see or still have. `GM: Hide Page`, its name before 2.4, still works. Found, use and refund also act at once on a page with a row for just one item. The scene marks work like the rest: on a scene page they mark that scene, and anywhere else they ask which. Publishing and starting a session ask first.
+On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and unreveal on any adventure page; off one, `GM: Unreveal Page` lists what the players can see or still have. `GM: Hide Page`, its name before 2.4, still works. Found, use and refund also act at once on a page with a row for just one item. The scene marks work like the rest: on a scene page they mark that scene, and anywhere else they ask which. Publishing and starting a session ask first.
 
 ## Items
 
-An item is a Planning page in an `Items/` folder. Marking it found records the session but doesn't reveal the page, because a party can carry a thing before it knows what it is. The notification offers *Reveal*, and so does the item's row until you press it.
+An item is an adventure page in an `Items/` folder. Marking it found records the session but doesn't reveal the page, because a party can carry a thing before it knows what it is. The notification offers *Reveal*, and so does the item's row until you press it.
 
 **Uses.** A page hands out an item when a GM Party count on it names the item:
 
@@ -78,7 +78,7 @@ That page's bar gets a row for the item, "Tube: six grins here", with *Mark foun
 
 ## Scenes
 
-A scene is a Planning page of `type: scene`, wherever it lives, since an adventure keeps its scenes under its acts rather than in one folder. `gm.config.sceneType` names the type.
+A scene is an adventure page of `type: scene`, wherever it lives, since an adventure keeps its scenes under its acts rather than in one folder. `gm.config.sceneType` names the type.
 
 **Planned, started, finished.** Before a session, *Mark planned* records the scenes you expect the party to reach. At the table *Mark started* opens one and *Mark finished* closes it. The two ends are kept apart because a scene that runs long finishes in the next session: the bar then reads "✓ Played in sessions 1–2", each number linked to its log, where a scene inside one session reads "✓ Played in session 3" and one still running reads "▶ Started in session 3, still going". A scene can only be finished once it is started, and unstarting one takes its finish with it.
 
@@ -100,7 +100,7 @@ Playing a scene never reveals it: what the players can see of the adventure stay
 
 ## Where the state goes
 
-- `State/Revealed`: one link per revealed Planning page
+- `State/Revealed`: one link per revealed adventure page
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
 - `State/Items/<name>`: found, the uses left of those found, and where, with a log
 - `State/Scenes/<act>/<scene>`: planned, started and finished, with a log; the act comes too, so scenes numbered alike in two acts stay apart
@@ -114,6 +114,14 @@ Publishing writes into `Player/` and **replaces** what is there, except `Player/
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.0
+
+The adventure lives in `Adventure/`, which was `Planning/`. Rename the folder, and the links to it in `State/`, or keep the old name with a `space-lua` block of your own:
+
+    gm.config.adventureFolder = "Planning/"
+
+In code, `gm.config.planningPrefix` is now `gm.config.adventureFolder`, `gm.isPlanningPage` is `gm.isAdventurePage` and `gm.planningPages` is `gm.adventurePages`.
 
 ## Changes in 2.6
 
@@ -129,7 +137,7 @@ Session logs keep scenes and decisions in sections of their own, and a decision 
 
 *Unreveal* replaces *Hide*. Hide took a page off the revealed list but left the players their published copy unless you caught a button in its notification; unrevealing deletes that copy too, with *Undo*. The bar says whether a revealed page has been published yet, and marks a page the players still have a copy of after it came off the list.
 
-A space's `CONFIG` page is no longer an adventure page. Before 2.4 it could be revealed, and publishing would then have copied Planning's settings over the Player space's own.
+A space's `CONFIG` page is no longer an adventure page. Before 2.4 it could be revealed, and publishing would then have copied the adventure's settings over the Player space's own.
 
 ## Changes in 2.3.1
 
@@ -158,20 +166,20 @@ Buttons: the GM bar, the header buttons, pickers, and *Undo*. Marking someone me
 gm = gm or {}
 
 gm.config = {
-  sessionPage    = "Session Table",
-  sessionsFolder = "Sessions/",
-  stateFolder    = "State/",
-  revealedPage   = "State/Revealed",
-  planningPrefix = "Planning/",
-  playerFolder   = "Player/",
-  playerNotes    = "Notes/",
-  dmHeading      = "DM Only",
-  sceneType      = "scene",
-  sessionType    = "session",
+  sessionPage     = "Session Table",
+  sessionsFolder  = "Sessions/",
+  stateFolder     = "State/",
+  revealedPage    = "State/Revealed",
+  adventureFolder = "Adventure/",
+  playerFolder    = "Player/",
+  playerNotes     = "Notes/",
+  dmHeading       = "DM Only",
+  sceneType       = "scene",
+  sessionType     = "session",
 }
 
 -- What GM Kit tracks, and what each kind's pages can be marked. The first
--- four are Planning folders. A scene is any Planning page of `sceneType`,
+-- four are adventure folders. A scene is any adventure page of `sceneType`,
 -- because an adventure keeps its scenes under its acts, not in one folder.
 gm.kinds = {
   People   = { met = true, dead = true },
@@ -333,7 +341,7 @@ function gm.writeRevealed(list)
   local lines = {
     "---", "type: state", "---", "",
     "# Revealed to players", "",
-    "Planning pages the players have learned about, kept by GM Kit. " ..
+    "Adventure pages the players have learned about, kept by GM Kit. " ..
       "Publishing copies each of them into `" .. gm.config.playerFolder .. "`.", "",
     '${widgets.commandButton("Reveal a page…", "GM: Reveal Page")} ' ..
       '${widgets.commandButton("Unreveal a page…", "GM: Unreveal Page")} ' ..
@@ -362,18 +370,18 @@ function gm.setRevealed(page, on)
   return true
 end
 
--- An adventure page: in Planning, but not its index, its CONFIG, libraries
--- or build output.
-function gm.isPlanningPage(page)
-  local prefix = gm.config.planningPrefix
+-- An adventure page: in the adventure folder, but not its index, its CONFIG,
+-- libraries or build output.
+function gm.isAdventurePage(page)
+  local prefix = gm.config.adventureFolder
   if not page or not page:startsWith(prefix) then return false end
   local rel = page:sub(#prefix + 1)
   return rel ~= "index" and rel ~= "CONFIG" and not rel:startsWith("Library/")
     and not rel:startsWith("Build/")
 end
 
-function gm.planningPages()
-  local prefix = gm.config.planningPrefix
+function gm.adventurePages()
+  local prefix = gm.config.adventureFolder
   local names = query[[
     from p = index.pages()
     where p.name:startsWith(prefix)
@@ -382,7 +390,7 @@ function gm.planningPages()
   ]]
   local out = {}
   for _, name in ipairs(names) do
-    if gm.isPlanningPage(name) then out[#out + 1] = name end
+    if gm.isAdventurePage(name) then out[#out + 1] = name end
   end
   return out
 end
@@ -396,7 +404,7 @@ function gm.pageType(page)
 end
 
 function gm.isScene(page)
-  return gm.isPlanningPage(page) and gm.pageType(page) == gm.config.sceneType
+  return gm.isAdventurePage(page) and gm.pageType(page) == gm.config.sceneType
 end
 
 -- The folder decides for people, places, factions and items; for anything
@@ -433,8 +441,8 @@ end
 -- adventure page, so never a space's index, CONFIG or libraries, and never
 -- the players' Notes.
 function gm.playerCopy(page)
-  if not gm.isPlanningPage(page) then return nil end
-  local rel = page:sub(#gm.config.planningPrefix + 1)
+  if not gm.isAdventurePage(page) then return nil end
+  local rel = page:sub(#gm.config.adventureFolder + 1)
   if rel:startsWith(gm.config.playerNotes) then return nil end
   return gm.config.playerFolder .. rel
 end
@@ -654,10 +662,10 @@ function gm.allows(page, mark, state)
   return (state or gm.readState(page))[n.field] == n.value
 end
 
--- Pages that can take a mark, unmarked first. If Planning has no People,
--- Places or Factions folders at all, every Planning page can.
+-- Pages that can take a mark, unmarked first. If the adventure has no
+-- People, Places or Factions folders at all, every adventure page can.
 function gm.markable(mark)
-  local m, all = gm.marks[mark], gm.planningPages()
+  local m, all = gm.marks[mark], gm.adventurePages()
   local open, done, notes = {}, {}, {}
   for _, page in ipairs(all) do
     local kind = gm.kind(page)
@@ -684,7 +692,7 @@ function gm.pick(label, help, pages, notes)
     gm.notify("There are no pages to choose from", nil, "warning")
     return nil
   end
-  local prefix = gm.config.planningPrefix
+  local prefix = gm.config.adventureFolder
   local options = {}
   for i, page in ipairs(pages) do
     options[i] = {
@@ -749,11 +757,11 @@ function gm.mark(page, mark, detail, extra)
   for k, v in pairs(extra.fields or {}) do fields[k] = v end
   gm.recordState(page, fields, gm.sessionLink(s, true) .. ": " .. entry)
   local log, logBefore = gm.logged(m, s, page)
-  local revealed = m.reveals and page:startsWith(gm.config.planningPrefix)
+  local revealed = m.reveals and page:startsWith(gm.config.adventureFolder)
                    and gm.setRevealed(page, true)
   gm.refresh()
   local actions = {}
-  if m.offers and page:startsWith(gm.config.planningPrefix) and not gm.isRevealed(page) then
+  if m.offers and page:startsWith(gm.config.adventureFolder) and not gm.isRevealed(page) then
     actions[#actions + 1] = { name = "Reveal", run = function() gm.reveal(page) end }
   end
   actions[#actions + 1] = { name = "Undo", run = function()
@@ -811,15 +819,15 @@ end
 
 ------------------------------------------------------------------ items
 
--- The Planning page a link in the adventure names: World/Items/Tube, a
+-- The adventure page a link in the adventure names: World/Items/Tube, a
 -- path from this space's root, or a name that only one page ends with.
 function gm.resolve(ref)
   ref = ref:match("^%s*(.-)%s*$"):gsub("%.md$", "")
-  local prefix = gm.config.planningPrefix
+  local prefix = gm.config.adventureFolder
   if space.pageExists(prefix .. ref) then return prefix .. ref end
   if ref:startsWith(prefix) and space.pageExists(ref) then return ref end
   local tail, found = "/" .. ref:lower(), nil
-  for _, page in ipairs(gm.planningPages()) do
+  for _, page in ipairs(gm.adventurePages()) do
     if ("/" .. page:lower()):endsWith(tail) then
       if found then return nil end
       found = page
@@ -930,7 +938,7 @@ end
 -- Every page that hands an item out, first by page name.
 function gm.handoutsOf(item)
   local out = {}
-  for _, page in ipairs(gm.planningPages()) do
+  for _, page in ipairs(gm.adventurePages()) do
     local text = space.readPage(page)
     if text:find("item%s*=") then
       for _, h in ipairs(gm.handouts(page, text)) do
@@ -1038,7 +1046,7 @@ end
 -- The found items a use can come off (spend) or go back to (refund).
 function gm.withUses(refund)
   local pages, notes = {}, {}
-  for _, page in ipairs(gm.planningPages()) do
+  for _, page in ipairs(gm.adventurePages()) do
     if gm.kind(page) == "Items" then
       local state = gm.readState(page)
       local uses, top = tonumber(state.uses), tonumber(state.uses_found)
@@ -1061,7 +1069,7 @@ function gm.pickItem(label, help, pages, notes)
     if page == current then return current end
     allowed[page] = true
   end
-  if gm.isPlanningPage(current) then
+  if gm.isAdventurePage(current) then
     local here = {}
     for _, item in ipairs((gm.itemsOn(current))) do
       if allowed[item] then here[#here + 1] = item end
@@ -1349,7 +1357,7 @@ end
 -- what the party has done, and a button for each thing not yet recorded.
 function gm.bar(page)
   page = page or editor.getCurrentPage()
-  if not gm.isPlanningPage(page) then return nil end
+  if not gm.isAdventurePage(page) then return nil end
   local kind = gm.kind(page)
   local can = kind and gm.kinds[kind] or {}
   local state = gm.readState(page)
@@ -1419,10 +1427,10 @@ command.define {
   name = "GM: Reveal Page",
   run = function()
     local page = editor.getCurrentPage()
-    if not gm.isPlanningPage(page) then
+    if not gm.isAdventurePage(page) then
       local revealed, hidden = {}, {}
       for _, n in ipairs(gm.readRevealed()) do revealed[n] = true end
-      for _, n in ipairs(gm.planningPages()) do
+      for _, n in ipairs(gm.adventurePages()) do
         if not revealed[n] then hidden[#hidden + 1] = n end
       end
       page = gm.pick("Reveal", "Which page have the players learned about?", hidden)
@@ -1431,11 +1439,11 @@ command.define {
   end
 }
 
--- The open Planning page, or one picked from those the players can see or
+-- The open adventure page, or one picked from those the players can see or
 -- still have a copy of.
 local function unrevealCommand()
   local page = editor.getCurrentPage()
-  if not gm.isPlanningPage(page) then
+  if not gm.isAdventurePage(page) then
     local pages, notes, listed = {}, {}, {}
     local function hasCopy(n)
       local copy = gm.playerCopy(n)
@@ -1446,7 +1454,7 @@ local function unrevealCommand()
       listed[n] = true
       notes[n] = hasCopy(n) and "Published" or "Revealed, not published yet"
     end
-    for _, n in ipairs(gm.planningPages()) do
+    for _, n in ipairs(gm.adventurePages()) do
       if not listed[n] and hasCopy(n) then
         pages[#pages + 1] = n
         notes[n] = "Not revealed, but the players still have a copy"
@@ -1544,7 +1552,7 @@ command.define {
   name = "GM: Unmark",
   run = function()
     local pages, notes, marked = {}, {}, {}
-    for _, page in ipairs(gm.planningPages()) do
+    for _, page in ipairs(gm.adventurePages()) do
       local kind = gm.kind(page)
       local can = kind and gm.kinds[kind] or {}
       local state, mine, said = gm.readState(page), {}, {}
