@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.1.0"
+version: "3.2.0"
 ---
 
 # GM Kit
@@ -32,7 +32,7 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 
 **The header.** Three buttons: the session table, *Log a decision* and *Publish to players*.
 
-**Notifications.** Marking, unmarking, revealing, unrevealing and starting a session each come with *Undo*. A reveal also offers *Publish now*. *Undo* only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
+**Notifications.** Marking, unmarking, revealing, unrevealing and starting a session each come with *Undo*. A reveal also offers *Publish now*. *Undo* takes back what its own action did and nothing else, so a mark, a use or a decision made since stays made. It only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
 
 **Taking a page back.** *Unreveal* takes a page off the revealed list and deletes the copy the players were sent, so a page revealed or published by mistake is gone from the Player space at once. *Undo* puts both back, and so does revealing it and publishing again. A page that isn't revealed but that the players still have a copy of, say one hidden before 2.4, shows ◐ on its bar, with *Delete their copy*.
 
@@ -140,9 +140,25 @@ None of them counts inside fenced code, so a code sample can show one. Give mark
 
 The DM space shows a callout with *DM only* and a crossed-out eye at its top, and a span with *DM* before it and a dotted line under it, so what the players won't get says so in words, not only in colour. `gm.config.dmWord` is the word all three look for, `dm`. The style looks for `dm` as well, so copy it with your own word if you change it.
 
+## Pages only the DM sees
+
+Some pages keep what only the DM may see in the page itself, where no DM-only marking can reach it. A GM Maps map page is one: its map block is the grid with the creatures on it, and every trapdoor, written out. Their types are in `gm.config.privateTypes`, `{ "map" }` by default, and the type GM Maps is set to give its pages counts too. Such a page is never revealed or published, and its bar says so: "⊘ Only for the DM". The players see a map where a page of theirs draws it, which prints it clean.
+
+A private page that is on the revealed list from before, or that the players already have a copy of, says that on its bar with a button to take it back. Publishing leaves it out and names it.
+
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.2
+
+**Marks no longer overwrite each other.** GM Kit asked `space.pageExists` whether a state page or a session's log was there yet. In SilverBullet 2.11 that answers the way a link resolves, from a list of pages that can be seconds behind a write, so a page written a moment before could look missing. A second action on it then built it afresh from its template: *Mark met* then *Mark dead*, or *Mark started* then *Log a decision*, lost the first, and both said they had worked. GM Kit now asks for the page itself (`gm.exists`).
+
+**Undo takes back only its own action.** It used to put the whole page back as the action found it, so undoing a scene's start deleted the session's log with a decision logged after it, and undoing one use of two gave both back. Now the fields the action set go back to what they were, its log lines come out, and a log it began goes only if nothing else was written to it.
+
+**A map page is never revealed or published.** Its map block holds the creatures and every hidden thing, and publishing one sent them to the players. See *Pages only the DM sees*.
+
+**A published page reads itself.** While publishing, `gm.printing` is the page being printed, so an expression that reads the page it sits on, such as GM Bestiary's `${bestiary.ref()}`, prints for that page instead of the one open in the editor.
 
 ## Changes in 3.1
 
@@ -212,6 +228,10 @@ gm.config = {
   dmWord          = "dm",
   sceneType       = "scene",
   sessionType     = "session",
+  -- Page types whose page itself holds what only the DM may see, so they
+  -- are never revealed or published: GM Maps keeps a map's creatures, and
+  -- everything hidden on it, in the map block on its page.
+  privateTypes    = { "map" },
 }
 
 -- What GM Kit tracks, and what each kind's pages can be marked. The first
@@ -236,13 +256,24 @@ function gm.splitFrontmatter(text)
   return text:sub(5, s), text:sub(e + 1)
 end
 
+-- A YAML value as SilverBullet's index reads it: "quoted" or 'quoted' comes
+-- without its quotes, and a # comment after it goes. A page typed 'map', or
+-- map # the clearing, is a map page to GM Maps, so it has to be one here.
+local function yamlValue(v)
+  local dq = v:match('^"(.*)"$') or v:match('^"(.-)"%s+#')
+  if dq then return dq end
+  local sq = v:match("^'(.*)'$") or v:match("^'(.-)'%s+#")
+  if sq then return (sq:gsub("''", "'")) end
+  return (v:gsub("%s+#.*$", ""))
+end
+
 -- Frontmatter as a table of strings.
 function gm.frontmatter(text)
   local fields = {}
   local head = gm.splitFrontmatter(text)
   for line in (head or ""):gmatch("([^\n]*)\n") do
     local k, v = line:match("^([%w_]+):%s*(.-)%s*$")
-    if k then fields[k] = v:match('^"(.*)"$') or v end
+    if k then fields[k] = yamlValue(v) end
   end
   return fields
 end
@@ -580,10 +611,16 @@ function gm.stripSecrets(text)
   return dmStrip(dmScan(text, c.dmHeading, c.dmWord))
 end
 
+-- While a page is printed for the players, gm.printing is its name, so an
+-- expression that reads the page it sits on, such as GM Bestiary's
+-- ${bestiary.ref()}, reads that page rather than the one open in the editor.
+gm.printing = nil
+
 -- A players' copy carries no code the Player space can't run: each ${...}
 -- that gives a widget with a Markdown face goes in as that Markdown. The rest
 -- stays live, so a query in the Player space sees only what was published.
-function gm.print(text)
+-- `page` is the page the text comes from.
+function gm.print(text, page)
   if not text:find("${", 1, true) then return text end
   local found = {}
   local function walk(node)
@@ -594,6 +631,11 @@ function gm.print(text)
     end
   end
   walk(markdown.parseMarkdown(text))
+  local was = gm.printing
+  gm.printing = page
+  -- put back however this ends, a stop from the user included, which pcall
+  -- passes on rather than catching
+  local restore <close> = setmetatable({}, { __close = function() gm.printing = was end })
   for i = #found, 1, -1 do
     local node = found[i]
     local ok, value = pcall(function()
@@ -606,15 +648,48 @@ function gm.print(text)
   return text
 end
 
+-- Whether there is a page of exactly this name. space.pageExists can't say:
+-- it answers the way a link resolves, so a page whose path only ends that
+-- way counts, and it reads a list of pages that can be seconds behind a
+-- write. A page written a moment ago then looks missing, and marking it again
+-- would build it afresh from its template over the first mark. Any failure
+-- but a missing page is raised rather than taken for one, for the same reason.
+function gm.exists(page)
+  if not page or page:find("^%.") or page:find("/%.%.?/") or page:find("/%.%.?$") then
+    return false
+  end
+  local ok, err = pcall(space.getPageMeta, page)
+  if ok then return true end
+  local why = tostring(err)
+  if why:find("Not found", 1, true) or why:find("isn't readable", 1, true) then return false end
+  error(err, 0)
+end
+
+-- For what a bar, a table or a picker shows: the client's own list first,
+-- which costs nothing, or GM Kit's note of a page it has just written, which
+-- the list can take seconds to show; then the page itself, only for a yes,
+-- since the list says yes to any page whose path ends the same way. gm.exists
+-- asks the space every time, which goes to the server for a page that isn't
+-- there.
+function gm.seen(page)
+  return (space.pageExists(page) or gm.written[page] == true) and gm.exists(page)
+end
+
 -- Reads a page, saving it first if it is open so no typing is lost.
 function gm.read(page)
   if editor.getCurrentPage() == page then editor.save() end
   return space.readPage(page)
 end
 
+-- The pages GM Kit has written since the space loaded, which the client's
+-- own list can take seconds to show: gm.seen counts them at once, so a bar
+-- redrawn straight after a mark shows the mark.
+gm.written = {}
+
 -- Writes a page, reloading it if it is open so the editor never shows a stale copy.
 function gm.write(page, text)
   space.writePage(page, text)
+  gm.written[page] = true
   if editor.getCurrentPage() == page then editor.reloadPage() end
 end
 
@@ -635,14 +710,14 @@ function gm.name(page)
 end
 
 function gm.patch(page, key, value)
-  local text = space.pageExists(page) and gm.read(page) or ("# " .. gm.name(page) .. "\n")
+  local text = gm.exists(page) and gm.read(page) or ("# " .. gm.name(page) .. "\n")
   gm.write(page, gm.setFrontmatter(text, key, value))
 end
 
 -- Read from the page rather than the index, so it is right straight after a change.
 function gm.currentSession()
   local page = gm.config.sessionPage
-  if not space.pageExists(page) then return 1 end
+  if not gm.exists(page) then return 1 end
   return tonumber(gm.frontmatter(space.readPage(page)).session) or 1
 end
 
@@ -656,7 +731,7 @@ end
 
 function gm.readRevealed()
   local list = {}
-  if not space.pageExists(gm.config.revealedPage) then return list end
+  if not gm.exists(gm.config.revealedPage) then return list end
   for name in space.readPage(gm.config.revealedPage):gmatch("%- %[%[([^%]]+)%]%]") do
     list[#list + 1] = name
   end
@@ -726,12 +801,56 @@ end
 -- A page's type, read from the page rather than the index so a page
 -- written a moment ago already counts.
 function gm.pageType(page)
-  if not page or not space.pageExists(page) then return nil end
+  if not page or not gm.exists(page) then return nil end
   return gm.frontmatter(space.readPage(page)).type
 end
 
 function gm.isScene(page)
   return gm.isAdventurePage(page) and gm.pageType(page) == gm.config.sceneType
+end
+
+-- The private types as a set: the configured ones, and the type GM Maps is
+-- set to give its map pages, since a space may have told it another.
+local function privateSet()
+  local set = {}
+  for _, t in ipairs(gm.config.privateTypes) do set[t] = true end
+  if maps and maps.setting then
+    local ok, t = pcall(maps.setting, "type")
+    if ok and type(t) == "string" then set[t] = true end
+  end
+  return set
+end
+
+-- A page of one of the private types, which only the DM may ever see. The
+-- page's own frontmatter is asked, which is right the moment it is written,
+-- and so is the index, which reads YAML the way GM Maps sees the page:
+-- either one saying so is enough.
+function gm.isPrivate(page)
+  local set = privateSet()
+  local t = gm.pageType(page)
+  if t and set[t] then return true end
+  local indexed = query[[
+    from p = index.pages()
+    where p.name == page and p.type ~= nil
+    select p.type
+  ]]
+  return type(indexed[1]) == "string" and set[indexed[1]] == true
+end
+
+-- The adventure pages of a private type, by the index, for a picker, where
+-- a page written a moment ago can wait to be left out.
+function gm.privatePages()
+  local prefix, set = gm.config.adventureFolder, privateSet()
+  local rows = query[[
+    from p = index.pages()
+    where p.name:startsWith(prefix) and p.type ~= nil
+    select { name = p.name, type = p.type }
+  ]]
+  local out = {}
+  for _, row in ipairs(rows) do
+    if set[row.type] then out[row.name] = true end
+  end
+  return out
 end
 
 -- The folder decides for people, places, factions and items; for anything
@@ -758,9 +877,14 @@ function gm.statePath(page)
   return gm.config.stateFolder .. kind .. "/" .. name
 end
 
-function gm.readState(page)
+-- A page's play state. What a bar or a table shows reads it the cheap way
+-- (gm.seen); an action that decides by it passes `exact`, so a record
+-- written a moment ago counts.
+function gm.readState(page, exact)
   local path = gm.statePath(page)
-  if not space.pageExists(path) then return {} end
+  local there
+  if exact then there = gm.exists(path) else there = gm.seen(path) end
+  if not there then return {} end
   return gm.frontmatter(space.readPage(path))
 end
 
@@ -802,30 +926,37 @@ function gm.appendUnder(text, heading, item)
   return text:sub(1, to) .. "\n" .. body .. (tail ~= "" and "\n" .. tail or "")
 end
 
--- A session's log page and its text, from a template when the session has
--- none yet. Scenes come first, because they say what the decisions are.
+-- What a session's log starts as. Scenes come first, because they say what
+-- the decisions are.
+function gm.sessionTemplate(s)
+  return "---\ntype: session\nsession: " .. s .. "\n---\n\n# Session " ..
+         s .. "\n\n## Scenes\n\n## Decisions\n"
+end
+
+-- A session's log page and its text, from the template when the session has
+-- none yet.
 function gm.sessionLog(s)
   local page = gm.config.sessionsFolder .. "Session " .. s
-  if space.pageExists(page) then return page, gm.read(page) end
-  return page, "---\ntype: session\nsession: " .. s .. "\n---\n\n# Session " ..
-         s .. "\n\n## Scenes\n\n## Decisions\n"
+  if gm.exists(page) then return page, gm.read(page) end
+  return page, gm.sessionTemplate(s)
 end
 
 -- "Scene 3 — Off the Road", or the page's name where it has no title.
 function gm.sceneTitle(page)
   local name = gm.name(page)
-  local title = space.pageExists(page) and gm.frontmatter(space.readPage(page)).scene_title
+  local title = gm.exists(page) and gm.frontmatter(space.readPage(page)).scene_title
   if title and title ~= "" then return name .. " — " .. title end
   return name
 end
 
 -- A scene's line in a session's own log, so the notes for a session jump
--- straight to the scene that was played in it.
+-- straight to the scene that was played in it. Gives back the log and the
+-- line, so Undo can take that line out again.
 function gm.logScene(s, what, page)
   local log, text = gm.sessionLog(s)
-  gm.write(log, gm.appendUnder(text, "Scenes",
-    what .. ": [[" .. page .. "|" .. gm.sceneTitle(page) .. "]]"))
-  return log
+  local item = what .. ": [[" .. page .. "|" .. gm.sceneTitle(page) .. "]]"
+  gm.write(log, gm.appendUnder(text, "Scenes", item))
+  return log, item
 end
 
 -- Every scene in the adventure, in the order it is meant to be played:
@@ -894,11 +1025,12 @@ function gm.playedText(state)
          gm.sessionNumberLink(to)
 end
 
--- Creates or updates a page's play state and appends to its log.
+-- Creates or updates a page's play state and appends to its log. Gives back
+-- the page and the text it wrote.
 function gm.recordState(page, fields, entry)
   local path = gm.statePath(page)
   local text
-  if space.pageExists(path) then
+  if gm.exists(path) then
     text = gm.read(path)
   else
     text = "---\ntype: state-record\nsubject: \"[[" .. page .. "]]\"\n---\n\n# " ..
@@ -910,11 +1042,67 @@ function gm.recordState(page, fields, entry)
   for _, k in ipairs(keys) do text = gm.setFrontmatter(text, k, fields[k]) end
   if entry then text = gm.appendItem(text, entry) end
   gm.write(path, text)
-  return path
+  return path, text
 end
 
 function gm.log(path, entry)
   gm.write(path, gm.appendItem(gm.read(path), entry))
+end
+
+-- A frontmatter field as it is written, quotes and all, or nil.
+function gm.rawField(text, key)
+  local head = gm.splitFrontmatter(text)
+  for line in (head or ""):gmatch("([^\n]*)\n") do
+    local k, v = line:match("^([%w_]+):%s*(.-)%s*$")
+    if k == key then return v end
+  end
+  return nil
+end
+
+-- Takes the last "- item" line out of a page's text, and gives back the
+-- text and whether the line was there. Where the line stood between two
+-- blank lines, one of them goes with it.
+function gm.removeItem(text, item)
+  local line = "- " .. item .. "\n"
+  local at, from = nil, 1
+  while true do
+    local s = text:find(line, from, true)
+    if not s then break end
+    if s == 1 or text:sub(s - 1, s - 1) == "\n" then at = s end
+    from = s + 1
+  end
+  if not at then return text, false end
+  local out = text:sub(1, at - 1) .. text:sub(at + #line)
+  if at > 2 and out:sub(at - 2, at - 1) == "\n\n" and out:sub(at, at) == "\n" then
+    out = out:sub(1, at - 1) .. out:sub(at + 1)
+  end
+  return out, true
+end
+
+-- Takes one action back off a page without touching what was done after it:
+-- each field it set goes back to what it was, or comes off if it wasn't
+-- there, and each line it added comes out. A page the action brought into
+-- being goes, unless something has been written to it since. Gives back
+-- whether there was anything to take back.
+function gm.revert(path, before, keys, items, created)
+  if not gm.exists(path) then return false end
+  local now = gm.read(path)
+  if not before and now == created then
+    space.deletePage(path)
+    return true
+  end
+  local text = now
+  for _, key in ipairs(keys) do
+    local was = before and gm.rawField(before, key)
+    if was then
+      text = gm.setFrontmatter(text, key, was)
+    else
+      text = gm.clearFrontmatter(text, key)
+    end
+  end
+  for _, item in ipairs(items) do text = (gm.removeItem(text, item)) end
+  gm.write(path, text)
+  return true
 end
 
 -- The marks, with the state field each sets and how it reads once set.
@@ -1044,22 +1232,41 @@ function gm.target(label, help, pages, notes)
   return gm.pick(label, help, pages, notes)
 end
 
--- Writes a mark's line into the session's own log, and gives back the log
--- and what it held before, so Undo can put it back or take it away again.
--- A mark with no `logs` writes nothing and gives back nothing.
-function gm.logged(m, s, page, what)
-  if not m.logs then return nil, nil end
+-- A mark's line in its session's own log, worked out before anything is
+-- written, so a read that fails stops the mark before any of it happens.
+-- A mark with no `logs` has no line.
+function gm.logPlan(m, s, page, what)
+  if not m.logs then return nil end
   local log = gm.config.sessionsFolder .. "Session " .. s
-  local before = space.pageExists(log) and space.readPage(log) or nil
-  gm.logScene(s, what or m.logs, page)
-  return log, before
+  local existed = gm.exists(log)
+  return {
+    log = log, session = s, existed = existed,
+    text = existed and gm.read(log) or gm.sessionTemplate(s),
+    item = (what or m.logs) .. ": [[" .. page .. "|" .. gm.sceneTitle(page) .. "]]",
+  }
 end
 
--- Puts a session's log back the way gm.logged found it, deleting one this
--- mark brought into being.
-function gm.unlogged(log, before)
-  if not log then return end
-  if before then gm.write(log, before) else space.deletePage(log) end
+-- Writes the line a plan worked out, and gives the plan back: it is what
+-- Undo needs to take that line out again.
+function gm.logged(plan)
+  if not plan then return nil end
+  gm.write(plan.log, gm.appendUnder(plan.text, "Scenes", plan.item))
+  return plan
+end
+
+-- Takes a mark's line back out of a session's log, and nothing else, so a
+-- decision or a scene logged after it stays. A log left with nothing but
+-- its template goes, whichever action began it: GM Kit never keeps an
+-- empty one.
+function gm.unlogged(done)
+  if not done or not gm.exists(done.log) then return end
+  local text = gm.removeItem(gm.read(done.log), done.item)
+  local function squeeze(t) return (t:gsub("%s+", " ")) end
+  if squeeze(text) == squeeze(gm.sessionTemplate(done.session)) then
+    space.deletePage(done.log)
+  else
+    gm.write(done.log, text)
+  end
 end
 
 -- Records a mark. extra can add state fields, replace the log entry, and
@@ -1067,7 +1274,7 @@ end
 function gm.mark(page, mark, detail, extra)
   extra = extra or {}
   local m, s = gm.marks[mark], gm.currentSession()
-  local name, state = gm.name(page), gm.readState(page)
+  local name, state = gm.name(page), gm.readState(page, true)
   if state[m.field] == m.value then
     gm.notify(name .. ": already recorded. " .. m.done .. "session " .. (state[m.session] or "?") .. ".")
     return false
@@ -1077,23 +1284,34 @@ function gm.mark(page, mark, detail, extra)
     return false
   end
   local path = gm.statePath(page)
-  local before = space.pageExists(path) and space.readPage(path) or nil
+  local before = gm.exists(path) and space.readPage(path) or nil
   local entry = extra.entry or (mark == "dead" and "died" or mark)
   if detail and detail ~= "" then entry = entry .. " - " .. detail end
   local fields = { [m.field] = m.value, [m.session] = s }
   for k, v in pairs(extra.fields or {}) do fields[k] = v end
-  gm.recordState(page, fields, gm.sessionLink(s, true) .. ": " .. entry)
-  local log, logBefore = gm.logged(m, s, page)
-  local revealed = m.reveals and page:startsWith(gm.config.adventureFolder)
-                   and gm.setRevealed(page, true)
+  local line = gm.sessionLink(s, true) .. ": " .. entry
+  -- everything read before anything is written, so a read that fails
+  -- stops the mark before any of it has happened
+  local plan = gm.logPlan(m, s, page)
+  local reveals = m.reveals and page:startsWith(gm.config.adventureFolder)
+                  and not gm.isPrivate(page)
+  local _, written = gm.recordState(page, fields, line)
+  local created = not before and written or nil
+  local logged = gm.logged(plan)
+  local revealed = reveals and gm.setRevealed(page, true)
   gm.refresh()
   local actions = {}
   if m.offers and page:startsWith(gm.config.adventureFolder) and not gm.isRevealed(page) then
     actions[#actions + 1] = { name = "Reveal", run = function() gm.reveal(page) end }
   end
+  -- Undo takes back this mark and nothing done since: another mark, a use
+  -- or a decision on the same pages stays
+  local keys = {}
+  for k in pairs(fields) do keys[#keys + 1] = k end
+  table.sort(keys)
   actions[#actions + 1] = { name = "Undo", run = function()
-    if before then gm.write(path, before) else space.deletePage(path) end
-    gm.unlogged(log, logBefore)
+    gm.revert(path, before, keys, { line }, created)
+    gm.unlogged(logged)
     if revealed then gm.setRevealed(page, false) end
     gm.refresh()
     gm.notify("Undone: " .. name .. " is no longer marked " .. mark)
@@ -1109,26 +1327,30 @@ end
 function gm.unmark(page, mark)
   local m, s = gm.marks[mark], gm.currentSession()
   local name, path = gm.name(page), gm.statePath(page)
-  if gm.readState(page)[m.field] ~= m.value then
+  if gm.readState(page, true)[m.field] ~= m.value then
     gm.notify(name .. " isn't marked " .. mark)
     return false
   end
   local before = gm.read(path)
-  local state = gm.readState(page)
+  local state = gm.readState(page, true)
   local alsoFinished = mark == "started" and state.finished == "true"
   local text = before
   for _, key in ipairs(m.clears) do text = gm.clearFrontmatter(text, key) end
   local was = gm.usesText(state, true)
-  gm.write(path, gm.appendItem(text, gm.sessionLink(s, true) .. ": not " ..
-    (mark == "dead" and "dead" or mark) .. " after all"))
-  local log, logBefore = gm.logged(m, s, page, "Not " .. mark .. " after all")
+  local line = gm.sessionLink(s, true) .. ": not " ..
+               (mark == "dead" and "dead" or mark) .. " after all"
+  local plan = gm.logPlan(m, s, page, "Not " .. mark .. " after all")
+  gm.write(path, gm.appendItem(text, line))
+  local logged = gm.logged(plan)
   gm.refresh()
   gm.notify(name .. ": no longer marked " .. mark ..
     ((mark == "found" and was ~= "") and ", and its uses with it" or "") ..
     (alsoFinished and ", and its finish with it" or "") .. ".", {
     { name = "Undo", run = function()
-      gm.write(path, before)
-      gm.unlogged(log, logBefore)
+      -- the cleared fields come back as they were, and only this line goes;
+      -- a record deleted since comes back whole, as it was before the unmark
+      if not gm.revert(path, before, m.clears, { line }) then gm.write(path, before) end
+      gm.unlogged(logged)
       gm.refresh()
       gm.notify("Undone: " .. name .. " is marked " .. mark .. " again")
     end },
@@ -1137,7 +1359,7 @@ function gm.unmark(page, mark)
 end
 
 function gm.markDead(page)
-  local state = gm.readState(page)
+  local state = gm.readState(page, true)
   if state.status == "dead" then return gm.mark(page, "dead") end
   local how = editor.prompt("How did " .. gm.name(page) .. " die? (optional)", "")
   if how == nil then return false end
@@ -1151,8 +1373,8 @@ end
 function gm.resolve(ref)
   ref = ref:match("^%s*(.-)%s*$"):gsub("%.md$", "")
   local prefix = gm.config.adventureFolder
-  if space.pageExists(prefix .. ref) then return prefix .. ref end
-  if ref:startsWith(prefix) and space.pageExists(ref) then return ref end
+  if gm.exists(prefix .. ref) then return prefix .. ref end
+  if ref:startsWith(prefix) and gm.exists(ref) then return ref end
   local tail, found = "/" .. ref:lower(), nil
   for _, page in ipairs(gm.adventurePages()) do
     if ("/" .. page:lower()):endsWith(tail) then
@@ -1179,7 +1401,7 @@ end
 -- stand-in for party.count that keeps the rule it is given.
 function gm.handouts(page, text)
   local out = {}
-  text = text or (space.pageExists(page) and space.readPage(page)) or ""
+  text = text or (gm.exists(page) and space.readPage(page)) or ""
   if not (party and party.value) or not text:find("item%s*=") then return out end
   local nodes = {}
   local function walk(node)
@@ -1243,7 +1465,7 @@ end
 -- The items a page hands out or shows, in page order and not counting the
 -- page itself, and what the page hands out of each.
 function gm.itemsOn(page)
-  if not space.pageExists(page) then return {}, {} end
+  if not gm.exists(page) then return {}, {} end
   local text = space.readPage(page)
   local all, given = {}, {}
   for _, h in ipairs(gm.handouts(page, text)) do
@@ -1283,7 +1505,7 @@ end
 -- on: `from`, if that page hands it out; else the one page that does, or the
 -- one picked when several do. Nothing handing it out, it has no uses.
 function gm.markFound(item, from)
-  if gm.readState(item).found == "true" then return gm.mark(item, "found") end
+  if gm.readState(item, true).found == "true" then return gm.mark(item, "found") end
   local choices = {}
   if from then
     for _, h in ipairs(gm.handouts(from)) do
@@ -1338,7 +1560,7 @@ end
 
 -- Spends one of an item's uses (delta -1) or refunds one (+1), with Undo.
 function gm.spend(item, delta)
-  local name, state = gm.name(item), gm.readState(item)
+  local name, state = gm.name(item), gm.readState(item, true)
   local uses, top = tonumber(state.uses), tonumber(state.uses_found)
   if state.found ~= "true" or not uses then
     gm.notify(name .. " has no uses to count", nil, "warning")
@@ -1358,13 +1580,25 @@ function gm.spend(item, delta)
   local before = gm.read(path)
   local what = a(unit) .. (delta < 0 and " used" or " refunded")
   local text = gm.setFrontmatter(before, "uses", int(after))
-  gm.write(path, gm.appendItem(text, gm.sessionLink(s, true) .. ": " .. what .. ", " .. int(after) .. " left"))
+  local line = gm.sessionLink(s, true) .. ": " .. what .. ", " .. int(after) .. " left"
+  gm.write(path, gm.appendItem(text, line))
   gm.refresh()
-  gm.notify(name .. ": " .. what .. ". " .. gm.usesText(gm.readState(item), true) .. ".", {
+  gm.notify(name .. ": " .. what .. ". " .. gm.usesText(gm.readState(item, true), true) .. ".", {
     { name = "Undo", run = function()
-      gm.write(path, before)
+      -- one use back the other way, counted from what is left now, so a use
+      -- or refund made since this one stays made
+      if not gm.exists(path) then return end
+      local now = gm.read(path)
+      local left, most = tonumber(gm.frontmatter(now).uses), tonumber(gm.frontmatter(now).uses_found)
+      if left then
+        left = left - delta
+        if left < 0 then left = 0 end
+        if most and left > most then left = most end
+        now = gm.setFrontmatter(now, "uses", int(left))
+      end
+      gm.write(path, (gm.removeItem(now, line)))
       gm.refresh()
-      gm.notify("Undone: " .. name .. " is back to " .. gm.usesText(gm.readState(item), true))
+      gm.notify("Undone: " .. name .. " is back to " .. gm.usesText(gm.readState(item, true), true))
     end },
   })
   return true
@@ -1410,7 +1644,18 @@ function gm.pickItem(label, help, pages, notes)
   return gm.pick(label, help, pages, notes)
 end
 
+-- What the notification says of a private page, for reveal and publish.
+local function privateNote(page)
+  return gm.name(page) .. " is a " .. tostring(gm.pageType(page)) ..
+    " page, which keeps what only the DM may see in the page itself, so it is " ..
+    "never revealed or published. The players see what a page they have shows of it."
+end
+
 function gm.reveal(page)
+  if gm.isPrivate(page) then
+    gm.notify(privateNote(page), nil, "warning")
+    return false
+  end
   if not gm.setRevealed(page, true) then
     gm.notify(gm.name(page) .. " is already revealed")
     return false
@@ -1431,7 +1676,7 @@ end
 -- list, but they still have a copy) or "hidden".
 function gm.visibility(page)
   local copy = gm.playerCopy(page)
-  local has = copy ~= nil and space.pageExists(copy)
+  local has = copy ~= nil and gm.seen(copy)
   if gm.isRevealed(page) then
     return has and "published" or "revealed"
   end
@@ -1442,7 +1687,7 @@ end
 -- they were sent deleted. Undo puts both back.
 function gm.unreveal(page)
   local name, copy = gm.name(page), gm.playerCopy(page)
-  local copyText = copy and space.pageExists(copy) and space.readPage(copy) or nil
+  local copyText = copy and gm.exists(copy) and space.readPage(copy) or nil
   local listed = gm.setRevealed(page, false)
   if not listed and not copyText then
     gm.notify(name .. " isn't revealed, and the players have no copy of it")
@@ -1457,6 +1702,12 @@ function gm.unreveal(page)
     message = "Unrevealed " .. name .. ". It was never published, so the players never had it."
   else
     message = "Deleted the players' copy of " .. name .. ", which wasn't revealed any more."
+  end
+  -- a private page is taken back for good: an Undo would hand the players
+  -- the DM's layer again
+  if gm.isPrivate(page) then
+    gm.notify(message)
+    return true
   end
   gm.notify(message, {
     { name = "Undo", run = function()
@@ -1475,18 +1726,47 @@ function gm.hide(page)
 end
 
 function gm.publish()
-  local pages, missing = {}, {}
+  local pages, missing, private = {}, {}, {}
   for _, page in ipairs(gm.readRevealed()) do
     if gm.playerCopy(page) then
-      if space.pageExists(page) then
-        pages[#pages + 1] = page
-      else
+      if not gm.exists(page) then
         missing[#missing + 1] = page
+      elseif gm.isPrivate(page) then
+        private[#private + 1] = page
+      else
+        pages[#pages + 1] = page
       end
     end
   end
+  -- A private page is never published. One on the list, from before GM Kit
+  -- refused them, is named. One the players still have a copy of, on the
+  -- list or not, is named with how to take it back, since publishing never
+  -- deletes anything.
+  local seen, leaked = {}, {}
+  for _, page in ipairs(private) do seen[page] = true end
+  for page in pairs(gm.privatePages()) do seen[page] = true end
+  local all = {}
+  for page in pairs(seen) do all[#all + 1] = page end
+  table.sort(all)
+  for _, page in ipairs(all) do
+    local copy = gm.playerCopy(page)
+    if copy and gm.exists(copy) then leaked[#leaked + 1] = page end
+  end
+  local held = ""
+  if #private > 0 then
+    held = " Left out, as only the DM may see them: " .. table.concat(private, ", ") .. "."
+  end
+  if #leaked > 0 then
+    held = held .. " The players still have a copy of " .. table.concat(leaked, ", ") ..
+           ", sent before such pages were kept to the DM: take it back with" ..
+           " Delete their copy on its bar."
+  end
   if #pages == 0 then
-    gm.notify("Nothing is revealed yet, so there is nothing to publish", nil, "warning")
+    if held ~= "" then
+      gm.notify("Nothing to publish." .. held, nil, "warning")
+    else
+      gm.notify("Nothing is revealed yet, so there is nothing to publish", nil, "warning")
+    end
     return false
   end
   local folder = gm.config.playerFolder
@@ -1499,8 +1779,8 @@ function gm.publish()
   local added, updated, same = 0, 0, 0
   for _, page in ipairs(pages) do
     local copy = gm.playerCopy(page)
-    local text = gm.print(gm.stripSecrets(space.readPage(page)))
-    if not space.pageExists(copy) then
+    local text = gm.print(gm.stripSecrets(space.readPage(page)), page)
+    if not gm.exists(copy) then
       gm.write(copy, text)
       added = added + 1
     elseif space.readPage(copy) ~= text then
@@ -1517,6 +1797,10 @@ function gm.publish()
     kind = "warning"
     message = message .. " Revealed but no longer there: " ..
               table.concat(missing, ", ") .. "."
+  end
+  if held ~= "" then
+    kind = "warning"
+    message = message .. held
   end
   gm.notify(message, nil, kind)
   return true
@@ -1581,6 +1865,20 @@ end
 -- `quiet` leaves out the states where they can see it.
 local function visibilityParts(page, add, note, quiet)
   local seen = gm.visibility(page)
+  -- a private page is never offered to the players; a copy or a place on
+  -- the list from before it could be refused is offered for taking back
+  if gm.isPrivate(page) then
+    if seen == "hidden" then
+      note("⊘ Only for the DM: never revealed")
+    elseif seen == "revealed" then
+      note("⊘ Only for the DM, but on the revealed list")
+      add(gm.button("Unreveal", function() gm.unreveal(page) end))
+    else
+      note("◐ Only for the DM, but the players have a copy")
+      add(gm.button("Delete their copy", function() gm.unreveal(page) end))
+    end
+    return
+  end
   if seen == "stale" then
     note("◐ Not revealed, but the players still have a copy")
     add(gm.button("Delete their copy", function() gm.unreveal(page) end))
@@ -1648,7 +1946,7 @@ end
 -- "← The Field · Scene 2 — The Road, and the Town · Off the Road →". The
 -- order is the adventure's, so the next scene can be the next act's first.
 function gm.sessionNav(page)
-  if not space.pageExists(page) then return nil end
+  if not gm.exists(page) then return nil end
   local here = gm.sessionScene(gm.frontmatter(space.readPage(page)).session)
   if not here then return nil end
   local scenes, at = gm.scenes(), nil
@@ -1719,7 +2017,7 @@ function gm.bar(page)
   for _, mark in ipairs(recorded) do
     add(gm.button("Unmark " .. mark, function() gm.unmark(page, mark) end))
   end
-  if space.pageExists(gm.statePath(page)) then
+  if gm.seen(gm.statePath(page)) then
     note("[[" .. gm.statePath(page) .. "|Play state]]")
   end
   local items, given = gm.itemsOn(page)
@@ -1755,10 +2053,10 @@ command.define {
   run = function()
     local page = editor.getCurrentPage()
     if not gm.isAdventurePage(page) then
-      local revealed, hidden = {}, {}
+      local revealed, hidden, private = {}, {}, gm.privatePages()
       for _, n in ipairs(gm.readRevealed()) do revealed[n] = true end
       for _, n in ipairs(gm.adventurePages()) do
-        if not revealed[n] then hidden[#hidden + 1] = n end
+        if not revealed[n] and not private[n] then hidden[#hidden + 1] = n end
       end
       page = gm.pick("Reveal", "Which page have the players learned about?", hidden)
     end
@@ -1774,7 +2072,7 @@ local function unrevealCommand()
     local pages, notes, listed = {}, {}, {}
     local function hasCopy(n)
       local copy = gm.playerCopy(n)
-      return copy ~= nil and space.pageExists(copy)
+      return copy ~= nil and gm.seen(copy)
     end
     for _, n in ipairs(gm.readRevealed()) do
       pages[#pages + 1] = n

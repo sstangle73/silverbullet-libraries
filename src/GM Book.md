@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.8.1"
+version: "1.8.2"
 ---
 
 # GM Book
@@ -660,9 +660,11 @@ function gmbook.editionOf(page)
 end
 
 function gmbook.pages(root)
+  -- `~= nil`, not the field alone: a query's where reads 0 as false, so a
+  -- page at book_order 0 would drop out of the book
   local pages = query[[
     from p = index.pages()
-    where p.book_order
+    where p.book_order ~= nil
     order by p.book_order
   ]]
   local out = {}
@@ -767,11 +769,25 @@ local function transclusionOf(line)
   return page, (heading ~= "" and heading or nil)
 end
 
+-- Whether there is a page of exactly this name. space.pageExists answers the
+-- way a link resolves, so a name that only ends a page's path counts, and
+-- space.readPage, which wants the exact name, then fails. A path with a `.`
+-- or `..` in it names no page. Any other failure is raised rather than taken
+-- for a missing page.
+function gmbook.exists(name)
+  if name:find("^%.") or name:find("/%.%.?/") or name:find("/%.%.?$") then return false end
+  local ok, err = pcall(space.getPageMeta, name)
+  if ok then return true end
+  local why = tostring(err)
+  if why:find("Not found", 1, true) or why:find("isn't readable", 1, true) then return false end
+  error(err, 0)
+end
+
 -- The page a link in the book names: relative to the book's folder, as its
 -- pages write links, or a whole path, or the one page whose path ends so.
 function gmbook.resolve(ref, root)
   for _, name in ipairs({ root .. ref, ref }) do
-    if space.pageExists(name) then return name end
+    if gmbook.exists(name) then return name end
   end
   local names = query[[
     from p = index.pages()
@@ -952,7 +968,7 @@ function gmbook.compile(editions)
     mode = config.get("gmBook.transclusions", gmbook.config.transclusions),
     see = config.get("gmBook.see", gmbook.config.see),
     read = function(name)
-      if cache[name] == nil then cache[name] = space.pageExists(name) and space.readPage(name) or false end
+      if cache[name] == nil then cache[name] = gmbook.exists(name) and space.readPage(name) or false end
       return cache[name] or nil
     end,
   }
@@ -1040,7 +1056,7 @@ end
 function gmbook.copy(edition)
   local label = gmbook.editions[edition].label
   local page = gmbook.output(edition)
-  if not space.pageExists(page) then
+  if not gmbook.exists(page) then
     editor.flashNotification("There is no " .. label .. " yet. Build the book first.", "warning")
     return false
   end

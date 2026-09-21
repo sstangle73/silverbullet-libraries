@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Maps"
 description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain, ways through and things are told apart by pattern and silhouette, so a map reads in one ink and in grayscale."
 author: "Steven Storie"
-version: "1.2.1"
+version: "1.2.2"
 ---
 
 # GM Maps
@@ -125,7 +125,7 @@ Eight for a party of five: an area one square wider than the party has members, 
 
 On the page that number is your table's. In print it is the adventure's, because a build evaluates the line with GM Party 1.2.1's `party.printed`, so the book is drawn for the party it is written for whoever is playing tonight.
 
-**The map grows around its middle.** Rows and columns are added either side of the centre, copied from the nearest row or column that is all one character, so what sits at the centre stays near it and what sits against a wall stays against it. Shrinking takes those same rows and columns away. A map with nothing uniform to copy is left at the size it was drawn, and says so.
+**The map grows around its middle.** Rows and columns are added either side of the centre, copied from the nearest row or column that is all one character and nothing but ground from wall to wall, so what sits at the centre stays near it and what sits against a wall stays against it. Shrinking takes those same rows and columns away. A row or column with a way through or a thing anywhere along it, its walls included, is never copied or taken, so growing never adds a second door or chest and shrinking never takes the only one. A map with nothing uniform to copy is left at the size it was drawn, and says so.
 
 Leave the line out and the map is the size you drew it.
 
@@ -139,7 +139,7 @@ Nothing here carries meaning by colour. Terrain is told apart by pattern — hat
 
 The map on the page is a widget: an SVG plan with the DM's layer on it, each thing that names a page a link to it, and a Markdown face that is the same plan with that layer left off. The key is inside the drawing either way, so there is one figure to place and nothing to keep in step with it.
 
-That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what GM Kit publishes to the players. So **a map the players can be handed is what a map prints anyway**, in the book and on their own wiki, with nothing having to be stripped out of it. Every thing's square is drawn as the ground around it, so that map has no square left looking different where a creature or a trapdoor was.
+That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what GM Kit publishes to the players. So **a map the players can be handed is what a map prints anyway**, in the book and on their own wiki, with nothing having to be stripped out of it. The map's own page is the exception: its map block is the DM's layer written out, so GM Kit 3.2 keeps a map page to the DM, and the players get the map where a page of theirs draws it. Every thing's square is drawn as the ground around it, so that map has no square left looking different where a creature or a trapdoor was.
 
 **A scene wants the map twice.** An expression prints the same in both editions, so an edition can't have a map of its own; DM-only text is what tells the two apart. Draw the map where the scene describes the ground, and draw it again with the DM's layer on it in a DM callout right under it:
 
@@ -218,7 +218,10 @@ function maps.all()
       byTail[tail] = byTail[tail] == nil and p or false
     end
   end
-  local value = { byName = byName, byTail = byTail }
+  -- the adventure's folder, for a path a copy elsewhere makes ambiguous:
+  -- worked out here, once, rather than on every look that misses
+  local root = gmbook and gmbook.root and gmbook.root() or ""
+  local value = { byName = byName, byTail = byTail, root = root }
   maps.cached = { at = now, value = value }
   return value
 end
@@ -228,17 +231,21 @@ function maps.refresh()
   maps.cached = nil
 end
 
--- The map page a path names, or nil.
+-- The map page a path names, or nil. A path written for the adventure's
+-- folder finds its page there first, so a copy of the page elsewhere, such
+-- as one published to the players, can't make the path ambiguous.
 function maps.find(ref)
   if type(ref) ~= "string" or ref == "" then return nil end
   local all = maps.all()
-  return all.byName[ref] or all.byTail[ref] or nil
+  local found = all.byName[ref] or all.byTail[ref]
+  if found then return found end
+  return all.root ~= "" and all.byName[all.root .. ref] or nil
 end
 
 -- The page a map reads with no page of its own: the one being printed
--- during a build, or the one open.
+-- during a build or for the players, or the one open.
 function maps.here()
-  return (gmbook and gmbook.printing) or editor.getCurrentPage()
+  return (gmbook and gmbook.printing) or (gm and gm.printing) or editor.getCurrentPage()
 end
 
 ------------------------------------------------------------------ the source
@@ -461,13 +468,14 @@ local function rectangle(rows)
   return grid, width
 end
 
--- Whether an interior row or column is all one square, and so safe to copy
--- or to take away. A creature or a way out is never copied: growing a map
--- must not put a second of that creature on it, or a second door.
+-- Whether a square is plain ground, and so safe to copy or to take away with
+-- its row or column. Only terrain is: growing a map must not put a second of
+-- a creature on it, or a second door, lever or chest, and shrinking one must
+-- not take the only one away.
 local function plain(m, ch)
   local e = m.legend[ch]
   local kind = e and e.kind or "floor"
-  return kind ~= "token" and kind ~= "exit"
+  return not THING[kind] and kind ~= "exit" and kind ~= "door"
 end
 
 -- A row is safe to copy or to drop when its squares inside the walls are
@@ -1138,10 +1146,9 @@ function maps.source(ref)
   if page then
     text = space.readPage(page.name)
   else
-    local ok, t = pcall(function()
-      if space.pageExists(name) then return space.readPage(name) end
-      return nil
-    end)
+    -- read it outright: space.pageExists would say yes to a page whose path
+    -- only ends in the name, which space.readPage can't read
+    local ok, t = pcall(space.readPage, name)
     text = ok and t or nil
   end
   if not text then return nil, nil end

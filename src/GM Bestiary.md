@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Bestiary"
 description: "Creature pages that point at official stat blocks: the reference links to a compendium on the page, and cites the book and its entry in print. Wires those pages to GM Party's fights."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 # GM Bestiary
@@ -131,7 +131,10 @@ function bestiary.all()
       byTail[tail] = byTail[tail] == nil and p or false
     end
   end
-  local value = { byName = byName, byTail = byTail }
+  -- the adventure's folder, for a path a copy elsewhere makes ambiguous:
+  -- worked out here, once, rather than on every look that misses
+  local root = gmbook and gmbook.root and gmbook.root() or ""
+  local value = { byName = byName, byTail = byTail, root = root }
   bestiary.cached = { at = now, value = value }
   return value
 end
@@ -141,11 +144,16 @@ function bestiary.refresh()
   bestiary.cached = nil
 end
 
--- The creature page a path names, or nil.
+-- The creature page a path names, or nil. A path written for the
+-- adventure's folder finds its page there when the path alone is ambiguous,
+-- so a copy of the page elsewhere, such as one published to the players,
+-- can't hide it.
 function bestiary.find(ref)
   if type(ref) ~= "string" or ref == "" then return nil end
   local all = bestiary.all()
-  return all.byName[ref] or all.byTail[ref] or nil
+  local found = all.byName[ref] or all.byTail[ref]
+  if found then return found end
+  return all.root ~= "" and all.byName[all.root .. ref] or nil
 end
 
 -- What a creature page says: its page, its title, and the stat block to run
@@ -217,9 +225,9 @@ local function forms(c)
 end
 
 -- The page a reference reads with no page of its own: the one being printed
--- during a build, or the one open.
+-- during a build or for the players, or the one open.
 function bestiary.here()
-  return (gmbook and gmbook.printing) or editor.getCurrentPage()
+  return (gmbook and gmbook.printing) or (gm and gm.printing) or editor.getCurrentPage()
 end
 
 local function missing(ref)
