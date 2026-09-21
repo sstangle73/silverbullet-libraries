@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.2.0"
+version: "3.3.0"
 ---
 
 # GM Kit
@@ -111,6 +111,8 @@ Playing a scene never reveals it: what the players can see of the adventure stay
 
 Publishing writes into `Player/` and **replaces** what is there, except `Player/Notes/`, which it never touches. Nothing in `Player/` is ever deleted except the copy of a page you unreveal.
 
+A players' copy keeps only the frontmatter keys in `gm.config.publishKeys`, `type` and `tags` by default. Everything else there is the DM's: an NPC's `role` or `faction`, a page's `status`, its `book_order`.
+
 ## DM-only text
 
 An adventure page can keep its secrets beside what the players may see, and publishing leaves them out of the players' copy. Four things mark them, and each can sit wherever it belongs on the page.
@@ -149,6 +151,10 @@ A private page that is on the revealed list from before, or that the players alr
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.3
+
+**A players' copy keeps only a page's `type` and `tags`.** Publishing copied the frontmatter whole, so revealing a person could tell the players the `role` the DM had given them, villain or ally. See *Players' own notes*.
 
 ## Changes in 3.2
 
@@ -232,6 +238,10 @@ gm.config = {
   -- are never revealed or published: GM Maps keeps a map's creatures, and
   -- everything hidden on it, in the map block on its page.
   privateTypes    = { "map" },
+  -- The frontmatter a players' copy keeps: what a page is and how it is
+  -- tagged. The rest is the DM's: an NPC's role or faction, a page's draft
+  -- status, its place in the book.
+  publishKeys     = { "type", "tags" },
 }
 
 -- What GM Kit tracks, and what each kind's pages can be marked. The first
@@ -293,6 +303,27 @@ function gm.setFrontmatter(text, key, value)
   end, 1)):sub(2)
   if not found then head = head .. line .. "\n" end
   return "---\n" .. head .. "---\n" .. rest
+end
+
+-- The page with only the frontmatter keys in gm.config.publishKeys, for a
+-- players' copy. A key's own continuation lines, a list under `tags:` say,
+-- go with it; a page left with no keys at all loses its frontmatter.
+function gm.publicFrontmatter(text)
+  local head, rest = gm.splitFrontmatter(text)
+  if not head then return text end
+  local keep, out, keeping = {}, {}, false
+  for _, k in ipairs(gm.config.publishKeys) do keep[k] = true end
+  for line in head:gmatch("([^\n]*)\n") do
+    local key = line:match("^([%w_%-]+):")
+    if key then
+      keeping = keep[key] == true
+    elseif not line:match("^[ \t%-]") then
+      keeping = false
+    end
+    if keeping then out[#out + 1] = line end
+  end
+  if #out == 0 then return (rest:gsub("^\n+", "")) end
+  return "---\n" .. table.concat(out, "\n") .. "\n---\n" .. rest
 end
 
 -- Takes a key back out of the frontmatter, leaving the rest as it was.
@@ -1779,7 +1810,7 @@ function gm.publish()
   local added, updated, same = 0, 0, 0
   for _, page in ipairs(pages) do
     local copy = gm.playerCopy(page)
-    local text = gm.print(gm.stripSecrets(space.readPage(page)), page)
+    local text = gm.print(gm.publicFrontmatter(gm.stripSecrets(space.readPage(page))), page)
     if not gm.exists(copy) then
       gm.write(copy, text)
       added = added + 1
