@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.7.1"
+version: "1.8.0"
 ---
 
 # GM Book
@@ -28,8 +28,23 @@ To put a build button on a page of your own:
 |---|---|---|
 | `GM: Build Book` | Both editions | The two below, built together |
 | `GM: Build Book (DM)` | `Build/Book DM` | Everything, secrets included |
-| `GM: Build Book (Player)` | `Build/Book Player` | `## DM Only` sections removed |
+| `GM: Build Book (Player)` | `Build/Book Player` | The DM-only text left out: see *DM-only text* |
 | `GM: Copy Book for Homebrewery` | The clipboard | The edition you are looking at, or the one you pick |
+
+## DM-only text
+
+The player edition leaves out everything a page marks as DM-only, and the DM's edition prints it as part of the page:
+
+| Marked as | In the DM's edition |
+|---|---|
+| A DM callout: `> **dm** Title`, and the lines of the quote under it | Ordinary text, the title the bold lead of its first paragraph: "**Title.** The text…" |
+| A stretch between `<!--#dm-->` and `<!--/dm-->` | Everything between, the markers gone |
+| `<span class="dm">…</span>` inside a line | The words, the tags gone |
+| A `## DM Only` section, to the next `#` or `##` heading | As it is, heading and all |
+
+A callout ends at the first blank line. A stretch holds anything, headings, tables and boxes included, and one with no end runs to the end of the page. None of them counts inside fenced code. GM Kit reads them with the same code, so the players' copies it publishes leave out exactly what the player edition does.
+
+Each edition is printed from its own text, so an expression inside DM-only text prints in the DM's edition and never runs for the player edition. A map drawn with its DM's layer can sit in a callout right under the clean one: see [GM Maps](<GM Maps>). Unwrapped, a callout's paragraphs, tables and maps are measured like any others, so the page breaks fall around them as they do around the rest of the page.
 
 ## Setting the order
 
@@ -72,7 +87,7 @@ A book doesn't print the same text twice. Where the page shown is in the book, t
 
     *See Lantern: Rules.*
 
-A page that isn't in the book is printed in place: the section, with its headings moved in under the heading above, its expressions printed, and its `## DM Only` sections left out of the player edition. The player edition also leaves out a pointer to a section it doesn't have. A page or section that can't be found prints nothing, and the build names it.
+A page that isn't in the book is printed in place: the section, with its headings moved in under the heading above, its expressions printed, and its DM-only text left out of the player edition. The player edition also leaves out a pointer to a section it doesn't have. A page or section that can't be found prints nothing, and the build names it.
 
 To print every one in place, or to word the pointer your own way (`%s` is the page and section):
 
@@ -97,6 +112,7 @@ In the larger space, a wiki link written for the adventure folder, such as `[[Wo
 - `[[Some/Path/Page]]` becomes `Page`; `[[Page#Section]]` becomes `Page`; `[[Page|Label]]` becomes `Label`
 - `[Label](<../Some/Page>)`, a link to a page in the space, becomes `Label`. Images and links to websites stay.
 - Baked-section markers removed, rendered bodies kept
+- DM-only text left out of the player edition, and in the DM's printed as ordinary text, as in *DM-only text*
 - `> **note**` and `> **warning**` blockquotes become Homebrewery `{{note}}` boxes. A warning keeps a `warning` class, so a brew's style can set it apart.
 - A section's headings dropped a level
 - A page break before every chapter, though not before a section, and wherever a page fills up
@@ -127,6 +143,7 @@ gmbook.config = {
   outputFolder = "Build/",
   pageBreak    = "\\page",
   dmHeading    = "DM Only",
+  dmWord       = "dm",
   libraryPage  = "Library/Storie/GM Book",
   homebrewery  = "https://homebrewery.naturalcrit.com/new",
   paginate     = true,
@@ -143,17 +160,408 @@ gmbook.editions = {
   player = { page = "Book Player", label = "player edition" },
 }
 
-function gmbook.stripSecrets(text)
-  local out, skipping = {}, false
-  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
-    if line:match("^##%s+" .. gmbook.config.dmHeading) then
-      skipping = true
-    elseif skipping and line:match("^##?%s") then
-      skipping = false
+------------------------------------------------------------ DM-only text
+-- GM Kit and GM Book share the code from here to "end of the shared DM-only
+-- code", word for word, so the players' copies leave out exactly what the
+-- player edition does.
+
+-- A quote line's markers: how many, and what follows them. "> > text"
+-- gives 2 and "text".
+local function dmQuote(line)
+  local depth, rest = 0, line
+  while true do
+    local sp, after = rest:match("^(%s*)>(.*)$")
+    if not sp or (depth > 0 and #sp > 3) then return depth, rest end
+    depth = depth + 1
+    rest = after:sub(1, 1) == " " and after:sub(2) or after
+  end
+end
+
+-- A quote line split at its d-th marker: what comes before the marker, and
+-- what follows it. Nothing for a line with fewer markers.
+local function dmSplit(line, d)
+  local rest, before = line, ""
+  for k = 1, d do
+    local sp, after = rest:match("^(%s*)>(.*)$")
+    if not sp or (k > 1 and #sp > 3) then return nil end
+    if k == d then before = line:sub(1, #line - #rest) .. sp end
+    rest = after:sub(1, 1) == " " and after:sub(2) or after
+  end
+  return before, rest
+end
+
+-- A callout's type and title, from what follows the quote marker on its
+-- line. Read the way SilverBullet reads them: "**note** Title" or
+-- "[!note] Title", the type running to whichever of ** and ] comes first.
+local function dmCallout(rest)
+  local body = rest:match("^ *%*%*(.*)$") or rest:match("^ *%[!(.*)$")
+  if not body then return nil end
+  local a = body:find("**", 1, true)
+  local b = body:find("]", 1, true)
+  local stop = a
+  if b and (not a or b < a) then stop = b end
+  if not stop then return nil end
+  return body:sub(1, stop - 1):lower(), body:sub(stop + (stop == a and 2 or 1))
+end
+
+-- A fenced code block's opening line, as its character and how many.
+local function dmFence(s)
+  local run = s:match("^%s*(```+)") or s:match("^%s*(~~~+)")
+  if not run then return nil end
+  local at = s:find(run, 1, true)
+  if run:sub(1, 1) == "`" and s:find("`", at + #run, true) then return nil end
+  return run:sub(1, 1), #run
+end
+
+local function dmCloses(s, ch, n)
+  local run = s:match(ch == "`" and "^%s*(`+)%s*$" or "^%s*(~+)%s*$")
+  return run ~= nil and #run >= n
+end
+
+-- Three or more of -, * or _, spaces between allowed: a rule across the page.
+local function dmRule(s)
+  local c = s:match("^%s*([-*_])")
+  if not c then return false end
+  local bare = (s:gsub("%s", ""))
+  return #bare >= 3 and (bare:gsub("%" .. c, "")) == ""
+end
+
+-- A line that begins a block of its own, so it can't carry on a paragraph.
+local function dmStarts(s)
+  return s:match("^%s*#+%s") ~= nil or s:match("^%s*#+$") ~= nil
+    or s:match("^%s*[-*+]%s+%S") ~= nil or s:match("^%s*1[.)]%s+%S") ~= nil
+    or dmFence(s) ~= nil or s:match("^%s*<!%-%-") ~= nil or dmRule(s)
+end
+
+-- Whether a <span ...> tag's class names `word`.
+local function dmClass(tag, word)
+  local c = "%s[cC][lL][aA][sS][sS]%s*=%s*"
+  local cls = tag:match(c .. "\"([^\"]*)\"") or tag:match(c .. "'([^']*)'")
+    or tag:match(c .. "([^%s>\"']+)")
+  if not cls then return false end
+  return (" " .. (cls:gsub("%s+", " ")):lower() .. " "):find(" " .. word .. " ", 1, true) ~= nil
+end
+
+-- A line's DM spans, <span class="dm">...</span>: left out, or with keep
+-- only their tags left out. open is how deep in one the line starts, carried
+-- from the line above. Gives back the line, how deep it ends, and whether it
+-- changed. Inline code is skipped, so a span shown in backticks stays.
+local function dmSpans(line, word, open, keep)
+  local out, pos, i, n = {}, 1, 1, #line
+  local changed, seam = false, false
+  local dropping = open > 0 and not keep
+  local function put(s)
+    if seam and s:match("^%s") then
+      local last = out[#out]
+      if not last or last:match("%s$") then s = (s:gsub("^%s+", "")) end
     end
-    if not skipping then out[#out + 1] = line end
+    seam = false
+    if s ~= "" then out[#out + 1] = s end
+  end
+  while i <= n do
+    local a = line:find("[`<]", i)
+    if not a then break end
+    if line:sub(a, a) == "`" then
+      local run = line:match("^`+", a)
+      local close = line:find(run, a + #run, true)
+      i = close and close + #run or a + #run
+    else
+      local tag = line:match("^<[sS][pP][aA][nN][%s>][^>]*>", a)
+        or line:match("^<[sS][pP][aA][nN]>", a)
+      local shut = not tag and line:match("^</[sS][pP][aA][nN]%s*>", a)
+      if tag then
+        if open > 0 then
+          open = open + 1
+        elseif dmClass(tag, word) then
+          put(line:sub(pos, a - 1))
+          open, changed, pos = 1, true, a + #tag
+          dropping = not keep
+        end
+        i = a + #tag
+      elseif shut then
+        if open > 0 then
+          open = open - 1
+          if open == 0 then
+            if keep then put(line:sub(pos, a - 1)) end
+            changed, pos = true, a + #shut
+            if not keep then dropping, seam = false, true end
+          end
+        end
+        i = a + #shut
+      else
+        i = a + 1
+      end
+    end
+  end
+  local tail = dropping and "" or line:sub(pos)
+  if dropping then changed = true end
+  put(tail)
+  local text = table.concat(out)
+  if not keep and changed and (dropping or not tail:match("%S")) then
+    text = (text:gsub("%s+$", ""))
+  end
+  return text, open, changed
+end
+
+-- Finds a page's DM-only text: a `## DM Only` section, a DM callout
+-- (> **dm** Title), a stretch between <!--#dm--> and <!--/dm-->, and a span
+-- inside a line. None of them counts in fenced code. Gives back the lines,
+-- and for each one what it is.
+local function dmScan(text, heading, word)
+  local lines = {}
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+  local n = #lines
+  local scan = { lines = lines, code = {}, callout = {}, section = {}, stretch = {},
+                 marker = {}, word = word:lower() }
+  local code = scan.code
+
+  -- Fenced code, and the quote depth its fence opened at: a quote that ends
+  -- takes its fence with it.
+  local fence
+  for i = 1, n do
+    if fence then
+      local _, rest = dmSplit(lines[i], fence.depth)
+      if rest then
+        code[i] = fence.depth
+        if dmCloses(rest, fence.ch, fence.n) then fence = nil end
+      else
+        fence = nil
+      end
+    end
+    if not fence and not code[i] then
+      local depth, rest = dmQuote(lines[i])
+      local ch, len = dmFence(rest)
+      if ch then
+        fence = { ch = ch, n = len, depth = depth }
+        code[i] = depth
+      end
+    end
+  end
+
+  -- DM callouts. A quote is one when the first of its lines to name a
+  -- callout type names `word`, and a quote that isn't is searched for one
+  -- inside it. A quote runs over the lines that carry its marker, and over a
+  -- line without one that carries on the paragraph above.
+  local function quotes(view, at, level)
+    local j, count = 1, #view
+    while j <= count do
+      local depth, inner = dmQuote(view[j])
+      local c = code[at[j]]
+      if depth == 0 or (c and c <= level) then
+        j = j + 1
+      else
+        local last, open = j, inner:match("%S") ~= nil and not dmStarts(inner)
+        for k = j + 1, count do
+          local d, rest = dmQuote(view[k])
+          if d > 0 then
+            last, open = k, rest:match("%S") ~= nil and not dmStarts(rest)
+          elseif open and view[k]:match("%S") and not dmStarts(view[k]) then
+            last = k
+          else
+            break
+          end
+        end
+        local kind, title, typeAt
+        for k = j, last do
+          local _, rest = dmSplit(view[k], 1)
+          if rest then
+            kind, title = dmCallout(rest)
+            if kind then
+              typeAt = k
+              break
+            end
+          end
+        end
+        if kind == scan.word then
+          local callout = {
+            first = at[j], last = at[last], depth = level + 1, typeAt = at[typeAt],
+            title = title:match("^%s*(.-)%s*$"),
+            gap = (dmSplit(lines[at[j]], level + 1) or ""):match("^(.-)%s*$"),
+          }
+          for k = j, last do scan.callout[at[k]] = callout end
+        else
+          local sub, subAt = {}, {}
+          for k = j, last do
+            local _, rest = dmSplit(view[k], 1)
+            sub[#sub + 1] = rest or view[k]
+            subAt[#subAt + 1] = at[k]
+          end
+          quotes(sub, subAt, level + 1)
+        end
+        j = last + 1
+      end
+    end
+  end
+  local all = {}
+  for i = 1, n do all[i] = i end
+  quotes(lines, all, 0)
+
+  -- `## DM Only` sections, to the next # or ## heading, and stretches
+  -- between the markers. Markers nest, so an inner end can't close an outer
+  -- stretch, and a stretch with no end runs to the end of the page.
+  local head = "^##%s+" .. (heading:gsub("%p", "%%%0"))
+  local w = (scan.word:gsub("%p", "%%%0")):gsub("%a", function(ch)
+    return "[" .. ch .. ch:upper() .. "]"
+  end)
+  local open = "^[%s>]*<!%-%-%s*#%s*" .. w .. "[^%w_]"
+  local shut = "<!%-%-%s*/%s*" .. w .. "[^%w_]"
+  local inSection, depth = false, 0
+  for i = 1, n do
+    local line = lines[i]
+    if not code[i] then
+      if inSection then
+        if line:match("^##?%s") and not line:match(head) then inSection = false end
+      elseif line:match(head) then
+        inSection = true
+      end
+      local l = line .. " "
+      if not scan.callout[i] and l:match(open) then
+        scan.marker[i] = true
+        local after = l:sub((l:find("<!--", 1, true)) + 4)
+        if not after:find(shut) then depth = depth + 1 end
+      elseif not scan.callout[i] and l:match("^[%s>]*" .. shut) then
+        scan.marker[i] = true
+        if depth > 0 then depth = depth - 1 end
+      end
+    end
+    if inSection then scan.section[i] = true end
+    if depth > 0 or scan.marker[i] then scan.stretch[i] = true end
+  end
+  return scan
+end
+
+-- The page without its DM-only text. Where a block goes from between two
+-- blank lines, one of them goes with it.
+local function dmStrip(scan)
+  local out, cut, span = {}, false, 0
+  for i, line in ipairs(scan.lines) do
+    local drop = scan.callout[i] or scan.section[i] or scan.stretch[i]
+    if drop or scan.code[i] or not line:match("%S") then
+      span = 0
+    else
+      local text, open, changed = dmSpans(line, scan.word, span, false)
+      span = open
+      if changed and not text:match("%S") then drop = true else line = text end
+    end
+    if drop then
+      cut = true
+    elseif cut and not line:match("%S") and (#out == 0 or not out[#out]:match("%S")) then
+      cut = false
+    else
+      out[#out + 1] = line
+      cut = false
+    end
   end
   return table.concat(out, "\n")
+end
+
+-- end of the shared DM-only code
+
+-- Whether a line is prose, so a bold lead can open it.
+local function dmProse(s)
+  return s:match("^%s*[^%s|>!<{\\$]") ~= nil and not dmStarts(s)
+    and not s:match("^%s*%d+[.)]%s")
+end
+
+-- A DM callout as ordinary text, for the DM's edition: its markers off, and
+-- its title the bold lead of the paragraph under it.
+local function dmUnwrap(scan, c)
+  local items, out, span = {}, {}, 0
+  for k = c.first, c.last do
+    local before, rest = dmSplit(scan.lines[k], c.depth)
+    local item = { pre = before or "", text = rest or scan.lines[k], lead = k == c.typeAt }
+    if item.lead or scan.code[k] or not item.text:match("%S") then
+      span = 0
+    else
+      item.text, span = dmSpans(item.text, scan.word, span, true)
+    end
+    items[#items + 1] = item
+  end
+  local t = c.title
+  local lead = t ~= "" and ("**" .. t .. (t:match("[%.!%?:;]$") and "" or ".") .. "**") or nil
+  local waiting
+  for _, item in ipairs(items) do
+    local blank = not item.text:match("%S")
+    if item.lead then
+      waiting = lead and item or nil
+    elseif waiting and blank then
+      -- the blank lines between a title and its text go
+    elseif waiting then
+      if dmProse(item.text) then
+        out[#out + 1] = item.pre .. lead .. " " .. (item.text:gsub("^%s+", ""))
+      else
+        out[#out + 1] = waiting.pre .. lead
+        out[#out + 1] = c.gap
+        out[#out + 1] = item.pre .. item.text
+      end
+      waiting = nil
+    elseif not (blank and #out == 0) then
+      out[#out + 1] = item.pre .. item.text
+    end
+  end
+  if waiting then out[#out + 1] = waiting.pre .. lead end
+  while #out > 0 and not out[#out]:match("%S") do out[#out] = nil end
+  return out
+end
+
+-- The page with its DM-only text shown as ordinary text, for the DM's
+-- edition: a callout unwrapped, a stretch's markers gone, a span's tags gone.
+-- A `## DM Only` section stays as it is.
+local function dmShow(scan)
+  local lines, out, cut, span = scan.lines, {}, false, 0
+  local i, n = 1, #lines
+  while i <= n do
+    local c = scan.callout[i]
+    if c and i == c.first then
+      local body = dmUnwrap(scan, c)
+      if #body > 0 then
+        if #out > 0 and out[#out]:match("[^%s>]") then out[#out + 1] = c.gap end
+        for _, line in ipairs(body) do out[#out + 1] = line end
+        local after = lines[c.last + 1]
+        if after and after:match("[^%s>]") and not scan.marker[c.last + 1] then
+          out[#out + 1] = c.gap
+        end
+        cut = false
+      else
+        cut = true
+      end
+      span, i = 0, c.last + 1
+    elseif scan.marker[i] then
+      cut, span, i = true, 0, i + 1
+    else
+      local line = lines[i]
+      if scan.code[i] or not line:match("%S") then
+        span = 0
+      else
+        line, span = dmSpans(line, scan.word, span, true)
+      end
+      if not (cut and not line:match("%S") and (#out == 0 or not out[#out]:match("%S"))) then
+        out[#out + 1] = line
+      end
+      cut, i = false, i + 1
+    end
+  end
+  return table.concat(out, "\n")
+end
+
+-- The page without its DM-only text, for the player edition.
+function gmbook.stripSecrets(text)
+  local c = gmbook.config
+  if not text:find("[<>]") and not text:find(c.dmHeading, 1, true) then return text end
+  return dmStrip(dmScan(text, c.dmHeading, c.dmWord))
+end
+
+-- The page with its DM-only text shown as ordinary text, for the DM's.
+function gmbook.showSecrets(text)
+  local c = gmbook.config
+  if not text:find("[<>]") then return text end
+  return dmShow(dmScan(text, c.dmHeading, c.dmWord))
+end
+
+-- A page as an edition prints it.
+function gmbook.forEdition(text, playerEdition)
+  if playerEdition then return gmbook.stripSecrets(text) end
+  return gmbook.showSecrets(text)
 end
 
 function gmbook.stripFrontmatter(text)
@@ -474,9 +882,8 @@ local function transcluded(ref, heading, playerEdition, ctx, level, depth)
   end
   if depth >= 4 then return {} end
   local left
-  body, left = gmbook.print(body, page)
+  body, left = gmbook.print(gmbook.forEdition(body, playerEdition), page)
   if #left > 0 then ctx.live[ctx.from] = true end
-  if playerEdition then body = gmbook.stripSecrets(body) end
   body = gmbook.transclude(body, playerEdition, ctx, depth + 1)
   body = shiftHeadings(body, math.max(level, 1) + 1)
   body = (body:gsub("^%s*\n", "")):gsub("%s+$", "")
@@ -525,8 +932,7 @@ function gmbook.transclude(text, playerEdition, ctx, depth)
 end
 
 function gmbook.render(text, playerEdition, section, ctx)
-  text = gmbook.stripFrontmatter(text)
-  if playerEdition then text = gmbook.stripSecrets(text) end
+  text = gmbook.forEdition(gmbook.stripFrontmatter(text), playerEdition)
   if ctx then text = gmbook.transclude(text, playerEdition, ctx) end
   if section then text = gmbook.demote(text) end
   text = gmbook.unbake(text)
@@ -552,18 +958,21 @@ function gmbook.compile(editions)
   }
   for i, p in ipairs(pages) do
     ctx.inBook[p.name] = true
-    local text, left = gmbook.print(space.readPage(p.name), p.name)
-    texts[i] = text
-    if #left > 0 then ctx.live[p.name:sub(#root + 1)] = true end
+    texts[i] = space.readPage(p.name)
   end
   local sep = "\n\n" .. gmbook.config.pageBreak .. "\n\n"
   for _, edition in ipairs(editions) do
-    local parts = {}
-    for i, text in ipairs(texts) do
+    -- each edition prints its own text, so what is DM-only never runs for
+    -- the player edition
+    local player, parts = edition == "player", {}
+    for i, raw in ipairs(texts) do
+      local from = pages[i].name:sub(#root + 1)
+      local text, left = gmbook.print(gmbook.forEdition(raw, player), pages[i].name)
+      if #left > 0 then ctx.live[from] = true end
       local section = pages[i].book_section == true
-      ctx.from = pages[i].name:sub(#root + 1)
+      ctx.from = from
       if i > 1 then parts[#parts + 1] = section and "\n\n" or sep end
-      parts[#parts + 1] = gmbook.render(text, edition == "player", section, ctx)
+      parts[#parts + 1] = gmbook.render(text, player, section, ctx)
     end
     local out = gmbook.output(edition, root)
     local book, sheets = table.concat(parts), nil
@@ -1417,7 +1826,7 @@ command.define {
     if not edition then
       local choice = editor.filterBox("Copy", {
         { name = "DM edition", description = "Everything, secrets included" },
-        { name = "Player edition", description = "Without the DM Only sections" },
+        { name = "Player edition", description = "Without the DM-only text" },
       }, "Copies a built edition, ready to paste into Homebrewery.")
       if not choice then return end
       edition = choice.name == "DM edition" and "dm" or "player"
@@ -1458,5 +1867,39 @@ event.listen {
 /* The widget's own Copy and Reload overlay would cover the bar's buttons. */
 .sb-lua-top-widget:has(.gmbook-bar) .button-bar {
   display: none !important;
+}
+
+/* DM-only text, where it sits on the page. The words and the icon say what
+   the players won't get, so the colour is never the only sign of it. */
+.sb-admonition[admonition="dm" i] {
+  --admonition-icon: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>');
+  --admonition-color: #8e5bd6;
+}
+
+.sb-admonition[admonition="dm" i] .sb-admonition-type::before {
+  width: var(--admonition-width) !important;
+}
+
+.sb-admonition[admonition="dm" i] .sb-admonition-type * {
+  display: none;
+}
+
+.sb-admonition[admonition="dm" i] .sb-admonition-type::after {
+  content: "DM only \00b7";
+  font-size: 85%;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0 0.4em 0 0.35em;
+}
+
+span.dm {
+  border-bottom: 2px dotted #8e5bd6;
+}
+
+span.dm::before {
+  content: "DM \25b8  ";
+  font-size: 80%;
+  font-weight: bold;
 }
 ```

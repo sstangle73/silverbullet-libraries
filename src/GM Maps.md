@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Maps"
 description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain, ways through and things are told apart by pattern and silhouette, so a map reads in one ink and in grayscale."
 author: "Steven Storie"
-version: "1.2.0"
+version: "1.2.1"
 ---
 
 # GM Maps
@@ -141,15 +141,16 @@ The map on the page is a widget: an SVG plan with the DM's layer on it, each thi
 
 That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what GM Kit publishes to the players. So **a map the players can be handed is what a map prints anyway**, in the book and on their own wiki, with nothing having to be stripped out of it. Every thing's square is drawn as the ground around it, so that map has no square left looking different where a creature or a trapdoor was.
 
-**A scene wants the map twice.** A build prints an expression once and uses it for both editions, so an edition cannot have its own; the `## DM Only` heading is what tells the two apart. Draw the map where the scene describes the ground, and draw it again with the DM's layer on it under `## DM Only`:
+**A scene wants the map twice.** An expression prints the same in both editions, so an edition can't have a map of its own; DM-only text is what tells the two apart. Draw the map where the scene describes the ground, and draw it again with the DM's layer on it in a DM callout right under it:
 
     ## The ground
 
     ${maps.draw("World/Maps/The Old Orchard")}
 
-    ## DM Only
+    > **dm** Where they start
+    > ${maps.draw("World/Maps/The Old Orchard", { dm = true })}
 
-    ${maps.draw("World/Maps/The Old Orchard", { dm = true })}
+GM Kit 3.1 and GM Book 1.8 leave a DM callout out of everything the players get. With older versions, put the second map under a `## DM Only` heading at the foot of the page instead.
 
 The DM's edition then carries both: the map to run the fight from, and the clean one to turn round and show the table. The players' edition and their wiki carry only the clean one, and whether they ever see it is a decision, not something the library makes for you.
 
