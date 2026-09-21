@@ -158,6 +158,10 @@ The adventure is written for five characters and runs for three to seven. Every 
 
 # The Warden
 
+## First Impressions
+
+A tall figure in a grey coat, with the keys of the ford on a chain.
+
 ## Who They Are
 
 Ashford's warden keeps the ford and the road beyond it, and has for twenty years. Everyone in town has a story about the Warden's kindness.

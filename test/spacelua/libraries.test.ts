@@ -298,7 +298,8 @@ test("a find recorded by mistake comes off again", async () => {
   expect(record).not.toContain("uses:");
   expect(record).toContain("- [[Sessions/Session 1|Session 1]]: not found after all");
   await run(`__b = __buttons(gm.bar().html)`);
-  expect(env.get("__b")).toBe("Reveal | Mark found");
+  // the lantern's Rules section is a part the players can be shown alone
+  expect(env.get("__b")).toBe("Reveal | Reveal part… | Mark found");
   await action(notes.at(-1)!, "Undo");
   expect(pages.get(RECORD)).toContain("\nuses: 5\n");
   expect(pages.get(RECORD)).not.toContain("not found after all");
@@ -319,11 +320,25 @@ test("a second mark keeps the first, whatever space.pageExists says", async () =
   expect(env.get("__e")).toBe(false);
 }, 60000);
 
-test("marking someone met writes their play state", async () => {
+test("marking someone met writes their play state, and reveals what the page shows first", async () => {
   const { run, pages, notes } = await setup(ROOT);
   await run(`gm.mark("${WARDEN}", "met")`);
   expect(pages.get("State/People/The Warden")).toContain("met: true\nmet_session: 1\n");
-  expect(notes.at(-1)!.message).toBe("The Warden: met in session 1, and revealed.");
+  expect(notes.at(-1)!.message).toBe("The Warden: met in session 1, and revealed “First Impressions”.");
+  expect(pages.get("State/Revealed")).toContain("- [[" + WARDEN + "#First Impressions]]\n");
+}, 60000);
+
+// Revealing part of a page, in SilverBullet's own Lua: the parts are read
+// with its string library, and the players' copy has the title and the
+// parts revealed.
+test("a page revealed in part publishes its title and those parts only", async () => {
+  const { run, pages } = await setup(ROOT);
+  await run(`gm.writeRevealed({}); gm.revealPart("${WARDEN}", "At the Table"); gm.mark("Adventure/World/People/Old Tam", "met"); gm.publish()`);
+  expect(pages.get("Player/World/People/The Warden")).toBe(
+    "---\ntype: npc\n---\n\n# The Warden\n\n## At the Table\n\n" +
+      "Polite, tired, and never in a hurry. The Warden answers a question with a question.\n",
+  );
+  expect(pages.get("Player/World/People/Old Tam")).toBe("---\ntype: npc\n---\n\n# Old Tam\n");
 }, 60000);
 
 test("the Session Table's Found query reads the uses", async () => {

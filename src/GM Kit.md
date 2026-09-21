@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.3.1"
+version: "3.4.0"
 ---
 
 # GM Kit
@@ -26,7 +26,7 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 
 ## Buttons
 
-**The GM bar.** In the DM space, every adventure page gets a bar across the top. It shows whether the players can see the page, with a button to reveal it or take it back: ◉ revealed and published, ◉ revealed but not published yet, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
+**The GM bar.** In the DM space, every adventure page gets a bar across the top. It shows whether the players can see the page, with buttons to reveal it, or part of it, or take it back: ◉ revealed and published, ◉ revealed but not published yet, ◔ revealed in part, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
 
 **A session's own notes.** A page in `Sessions/` gets a bar of its own instead: the scene before, the scene the session is on, and the scene after. See *Scenes*.
 
@@ -46,9 +46,9 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 | Command | Key | Does |
 |---|---|---|
 | `GM: Session Table` | | Opens the session page |
-| `GM: Mark Met` | `Ctrl-Alt-m` | Records that the party met a person or faction, stamps the session, reveals the page |
+| `GM: Mark Met` | `Ctrl-Alt-m` | Records that the party met a person or faction, stamps the session, and reveals what the page shows first |
 | `GM: Mark Dead` | | Records a death and how it happened |
-| `GM: Mark Visited` | | Records that the party visited a place, reveals it |
+| `GM: Mark Visited` | | Records that the party visited a place, and reveals what the page shows first |
 | `GM: Mark Found` | | Records that the party found an item, starts counting its uses, and offers to reveal it |
 | `GM: Mark Scene Planned` | | Records a scene you expect the party to reach this session |
 | `GM: Mark Scene Started` | | Opens a scene at the table |
@@ -57,6 +57,7 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 | `GM: Spend Use` | | Uses one of an item's uses |
 | `GM: Refund Use` | | Gives one back |
 | `GM: Reveal Page` | | Adds an adventure page to the revealed list |
+| `GM: Reveal Part` | | Adds one section of a page to the revealed list |
 | `GM: Unreveal Page` | | Takes a page back: off the revealed list, and the players' copy deleted |
 | `GM: Publish to Players` | | Copies every revealed page into the Player space, leaving out its DM-only text |
 | `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
@@ -72,7 +73,7 @@ An item is an adventure page in an `Items/` folder. Marking it found records the
 
     It holds ${party.count{"arrow", plus = 1, item = "World/Items/Quiver"}}.
 
-That page's bar gets a row for the item, "Quiver: six arrows here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 arrows left", with *Use a arrow* and *Refund a arrow*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses. *Unmark found* takes the find back, uses and all, so finding it again counts them afresh.
+That page's bar gets a row for the item, "Quiver: six arrows here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 arrows left", with *Use an arrow* and *Refund an arrow*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses. *Unmark found* takes the find back, uses and all, so finding it again counts them afresh.
 
 **Rules in a scene.** A page that shows an item's rules with `![[World/Items/Quiver#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
 
@@ -98,9 +99,25 @@ A session sits on the last scene it started, failing that the first scene planne
 
 Playing a scene never reveals it: what the players can see of the adventure stays your business.
 
+## Revealing part of a page
+
+Players rarely learn all of a page at once. They meet the Warden and see a tall figure in a grey coat; what the Warden wants comes later, if it comes at all. So a page can be revealed a section at a time.
+
+**Parts.** A page's parts are its `##` sections. *Reveal part…* on its bar, or `GM: Reveal Part`, asks which. The revealed list then links that section, `[[Adventure/World/People/The Warden#What They Want]]`, and the bar reads "◔ Revealed in part: What They Want", with *Reveal all* for the rest. A DM Only section is never a part, and neither is a heading inside DM-only text or fenced code.
+
+**What the players get.** Publishing a page revealed in part sends its title and the parts revealed, in the page's order, with their DM-only text left out as ever. Nothing in the copy says there is more. The text above a page's first section goes only with the whole page, since that is where a page usually sums itself up for the DM. A part whose heading has been renamed since it was revealed is named when you publish, so it can be revealed again under its new name.
+
+**Meeting someone is not learning everything.** *Mark met* and *Mark visited* reveal only what the page says the players see first:
+
+- the sections its frontmatter names under `reveal_first`, one or a list: `reveal_first: [Who They Are]`;
+- or else a section called *First Impressions*, if it has one;
+- or else the page by its name alone: the players' copy is its title, and the bar reads "◔ Revealed by name only".
+
+`reveal_first: all` reveals the whole page, for a page with nothing to hold back. A page already revealed keeps what it has, and *Undo* takes back only what the mark revealed. `gm.config.revealFirstKey` names the frontmatter key, and `gm.config.firstReveal` the sections looked for without one.
+
 ## Where the state goes
 
-- `State/Revealed`: one link per revealed adventure page
+- `State/Revealed`: a link for each revealed adventure page, `[[Adventure/World/People/Mara]]`, or for each part of one, `[[Adventure/World/People/Mara#Who They Are]]`
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
 - `State/Items/<name>`: found, the uses left of those found, and where, with a log
 - `State/Scenes/<act>/<scene>`: planned, started and finished, with a log; the act comes too, so scenes numbered alike in two acts stay apart
@@ -151,6 +168,14 @@ A private page that is on the revealed list from before, or that the players alr
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven arrows" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.4
+
+**A page can be revealed a part at a time.** *Reveal part…* reveals one `##` section, and publishing sends the players the page's title and the parts revealed. See *Revealing part of a page*.
+
+**Marking someone met, or a place visited, no longer reveals the whole page.** It reveals what the page says the players see first: the sections named under `reveal_first`, a *First Impressions* section, or else the page's name alone. A page that should go out whole on meeting says `reveal_first: all`.
+
+**Undo puts the revealed list back as it was**, so undoing a reveal leaves a part revealed before it still revealed.
 
 ## Changes in 3.3.1
 
@@ -246,6 +271,11 @@ gm.config = {
   -- tagged. The rest is the DM's: an NPC's role or faction, a page's draft
   -- status, its place in the book.
   publishKeys     = { "type", "tags" },
+  -- What marking a page met or visited reveals of it: the sections its
+  -- frontmatter names under this key, or `all` for the whole page...
+  revealFirstKey  = "reveal_first",
+  -- ...or else whichever of these sections it has, or else its name alone.
+  firstReveal     = { "First Impressions" },
 }
 
 -- What GM Kit tracks, and what each kind's pages can be marked. The first
@@ -788,23 +818,244 @@ function gm.writeRevealed(list)
   gm.write(gm.config.revealedPage, table.concat(lines, "\n") .. "\n")
 end
 
-function gm.isRevealed(page)
-  for _, n in ipairs(gm.readRevealed()) do
-    if n == page then return true end
-  end
-  return false
+-- A revealed-list entry as its page and its part: "Adventure/X" is the
+-- whole page, "Adventure/X#Who They Are" one section of it.
+local function entryParts(entry)
+  local page, part = entry:match("^(.-)#(.*)$")
+  if page and page ~= "" then return page, part end
+  return entry, nil
 end
 
--- Adds or removes a page. Returns whether the list changed.
-function gm.setRevealed(page, on)
-  local out, found = {}, false
-  for _, n in ipairs(gm.readRevealed()) do
-    if n == page then found = true else out[#out + 1] = n end
+-- What the players are meant to see of each page on the revealed list:
+-- true for the whole page, or the names of the parts revealed. The pages
+-- come in the list's order.
+function gm.reveals()
+  local pages, of = {}, {}
+  for _, entry in ipairs(gm.readRevealed()) do
+    local page, part = entryParts(entry)
+    if of[page] == nil then
+      pages[#pages + 1] = page
+      of[page] = {}
+    end
+    if part == nil then
+      of[page] = true
+    elseif of[page] ~= true then
+      local parts = of[page]
+      parts[#parts + 1] = part
+    end
   end
-  if found == on then return false end
+  return pages, of
+end
+
+-- true when the whole page is revealed, the names of the parts revealed
+-- when only some are, or nil.
+function gm.revealedPart(page)
+  local _, of = gm.reveals()
+  return of[page]
+end
+
+-- Whether the players are meant to see any of a page, whole or in part.
+function gm.isRevealed(page)
+  return gm.revealedPart(page) ~= nil
+end
+
+-- A page's own entries on the list, to put back as they were.
+function gm.revealEntries(page)
+  local mine = {}
+  for _, entry in ipairs(gm.readRevealed()) do
+    if (entryParts(entry)) == page then mine[#mine + 1] = entry end
+  end
+  return mine
+end
+
+-- Puts a page's entries back as they were, and only that page's: Undo's
+-- way, so undoing a reveal leaves what was revealed before it revealed.
+function gm.putRevealEntries(page, entries)
+  local out = {}
+  for _, entry in ipairs(gm.readRevealed()) do
+    if (entryParts(entry)) ~= page then out[#out + 1] = entry end
+  end
+  for _, entry in ipairs(entries) do out[#out + 1] = entry end
+  gm.writeRevealed(out)
+end
+
+-- Reveals the whole page, in place of any parts of it, or takes all of it
+-- back. Returns whether the list changed.
+function gm.setRevealed(page, on)
+  local out, listed, whole = {}, false, false
+  for _, entry in ipairs(gm.readRevealed()) do
+    local p, part = entryParts(entry)
+    if p == page then
+      listed = true
+      if part == nil then whole = true end
+    else
+      out[#out + 1] = entry
+    end
+  end
+  if on and whole then return false end
+  if not on and not listed then return false end
   if on then out[#out + 1] = page end
   gm.writeRevealed(out)
   return true
+end
+
+-- A frontmatter key's value as a list: `key: A`, `key: [A, B]`, or a YAML
+-- list under it, a `- A` a line.
+function gm.frontmatterList(text, key)
+  local head = gm.splitFrontmatter(text)
+  local out, under = {}, false
+  for line in (head or ""):gmatch("([^\n]*)\n") do
+    local k, v = line:match("^([%w_%-]+):%s*(.-)%s*$")
+    if k then
+      under = false
+      if k == key then
+        v = yamlValue(v)
+        local inner = v:match("^%[(.*)%]$")
+        if inner then
+          for item in (inner .. ","):gmatch("([^,]*),") do
+            item = yamlValue(item:match("^%s*(.-)%s*$"))
+            if item ~= "" then out[#out + 1] = item end
+          end
+        elseif v ~= "" then
+          out[#out + 1] = v
+        else
+          under = true
+        end
+      end
+    elseif under then
+      local item = line:match("^%s*%-%s+(.-)%s*$")
+      if item then out[#out + 1] = yamlValue(item) end
+    end
+  end
+  return out
+end
+
+-- A page as parts the players can be shown one at a time: its `##`
+-- sections, read from the page as the players would have it, so DM-only
+-- text is gone, a DM Only section is never a part, and a heading in fenced
+-- code isn't one. Gives the title line, the name the page goes by (its
+-- title, or else its own name), the parts in page order, each with its
+-- lines, and the opening above the first part.
+function gm.parts(page, text)
+  text = text or space.readPage(page)
+  local _, body = gm.splitFrontmatter(text)
+  body = gm.stripSecrets(body or text)
+  local title, opening, parts, current, fence = nil, {}, {}, nil, nil
+  for line in (body .. "\n"):gmatch("([^\n]*)\n") do
+    local mark = line:match("^%s*(```+)") or line:match("^%s*(~~~+)")
+    local heading = false
+    if fence then
+      if mark and mark:sub(1, 1) == fence:sub(1, 1) and #mark >= #fence then fence = nil end
+    elseif mark then
+      fence = mark
+    else
+      heading = line:match("^##?%s") ~= nil
+    end
+    if heading and not title and not current and line:match("^#%s") then
+      title = line
+    elseif heading then
+      current = { name = line:match("^##?%s+(.-)%s*$"), lines = { line } }
+      parts[#parts + 1] = current
+    elseif current then
+      current.lines[#current.lines + 1] = line
+    else
+      opening[#opening + 1] = line
+    end
+  end
+  return {
+    title = title, parts = parts, opening = opening,
+    name = title and title:match("^#%s+(.-)%s*$") or gm.name(page),
+  }
+end
+
+-- The players' copy of some of a page: its frontmatter and its title, then
+-- the parts named, in the page's order. The opening above the first part
+-- goes only with the whole page, since that is where a page usually sums
+-- itself up for the DM.
+function gm.partialCopy(page, text, names)
+  local want = {}
+  for _, n in ipairs(names) do want[n] = true end
+  local p = gm.parts(page, text)
+  local out = { p.title or ("# " .. p.name), "" }
+  for _, part in ipairs(p.parts) do
+    if want[part.name] then
+      for _, line in ipairs(part.lines) do out[#out + 1] = line end
+    end
+  end
+  local body = (table.concat(out, "\n"):gsub("\n\n\n+", "\n\n"))
+  body = (body:gsub("%s+$", "")) .. "\n"
+  local head = gm.splitFrontmatter(text)
+  if not head then return body end
+  return "---\n" .. head .. "---\n\n" .. body
+end
+
+-- The parts named that the page no longer has, a heading renamed since
+-- it was revealed, say. The page's own name is always there.
+function gm.missingParts(page, text, names)
+  local p, have, gone = gm.parts(page, text), {}, {}
+  have[p.name] = true
+  for _, part in ipairs(p.parts) do have[part.name] = true end
+  for _, n in ipairs(names) do
+    if not have[n] then gone[#gone + 1] = n end
+  end
+  return gone
+end
+
+-- What marking a page met or visited reveals of it, never the whole page
+-- unless the page says so: true for `all`, else the parts named under
+-- gm.config.revealFirstKey, else those in gm.config.firstReveal, of those
+-- the page has. An empty list is the page's name alone. The name the page
+-- goes by comes second.
+function gm.firstReveal(page, text)
+  text = text or space.readPage(page)
+  local named = gm.frontmatterList(text, gm.config.revealFirstKey)
+  if #named == 1 and named[1]:lower() == "all" then return true, nil end
+  local p, have, out = gm.parts(page, text), {}, {}
+  for _, part in ipairs(p.parts) do have[part.name] = true end
+  for _, n in ipairs(#named > 0 and named or gm.config.firstReveal) do
+    if have[n] then out[#out + 1] = n end
+  end
+  return out, p.name
+end
+
+-- "“Who They Are”", "“Who They Are” and “At the Table”".
+local function partNames(names)
+  local out = ""
+  for i, n in ipairs(names) do
+    if i > 1 then out = out .. (i == #names and " and " or ", ") end
+    out = out .. "“" .. n .. "”"
+  end
+  return out
+end
+
+-- Reveals what marking the page reveals (gm.firstReveal), unless the
+-- players are meant to see all of that already. Gives back the page's
+-- entries as they were, for Undo, and what was revealed, for the
+-- notification, or nil when nothing changed.
+function gm.revealFirst(page)
+  local before, now = gm.revealEntries(page), gm.revealedPart(page)
+  if now == true then return before, nil end
+  local first, name = gm.firstReveal(page)
+  if first == true then
+    gm.setRevealed(page, true)
+    return before, "revealed"
+  end
+  if #first == 0 then
+    -- the page by its name: anything revealed of it already says as much
+    if now then return before, nil end
+    first = { name }
+  end
+  local have, added = {}, {}
+  for _, n in ipairs(now or {}) do have[n] = true end
+  for _, n in ipairs(first) do
+    if not have[n] then added[#added + 1] = n end
+  end
+  if #added == 0 then return before, nil end
+  local list = gm.readRevealed()
+  for _, n in ipairs(added) do list[#list + 1] = page .. "#" .. n end
+  gm.writeRevealed(list)
+  if added[1] == name and #added == 1 then return before, "revealed by name" end
+  return before, "revealed " .. partNames(added)
 end
 
 -- An adventure page: in the adventure folder, but not its index, its CONFIG,
@@ -1333,7 +1584,10 @@ function gm.mark(page, mark, detail, extra)
   local _, written = gm.recordState(page, fields, line)
   local created = not before and written or nil
   local logged = gm.logged(plan)
-  local revealed = reveals and gm.setRevealed(page, true)
+  -- what the players get is what the page says they see first, and never
+  -- the whole page unless it says so
+  local listed, revealed
+  if reveals then listed, revealed = gm.revealFirst(page) end
   gm.refresh()
   local actions = {}
   if m.offers and page:startsWith(gm.config.adventureFolder) and not gm.isRevealed(page) then
@@ -1347,12 +1601,12 @@ function gm.mark(page, mark, detail, extra)
   actions[#actions + 1] = { name = "Undo", run = function()
     gm.revert(path, before, keys, { line }, created)
     gm.unlogged(logged)
-    if revealed then gm.setRevealed(page, false) end
+    if revealed then gm.putRevealEntries(page, listed) end
     gm.refresh()
     gm.notify("Undone: " .. name .. " is no longer marked " .. mark)
   end }
   gm.notify(name .. ": " .. m.done:lower() .. "session " .. s .. (extra.note or "") ..
-            (revealed and ", and revealed" or "") .. ".", actions)
+            (revealed and (", and " .. revealed) or "") .. ".", actions)
   return true
 end
 
@@ -1691,6 +1945,7 @@ function gm.reveal(page)
     gm.notify(privateNote(page), nil, "warning")
     return false
   end
+  local before = gm.revealEntries(page)
   if not gm.setRevealed(page, true) then
     gm.notify(gm.name(page) .. " is already revealed")
     return false
@@ -1699,7 +1954,61 @@ function gm.reveal(page)
   gm.notify("Revealed " .. gm.name(page) .. ". The players see it once you publish.", {
     { name = "Publish now", run = function() gm.publish() end },
     { name = "Undo", run = function()
-      gm.setRevealed(page, false)
+      gm.putRevealEntries(page, before)
+      gm.refresh()
+    end },
+  })
+  return true
+end
+
+-- Asks which part of a page to reveal, of those not revealed yet.
+function gm.pickPart(page)
+  local now = gm.revealedPart(page)
+  if now == true then
+    gm.notify(gm.name(page) .. " is revealed whole already")
+    return nil
+  end
+  local have, options = {}, {}
+  for _, n in ipairs(now or {}) do have[n] = true end
+  for i, part in ipairs(gm.parts(page).parts) do
+    if not have[part.name] then options[#options + 1] = { name = part.name, orderId = i } end
+  end
+  if #options == 0 then
+    gm.notify("Every part of " .. gm.name(page) .. " is revealed already")
+    return nil
+  end
+  local choice = editor.filterBox("Reveal part", options,
+    "Which part of " .. gm.name(page) .. " have the players learned?", "Type to filter")
+  return choice and choice.name or nil
+end
+
+-- Reveals one part of a page, one of its `##` sections, with Undo.
+-- Publishing then sends the players the page's title and the parts
+-- revealed, and nothing that says there is more.
+function gm.revealPart(page, part)
+  if gm.isPrivate(page) then
+    gm.notify(privateNote(page), nil, "warning")
+    return false
+  end
+  local before, now = gm.revealEntries(page), gm.revealedPart(page)
+  if now == true then
+    gm.notify(gm.name(page) .. " is revealed whole already")
+    return false
+  end
+  for _, n in ipairs(now or {}) do
+    if n == part then
+      gm.notify("“" .. part .. "” of " .. gm.name(page) .. " is already revealed")
+      return false
+    end
+  end
+  local list = gm.readRevealed()
+  list[#list + 1] = page .. "#" .. part
+  gm.writeRevealed(list)
+  gm.refresh()
+  gm.notify("Revealed “" .. part .. "” of " .. gm.name(page) .. ". The players see it once you publish.", {
+    { name = "Publish now", run = function() gm.publish() end },
+    { name = "Undo", run = function()
+      gm.putRevealEntries(page, before)
       gm.refresh()
     end },
   })
@@ -1723,6 +2032,7 @@ end
 function gm.unreveal(page)
   local name, copy = gm.name(page), gm.playerCopy(page)
   local copyText = copy and gm.exists(copy) and space.readPage(copy) or nil
+  local entries = gm.revealEntries(page)
   local listed = gm.setRevealed(page, false)
   if not listed and not copyText then
     gm.notify(name .. " isn't revealed, and the players have no copy of it")
@@ -1746,7 +2056,7 @@ function gm.unreveal(page)
   end
   gm.notify(message, {
     { name = "Undo", run = function()
-      if listed then gm.setRevealed(page, true) end
+      if listed then gm.putRevealEntries(page, entries) end
       if copyText then gm.write(copy, copyText) end
       gm.refresh()
       gm.notify("Undone: " .. name .. (copyText and " is back with the players" or " is revealed again"))
@@ -1762,7 +2072,8 @@ end
 
 function gm.publish()
   local pages, missing, private = {}, {}, {}
-  for _, page in ipairs(gm.readRevealed()) do
+  local order, of = gm.reveals()
+  for _, page in ipairs(order) do
     if gm.playerCopy(page) then
       if not gm.exists(page) then
         missing[#missing + 1] = page
@@ -1813,8 +2124,19 @@ function gm.publish()
   end
   local added, updated, same = 0, 0, 0
   for _, page in ipairs(pages) do
-    local copy = gm.playerCopy(page)
-    local text = gm.print(gm.publicFrontmatter(gm.stripSecrets(space.readPage(page))), page)
+    local copy, raw = gm.playerCopy(page), space.readPage(page)
+    local text
+    if of[page] == true then
+      text = gm.stripSecrets(raw)
+    else
+      -- revealed in part: its title and those parts, and nothing that says
+      -- there is more
+      text = gm.partialCopy(page, raw, of[page])
+      for _, part in ipairs(gm.missingParts(page, raw, of[page])) do
+        missing[#missing + 1] = page .. "#" .. part
+      end
+    end
+    text = gm.print(gm.publicFrontmatter(text), page)
     if not gm.exists(copy) then
       gm.write(copy, text)
       added = added + 1
@@ -1914,6 +2236,10 @@ local function visibilityParts(page, add, note, quiet)
     end
     return
   end
+  local function revealPart()
+    local part = gm.pickPart(page)
+    if part then gm.revealPart(page, part) end
+  end
   if seen == "stale" then
     note("◐ Not revealed, but the players still have a copy")
     add(gm.button("Delete their copy", function() gm.unreveal(page) end))
@@ -1921,8 +2247,28 @@ local function visibilityParts(page, add, note, quiet)
   elseif seen == "hidden" then
     note("○ Hidden from players")
     add(gm.button("Reveal", function() gm.reveal(page) end))
+    -- an item's row on another page's bar keeps to the one button; the
+    -- item's own bar has the rest
+    if not quiet and #gm.parts(page).parts > 0 then add(gm.button("Reveal part…", revealPart)) end
   elseif not quiet then
-    note(seen == "published" and "◉ Revealed to players" or "◉ Revealed, not published yet")
+    local part = gm.revealedPart(page)
+    local waiting = seen == "published" and "" or ", not published yet"
+    if part == true then
+      note(seen == "published" and "◉ Revealed to players" or "◉ Revealed, not published yet")
+    else
+      -- a quarter circle, and the words, for a page the players see some of
+      local p, shown = gm.parts(page), {}
+      for _, n in ipairs(part) do
+        if n ~= p.name then shown[#shown + 1] = n end
+      end
+      if #shown == 0 then
+        note("◔ Revealed by name only" .. waiting)
+      else
+        note("◔ Revealed in part" .. waiting .. ": " .. table.concat(shown, ", "))
+      end
+      add(gm.button("Reveal all", function() gm.reveal(page) end))
+      if #shown < #p.parts then add(gm.button("Reveal part…", revealPart)) end
+    end
     add(gm.button("Unreveal", function() gm.unreveal(page) end))
   end
 end
@@ -2083,19 +2429,43 @@ command.define {
   run = function() editor.navigate(gm.config.sessionPage) end
 }
 
+-- The adventure pages not revealed whole, for a picker: a page revealed in
+-- part can still be revealed whole, or in another part.
+local function notWhollyRevealed()
+  local _, of = gm.reveals()
+  local pages, notes, private = {}, {}, gm.privatePages()
+  for _, n in ipairs(gm.adventurePages()) do
+    if of[n] ~= true and not private[n] then
+      pages[#pages + 1] = n
+      if of[n] then notes[n] = "Revealed in part" end
+    end
+  end
+  return pages, notes
+end
+
 command.define {
   name = "GM: Reveal Page",
   run = function()
     local page = editor.getCurrentPage()
     if not gm.isAdventurePage(page) then
-      local revealed, hidden, private = {}, {}, gm.privatePages()
-      for _, n in ipairs(gm.readRevealed()) do revealed[n] = true end
-      for _, n in ipairs(gm.adventurePages()) do
-        if not revealed[n] and not private[n] then hidden[#hidden + 1] = n end
-      end
-      page = gm.pick("Reveal", "Which page have the players learned about?", hidden)
+      local pages, notes = notWhollyRevealed()
+      page = gm.pick("Reveal", "Which page have the players learned about?", pages, notes)
     end
     if page then gm.reveal(page) end
+  end
+}
+
+command.define {
+  name = "GM: Reveal Part",
+  run = function()
+    local page = editor.getCurrentPage()
+    if not gm.isAdventurePage(page) then
+      local pages, notes = notWhollyRevealed()
+      page = gm.pick("Reveal part", "Which page have the players learned some of?", pages, notes)
+    end
+    if not page then return end
+    local part = gm.pickPart(page)
+    if part then gm.revealPart(page, part) end
   end
 }
 
@@ -2109,10 +2479,15 @@ local function unrevealCommand()
       local copy = gm.playerCopy(n)
       return copy ~= nil and gm.seen(copy)
     end
-    for _, n in ipairs(gm.readRevealed()) do
+    local order, of = gm.reveals()
+    for _, n in ipairs(order) do
       pages[#pages + 1] = n
       listed[n] = true
-      notes[n] = hasCopy(n) and "Published" or "Revealed, not published yet"
+      if of[n] == true then
+        notes[n] = hasCopy(n) and "Published" or "Revealed, not published yet"
+      else
+        notes[n] = hasCopy(n) and "Published in part" or "Revealed in part, not published yet"
+      end
     end
     for _, n in ipairs(gm.adventurePages()) do
       if not listed[n] and hasCopy(n) then

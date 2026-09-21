@@ -159,7 +159,7 @@ test("unreveal: tonight's mistake, a found item revealed and published, taken ba
   ok(not gm.isRevealed(U_LANTERN))
   ok(H.pages["State/Items/Lantern"], "unrevealing must leave the play state alone")
   has(H.pages["State/Items/Lantern"], "found: true")
-  eq(list(buttonsOf(gm.bar().html)), "Reveal | Use a wick | Unmark found")
+  eq(list(buttonsOf(gm.bar().html)), "Reveal | Reveal part… | Use a wick | Unmark found")
   H.confirms = { true }
   gm.publish()
   eq(H.pages[U_LANTERN_COPY], nil, "a later publish mustn't bring it back")

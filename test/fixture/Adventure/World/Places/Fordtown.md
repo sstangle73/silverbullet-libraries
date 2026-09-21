@@ -4,6 +4,7 @@ type: place
 glyph: F
 region: south
 status: stub
+reveal_first: all
 ---
 
 # Fordtown

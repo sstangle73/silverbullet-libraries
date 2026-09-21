@@ -5,6 +5,7 @@ faction: unaligned
 role: wildcard
 region: south
 status: stub
+reveal_first: [Who They Are]
 ---
 
 # Mara
