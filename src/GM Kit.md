@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.3.0"
+version: "3.3.1"
 ---
 
 # GM Kit
@@ -70,11 +70,11 @@ An item is an adventure page in an `Items/` folder. Marking it found records the
 
 **Uses.** A page hands out an item when a GM Party count on it names the item:
 
-    It holds ${party.count{"grin", plus = 1, item = "World/Items/Tube"}}.
+    It holds ${party.count{"arrow", plus = 1, item = "World/Items/Quiver"}}.
 
-That page's bar gets a row for the item, "Tube: six grins here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 grins left", with *Use a grin* and *Refund a grin*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses. *Unmark found* takes the find back, uses and all, so finding it again counts them afresh.
+That page's bar gets a row for the item, "Quiver: six arrows here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 arrows left", with *Use a arrow* and *Refund a arrow*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses. *Unmark found* takes the find back, uses and all, so finding it again counts them afresh.
 
-**Rules in a scene.** A page that shows an item's rules with `![[World/Items/Tube#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
+**Rules in a scene.** A page that shows an item's rules with `![[World/Items/Quiver#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
 
 ## Scenes
 
@@ -150,7 +150,11 @@ A private page that is on the revealed list from before, or that the players alr
 
 ## Live values in players' copies
 
-The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven grins" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven arrows" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.3.1
+
+New examples in these docs, of a quiver and its arrows.
 
 ## Changes in 3.3
 
@@ -1399,7 +1403,7 @@ end
 
 ------------------------------------------------------------------ items
 
--- The adventure page a link in the adventure names: World/Items/Tube, a
+-- The adventure page a link in the adventure names: World/Items/Quiver, a
 -- path from this space's root, or a name that only one page ends with.
 function gm.resolve(ref)
   ref = ref:match("^%s*(.-)%s*$"):gsub("%.md$", "")
@@ -1420,7 +1424,7 @@ local function int(n)
   return string.format("%d", n)
 end
 
--- "a grin", "an arrow", "a use"
+-- "a torch", "an arrow", "a use"
 local function a(noun)
   local an = noun:match("^[aeiouAEIOU]") and not noun:match("^[uU][^aeiouAEIOU][aeiouAEIOU]")
   return (an and "an " or "a ") .. noun
@@ -1571,7 +1575,7 @@ function gm.markFound(item, from)
   })
 end
 
--- "●●●●○○ 4 of 6 grins left" from a state record or a query's page, or ""
+-- "●●●●○○ 4 of 6 arrows left" from a state record or a query's page, or ""
 -- for an item without uses. plain leaves out the pips.
 function gm.usesText(state, plain)
   local uses, top = tonumber(state.uses), tonumber(state.uses_found)

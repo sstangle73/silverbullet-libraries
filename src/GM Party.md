@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.2.1"
+version: "1.2.2"
 ---
 
 # GM Party
@@ -12,8 +12,8 @@ Write an adventure once, for the party size you design it for, and let its numbe
 
 | On the page, for a party of six | In print |
 |---|---|
-| It holds seven grins | It holds one more grin than the party has members, six for a party of five |
-| A table laid for six | A table laid for five |
+| It holds seven arrows | It holds one more arrow than the party has members, six for a party of five |
+| A camp with room for six | A camp with room for five |
 | Six here: all five finds, with one find shared by two | Nothing: the text itself says how finds are shared |
 | The fight for this party: its creatures, XP and difficulty | The fight for five, and an *Adjusting the Encounter* note with a table for three to seven characters |
 
@@ -43,31 +43,31 @@ On a DM page, `${party.summary()}` shows the party, who is here, and what a figh
 
 **A number in the story** that follows the party: `party.n()` is its size, `party.n(1)` one more, `party.n{times = 2}` twice as many. `party.N` is the same with a capital, to start a sentence. In print, each is the number for the adventure's party.
 
-    A kitchen table still laid for ${party.n()}. ${party.N()} plates, ${party.n()} chairs.
+    A camp with room for ${party.n()}. ${party.N()} bedrolls, ${party.n()} packs.
 
 These work anywhere a sentence does, table cells included.
 
 **A count that follows a rule**: `party.count` takes the thing counted and the rule. On the page it shows the count for your party. In print it shows the rule, then the count for the adventure's party.
 
-    It holds ${party.count{"grin", plus = 1}}: enough for everyone.
+    It holds ${party.count{"arrow", plus = 1}}: enough for everyone.
 
 | Rule | Prints |
 |---|---|
-| `{"grin"}` | as many grins as the party has members, five for a party of five |
-| `{"grin", plus = 1}` | one more grin than the party has members, six for a party of five |
-| `{"grin", plus = -1}` | one fewer grin than the party has members, four for a party of five |
-| `{"grin", per = 2}` | two grins for each member of the party, ten for a party of five |
-| `{"grin", per = 1/2}` | one grin for every two members of the party, rounding up, three for a party of five |
+| `{"arrow"}` | as many arrows as the party has members, five for a party of five |
+| `{"arrow", plus = 1}` | one more arrow than the party has members, six for a party of five |
+| `{"arrow", plus = -1}` | one fewer arrow than the party has members, four for a party of five |
+| `{"arrow", per = 2}` | two arrows for each member of the party, ten for a party of five |
+| `{"arrow", per = 1/2}` | one arrow for every two members of the party, rounding up, three for a party of five |
 
 `min` and `max` bound a count, `round = "down"` rounds a fraction down, and `example = false` leaves off the count for the adventure's party. A second name is the plural where adding an s won't do: `{"wolf", "wolves"}`. `cap = true` starts it with a capital.
 
 Hover over a number on the page to see its rule and what it prints.
 
-**A count that is an item's uses** can name the item, as a link in the adventure would: `item = "World/Items/Tube"`. It changes nothing on the page or in print. GM Kit 2.3 or later reads it: when the party finds the item there, its uses start at this count for the party at that moment.
+**A count that is an item's uses** can name the item, as a link in the adventure would: `item = "World/Items/Quiver"`. It changes nothing on the page or in print. GM Kit 2.3 or later reads it: when the party finds the item there, its uses start at this count for the party at that moment.
 
-    It holds ${party.count{"grin", plus = 1, item = "World/Items/Tube"}}.
+    It holds ${party.count{"arrow", plus = 1, item = "World/Items/Quiver"}}.
 
-**The number itself**, for a library that needs it: `party.value{"grin", plus = 1}` is 6 for a party of five, and `party.value(1)` is the party's size plus one. A second argument asks for another size: `party.value({"grin"}, 7)` is 7.
+**The number itself**, for a library that needs it: `party.value{"arrow", plus = 1}` is 6 for a party of five, and `party.value(1)` is the party's size plus one. A second argument asks for another size: `party.value({"arrow"}, 7)` is 7.
 
 ## One each
 
@@ -77,7 +77,7 @@ Hover over a number on the page to see its rule and what it prints.
 
 Write each fight for the adventure's party, at the level it expects the characters to be:
 
-    ${party.fight { "Drill site", level = 3, difficulty = "moderate",
+    ${party.fight { "The barrow", level = 3, difficulty = "moderate",
       {1, "wight", cr = 3},
       {1, "warhorse skeleton", cr = "1/2"},
       {6, "skeleton", cr = "1/4", step = 4},
@@ -115,7 +115,7 @@ For the whole fight, `difficulty` is what it is meant to be: low, moderate or hi
 
 **In print** it gives the fight for the adventure's party with its difficulty and XP. Then comes *Adjusting the Encounter*: a sentence for each rule, and a table for three to seven characters at the written level.
 
-    **Drill site.** A wight, a warhorse skeleton and six skeletons: a moderate-difficulty encounter for five level 3 characters (1,100 XP).
+    **The barrow.** A wight, a warhorse skeleton and six skeletons: a moderate-difficulty encounter for five level 3 characters (1,100 XP).
 
     **Adjusting the Encounter.** For each character fewer than five, remove four skeletons; for each one more, add four.
 
@@ -154,6 +154,10 @@ Baked Sections alone couldn't do this: they bake whole blocks, never a number in
 The XP Budget per Character and Experience Points by Challenge Rating tables below come from the SRD 5.2.1. A book that prints them carries the same statement:
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## Changes in 1.2.2
+
+New examples in these docs, of arrows and a barrow.
 
 ## Changes in 1.2.1
 
@@ -252,7 +256,7 @@ function party.plural(noun)
   return noun .. "s"
 end
 
--- "six grins", "one grin", "no grins"; with article, "a wight".
+-- "six arrows", "one arrow", "no arrows"; with article, "a wight".
 local function counted(n, one, many, article)
   if n == 1 then
     if article then return (one:match("^[aeiouAEIOU]") and "an " or "a ") .. one end
@@ -406,7 +410,7 @@ local function countFor(spec, size)
   return v
 end
 
--- The rule behind a count, as a phrase: "one more grin than the party has
+-- The rule behind a count, as a phrase: "one more arrow than the party has
 -- members".
 function party.rule(spec)
   local one = spec[1]
@@ -437,12 +441,12 @@ function party.rule(spec)
   return s
 end
 
--- A count that follows a rule. Returns this party's count, "seven grins",
--- the rule for print, "one more grin than the party has members, six for a
+-- A count that follows a rule. Returns this party's count, "seven arrows",
+-- the rule for print, "one more arrow than the party has members, six for a
 -- party of five", and a note.
 local function countForms(spec)
   if type(spec) ~= "table" or type(spec[1]) ~= "string" then
-    error('party.count takes the thing counted and its rule: {"grin", plus = 1}')
+    error('party.count takes the thing counted and its rule: {"arrow", plus = 1}')
   end
   local one = spec[1]
   local many = spec[2] or party.plural(one)
@@ -466,7 +470,7 @@ function party.count(spec)
 end
 
 -- The number behind a count or a story number, for this party or for size
--- characters: party.value{"grin", plus = 1} is 6 for a party of five.
+-- characters: party.value{"arrow", plus = 1} is 6 for a party of five.
 function party.value(spec, size)
   size = size or party.get().size
   if type(spec) == "table" and type(spec[1]) == "string" then return countFor(spec, size) end

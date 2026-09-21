@@ -1,7 +1,7 @@
 ---
 tags: meta/repository
 name: Repository/Storie
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Storie Library Repository
@@ -36,6 +36,16 @@ name: "GM Party"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Party.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Party.md
 description: "Numbers, hand-outs and fights that follow the party's size: live for your table, general rules in print. 2024 encounter math from the SRD 5.2.1."
+---
+name: "GM Bestiary"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Bestiary.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Bestiary.md
+description: "Creature pages that point at official stat blocks: a link to a compendium on the page, the book and its entry in print. Wires those pages to GM Party's fights."
+---
+name: "GM Maps"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Maps.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Maps.md
+description: "Encounter maps written as a grid of characters with a legend: drawn as a scaled plan with its own key, on the wiki and in the book, and sized to the party."
 ---
 name: "Space Switcher"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Space%20Switcher.md

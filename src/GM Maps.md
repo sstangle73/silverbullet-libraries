@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Maps"
 description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain, ways through and things are told apart by pattern and silhouette, so a map reads in one ink and in grayscale."
 author: "Steven Storie"
-version: "1.2.2"
+version: "1.2.3"
 ---
 
 # GM Maps
@@ -88,9 +88,9 @@ A `token`, and any other thing, can name a page after an `=`, and the map then l
 
 **A thing is named on the map.** Beside each one, the drawing writes what it is, so a reader is not sent to the key to find out what `C` was. The words come from the start of the line, up to its first comma or dash, and the key keeps the whole of it:
 
-    C treasure the strongbox, iron-bound and too heavy to carry full
+    C treasure a strongbox, iron-bound and too heavy to carry full
 
-draws **the strongbox** beside the triangle, and prints *the strongbox, iron-bound and too heavy to carry full* in the key.
+draws **a strongbox** beside the triangle, and prints *a strongbox, iron-bound and too heavy to carry full* in the key.
 
 A square holds about twelve characters at five feet to a square, so a label is at most two words and that long. Where the start of the line is longer, name it in brackets:
 

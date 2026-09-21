@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Beyond"
 description: "Live party roster pulled from D&D Beyond public character data via the server-side fetch proxy. Renders name, race, class and level."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 # GM Beyond
@@ -71,7 +71,7 @@ function gmb.fetch(id)
   return body and body.data or nil
 end
 
---- "Nox — Half-Elf Rogue 4 / Warlock 2"
+--- "Brin — Half-Elf Rogue 4 / Warlock 2"
 function gmb.summary(id)
   local c = gmb.fetch(id)
   if not c then return "_(private or unreachable)_" end
