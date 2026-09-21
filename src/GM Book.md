@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.8.0"
+version: "1.8.1"
 ---
 
 # GM Book
@@ -42,7 +42,7 @@ The player edition leaves out everything a page marks as DM-only, and the DM's e
 | `<span class="dm">…</span>` inside a line | The words, the tags gone |
 | A `## DM Only` section, to the next `#` or `##` heading | As it is, heading and all |
 
-A callout ends at the first blank line. A stretch holds anything, headings, tables and boxes included, and one with no end runs to the end of the page. None of them counts inside fenced code. GM Kit reads them with the same code, so the players' copies it publishes leave out exactly what the player edition does.
+A callout ends at the first blank line. A stretch holds anything, headings, tables and boxes included, and one with no end runs to the end of the page, so a start marker above a page's title keeps the whole page back. A page with nothing left for the player edition takes no room in it, not even a page break. None of them counts inside fenced code. GM Kit reads them with the same code, so the players' copies it publishes leave out exactly what the player edition does.
 
 Each edition is printed from its own text, so an expression inside DM-only text prints in the DM's edition and never runs for the player edition. A map drawn with its DM's layer can sit in a callout right under the clean one: see [GM Maps](<GM Maps>). Unwrapped, a callout's paragraphs, tables and maps are measured like any others, so the page breaks fall around them as they do around the rest of the page.
 
@@ -971,8 +971,13 @@ function gmbook.compile(editions)
       if #left > 0 then ctx.live[from] = true end
       local section = pages[i].book_section == true
       ctx.from = from
-      if i > 1 then parts[#parts + 1] = section and "\n\n" or sep end
-      parts[#parts + 1] = gmbook.render(text, player, section, ctx)
+      local body = gmbook.render(text, player, section, ctx)
+      -- a page with nothing left for this edition, such as one kept back
+      -- whole for the DM, takes no room in it
+      if body:match("%S") then
+        if #parts > 0 then parts[#parts + 1] = section and "\n\n" or sep end
+        parts[#parts + 1] = body
+      end
     end
     local out = gmbook.output(edition, root)
     local book, sheets = table.concat(parts), nil
