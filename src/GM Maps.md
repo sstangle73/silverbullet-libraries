@@ -1,9 +1,9 @@
 ---
 tags: meta/library
 name: "Library/Storie/GM Maps"
-description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain and creatures are told apart by pattern and glyph, so a map reads in grayscale."
+description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain, ways through and things are told apart by pattern and silhouette, so a map reads in one ink and in grayscale."
 author: "Steven Storie"
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # GM Maps
@@ -59,21 +59,61 @@ A legend line is a single character, then what kind of square it is, then what i
 
     , rough bramble and root - difficult terrain
 
-**The character is for you, not for the reader.** It says which squares of the grid this line is about, and it is nowhere on the drawing: a wall is hatching, difficult ground is a stipple, a way out is an arrow. So the map draws its own key, and each row of it is the square as the map draws it — a hatched swatch, a stippled one, the arrow pointing the way it points on the grid, the creature's own ring and letter. Nothing asks the reader to match a symbol they cannot see.
+**The character is for you, not for the reader.** It says which squares of the grid this line is about, and it is nowhere on the drawing: a wall is hatching, difficult ground is a stipple, a way out is an arrow. So the map draws its own key, and each row of it is the square as the map draws it — the swatch with its own pattern, the arrow pointing the way it points on that grid, the thing in its own silhouette with its own letter. Nothing asks the reader to match a symbol they cannot see, and the key lists only what this map actually draws.
+
+There are twelve kinds, in four families. **Terrain** fills a square, **a way through** is a mark in a gap in the wall, and **a thing** is its letter in a silhouette — the silhouette is what tells one thing from another, so they stay apart in one ink and in grayscale.
 
 | Kind | Drawn as | For |
 |---|---|---|
-| `wall` | hatched, with a heavy edge | Something that blocks: rock, thorn, a building's side |
+| `wall` | close diagonal hatching | Something that blocks: rock, briar, a building's side |
 | `floor` | open | Ground that costs nothing to cross |
-| `rough` | stippled | Difficult terrain |
-| `exit` | a gap with an arrow through it | A way out of the area |
-| `token` | a ringed letter | A creature, at the square it starts on |
+| `rough` | fine dots | Difficult terrain |
+| `water` | waves | Water, deep or shallow — say which in the label |
+| `pit` | an open diagonal mesh | A hole, a shaft, a drop |
+| `exit` | an arrow out through the gap | A way out of the area |
+| `door` | a bar across the gap | A way through that can be shut |
+| `token` | a letter in a **circle** | A creature, at the square it starts on |
+| `object` | a letter in a **square** | A thing that is there: a crate, a cart, a rig |
+| `control` | a letter in a **diamond** | A thing you work: a lever, a button, a handle, a valve |
+| `treasure` | a letter in a **triangle** | A thing worth taking: a chest, a prize, a strongbox |
+| `hidden` | a letter in a **broken square** | A thing the players do not see. Say what it is in the label |
 
-A `token` line can name the creature's Bestiary page after an `=`, and the map then links to it the way a fight does:
+Every thing also carries a short label, drawn beside it: see *A thing is named on the map* below.
+
+Nothing else is a kind. A character in the grid with no legend line is drawn as open floor, and the map says so under it.
+
+A `token`, and any other thing, can name a page after an `=`, and the map then links to it the way a fight does:
 
     S token strangler = World/Monsters/Strangler
 
-Nothing else is a kind. A character in the grid with no legend line is drawn as open floor, and the map says so under it.
+**A thing is named on the map.** Beside each one, the drawing writes what it is, so a reader is not sent to the key to find out what `C` was. The words come from the start of the line, up to its first comma or dash, and the key keeps the whole of it:
+
+    C treasure the strongbox, iron-bound and too heavy to carry full
+
+draws **the strongbox** beside the triangle, and prints *the strongbox, iron-bound and too heavy to carry full* in the key.
+
+A square holds about twelve characters at five feet to a square, so a label is at most two words and that long. Where the start of the line is longer, name it in brackets:
+
+    O object [powder] a crate of blasting powder, and nobody has checked it
+
+**A thing with nothing short enough to write beside it is a warning, not a bare letter.** That is the point of the rule: the map asks to be told what each thing is, in a few words a reader can take in at the table, and the key asks for the rest. A map is only worth what is written for it.
+
+Labels come off a map drawn too small to carry them, and the key still names everything.
+
+**A thing stands on the ground, and the ground comes from its neighbours.** A crate in the water is drawn on water and a crate on the floor on floor, so taking the DM's layer off leaves no square looking different from the ones around it.
+
+**`token` and `hidden` are the DM's layer.** They are on the map you keep and off the map the players get. Everything else is on both: a crate and a lever are in plain sight, and a trapdoor under the straw is what `hidden` is for.
+
+## The characters
+
+Any of the **94 printable ASCII characters**, `!` to `~`, can be a legend key, and they are case-sensitive, so `T` and `t` are two different keys. Pick whatever draws legibly in the source; there is no reserved set.
+
+**Keep the grid to ASCII.** This is a correctness rule, not a preference. `s:sub(i, i)` is bytes in stock Lua and UTF-16 units in SilverBullet's, so a box-drawing character would draw on the wiki and corrupt a build of the same page.
+
+Two things a grid cannot hold:
+
+- **A space.** Short rows are padded with them, so a space is how the library says "nothing here". Write an explicit character for an empty square instead.
+- **Nothing before the grid.** The block is the grid, then a blank line, then the declarations. A declaration above the grid discards it, and says so.
 
 ## Sizing to the party
 
@@ -91,15 +131,17 @@ Leave the line out and the map is the size you drew it.
 
 ## Colour
 
-Nothing here carries meaning by colour. Walls are hatched, difficult ground is stippled, open ground is bare, exits are arrows, and a creature is a letter inside a ring. The map draws in one ink and reads the same in grayscale, which is the point: a reader who cannot tell two hues apart, or who prints in black and white, loses nothing.
+Nothing here carries meaning by colour. Terrain is told apart by pattern — hatching, dots, waves, a mesh, nothing at all — and a thing by silhouette: a ring, a box, a diamond, a triangle, a broken box. The map draws in one ink and reads the same in grayscale, which is the point: a reader who cannot tell two hues apart, or who prints in black and white, loses nothing.
+
+**That is also the ceiling on new kinds.** Patterns and silhouettes have to stay apart at a square's size, and these twelve use up the ones that do. Another kind would mean a mark too close to one already here, so the next distinction belongs in a label — `object` covers a cart and a cauldron alike — rather than in a thirteenth kind.
 
 ## How it prints
 
-The map on the page is a widget: an SVG plan with the creatures on it, each a link to its Bestiary entry, and a Markdown face that is the same plan with the creatures left off. The key is inside the drawing either way, so there is one figure to place and nothing to keep in step with it.
+The map on the page is a widget: an SVG plan with the DM's layer on it, each thing that names a page a link to it, and a Markdown face that is the same plan with that layer left off. The key is inside the drawing either way, so there is one figure to place and nothing to keep in step with it.
 
-That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what GM Kit publishes to the players. So **a map the players can be handed is what a map prints anyway**, in the book and on their own wiki, with nothing having to be stripped out of it. A creature's square is drawn as the ground under it, so that map has no bare squares left where the creatures were standing.
+That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what GM Kit publishes to the players. So **a map the players can be handed is what a map prints anyway**, in the book and on their own wiki, with nothing having to be stripped out of it. Every thing's square is drawn as the ground around it, so that map has no square left looking different where a creature or a trapdoor was.
 
-**A scene wants the map twice.** A build prints an expression once and uses it for both editions, so an edition cannot have its own; the `## DM Only` heading is what tells the two apart. Draw the ground where the scene describes it, and draw it again with the creatures on it under `## DM Only`:
+**A scene wants the map twice.** A build prints an expression once and uses it for both editions, so an edition cannot have its own; the `## DM Only` heading is what tells the two apart. Draw the map where the scene describes the ground, and draw it again with the DM's layer on it under `## DM Only`:
 
     ## The ground
 
@@ -107,7 +149,7 @@ That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what 
 
     ## DM Only
 
-    ${maps.draw("World/Maps/The Old Orchard", { tokens = true })}
+    ${maps.draw("World/Maps/The Old Orchard", { dm = true })}
 
 The DM's edition then carries both: the map to run the fight from, and the clean one to turn round and show the table. The players' edition and their wiki carry only the clean one, and whether they ever see it is a decision, not something the library makes for you.
 
@@ -115,7 +157,7 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
 
 | Option | Means |
 |---|---|
-| `tokens` | Creatures in the printed map as well as on the page. Off by default |
+| `dm` | The DM's layer — creatures and hidden things — in the printed map as well as on the page. Off by default. `tokens` was this option's name in 1.1, and still works |
 | `legend` | The key inside the map. On by default |
 | `width` | The map's width in px, for a map that should print narrower than a column |
 
@@ -247,11 +289,76 @@ local function block(text)
   return text:match("\n```map\n(.-)\n```") or text:match("^```map\n(.-)\n```")
 end
 
-local KINDS = { wall = true, floor = true, rough = true, exit = true, token = true }
+-- Every kind of square, in four families. Terrain fills a square; a way
+-- through is a mark in a gap in a wall; a thing is its legend letter in a
+-- silhouette, and the silhouette is what tells one from another, so they
+-- stay apart in one ink and in grayscale.
+local KINDS = {
+  wall = true, floor = true, rough = true, water = true, pit = true,  -- terrain
+  exit = true, door = true,                                           -- ways through
+  token = true, object = true, control = true, treasure = true,       -- things
+  hidden = true,
+}
+
+-- What only the DM sees: a map drawn without its DM layer is one the
+-- players can be handed.
+local SECRET = { token = true, hidden = true }
+
+-- A thing stands on ground, so the ground is drawn under it, and a thing is
+-- never what the ground of a map is taken to be.
+local THING = {
+  token = true, object = true, control = true, treasure = true, hidden = true,
+}
+
 local KEYWORDS = { grow = true, scale = true, units = true, title = true }
 
--- A legend line is a single character, then its kind, then what it is, and
--- a token's Bestiary page after the last " = ".
+-- Whether a line is a declaration rather than a row of the grid. A blank
+-- line is what really separates the two, and this only decides a block
+-- written without one, so it is strict on purpose: a keyword and its
+-- argument, or a character and a kind this library knows. Anything else is
+-- part of the picture. A looser rule read a grid row with a space in its
+-- second column, or one that happened to spell "grow", as a declaration,
+-- and threw away the rest of the map.
+local function declares(l)
+  local word = l:match("^(%a+)%s")
+  if word and KEYWORDS[word] then return true end
+  local kind = l:match("^%S%s+(%a+)%s")
+  return kind ~= nil and KINDS[kind:lower()] == true
+end
+
+-- The few words that go beside a thing on the map, so the drawing says what
+-- something is instead of sending the reader to the key for it. Taken from
+-- the start of the line, up to the first comma or dash, and only when that
+-- is short enough to draw; a longer one is named in brackets or left off.
+-- Counted in words, never in characters: a character count is bytes in one
+-- Lua and UTF-16 units in the other, and the two would draw differently.
+local function shortLabel(text, given)
+  local head = given
+  if not head then
+    head = text
+    for _, mark in ipairs({ ",", " — ", " - " }) do
+      local at = head:find(mark, 1, true)
+      if at then head = head:sub(1, at - 1) end
+    end
+  end
+  head = (head:gsub("^%s+", ""))
+  head = (head:gsub("%s+$", ""))
+  -- It has to fit inside a square, which at five feet to a square is about
+  -- twelve characters of it. The pattern admits only ASCII, which is what
+  -- makes the length safe to count: bytes and UTF-16 units agree there,
+  -- and a label that measured differently in the two Luas would draw
+  -- differently in a build than on the wiki.
+  if not head:match("^[%w][%w%s%-'%.]*$") then return nil end
+  if #head > 12 then return nil end
+  local words = 0
+  for _ in head:gmatch("%S+") do words = words + 1 end
+  if words == 0 or words > 2 then return nil end
+  return head
+end
+
+-- A legend line is a single character, then its kind, then an optional
+-- label for the map in brackets, then what it is, and a page after the
+-- last " = ".
 local function legendLine(char, rest)
   local kind, text = rest:match("^(%a+)%s+(.*)$")
   local warn
@@ -260,6 +367,11 @@ local function legendLine(char, rest)
   else
     kind, text = "floor", rest
     warn = "No kind for " .. char .. ", so it is drawn as open floor."
+  end
+  local given = text and text:match("^%[([^%]]*)%]%s*")
+  if given then
+    text = (text:gsub("^%[[^%]]*%]%s*", ""))
+    if given == "" then given = nil end
   end
   local page, cut, at = nil, nil, 1
   while true do
@@ -271,7 +383,16 @@ local function legendLine(char, rest)
     page = (text:sub(cut + 3):gsub("%s+$", ""))
     text = (text:sub(1, cut - 1):gsub("%s+$", ""))
   end
-  return { char = char, kind = kind, text = text, page = page }, warn
+  local label = THING[kind] and shortLabel(text, given) or nil
+  -- A thing on the map is named on the map. Where the line does not start
+  -- with something short enough to draw, say so rather than quietly
+  -- leaving the square as a bare letter: what a map is worth depends on
+  -- what is written for it, so this is the place to ask for it.
+  if THING[kind] and not label and not warn then
+    warn = "Nothing short enough to write beside " .. char ..
+      " on the map. Give it a label in brackets: " .. char .. " " .. kind .. " [a name] ..."
+  end
+  return { char = char, kind = kind, text = text, page = page, label = label }, warn
 end
 
 -- A map's source read: its grid as rows of characters, the legend by
@@ -286,7 +407,7 @@ function maps.parse(source, printing)
     l = (l:gsub("^%s+", ""))
     if l == "" then
       if #rows > 0 then inGrid = false end
-    elseif inGrid and not l:match("^%S%s") and not KEYWORDS[l:match("^(%a+)") or ""] then
+    elseif inGrid and not declares(l) then
       rows[#rows + 1] = l
     else
       inGrid = false
@@ -306,7 +427,11 @@ function maps.parse(source, printing)
       elseif char and rest then
         local entry, w = legendLine(char, rest)
         if w then warn[#warn + 1] = w end
-        if not legend[char] then order[#order + 1] = char end
+        if legend[char] then
+          warn[#warn + 1] = "Two legend lines for " .. char .. "; the last one wins."
+        else
+          order[#order + 1] = char
+        end
         legend[char] = entry
       else
         warn[#warn + 1] = "Not a legend line: " .. l
@@ -501,7 +626,9 @@ local function ground(m, grid)
     for _, ch in ipairs(row) do
       local e = m.legend[ch]
       local kind = e and e.kind or "floor"
-      if kind ~= "token" and kind ~= "exit" then
+      -- a wall is never it: nothing stands on a wall, and on a map with a
+      -- thick frame the wall is the commonest square there is
+      if not THING[kind] and kind ~= "exit" and kind ~= "door" and kind ~= "wall" then
         count[ch] = (count[ch] or 0) + 1
       end
     end
@@ -526,6 +653,32 @@ local function ground(m, grid)
     if count[ch] > most then best, most = ch, count[ch] end
   end
   return best
+end
+
+-- The ground under one thing: what lies around it. A crate in the water
+-- stands on water and a crate on the floor stands on floor, so the square
+-- is drawn from its neighbours rather than from the map as a whole, and a
+-- map without its DM layer has nothing out of place where a thing was.
+local function groundAt(m, grid, r, c, fallback)
+  local count = {}
+  local function look(rr, cc)
+    local row = grid[rr]
+    local ch = row and row[cc]
+    if not ch then return end
+    local e = m.legend[ch]
+    local kind = e and e.kind or "floor"
+    if THING[kind] or kind == "exit" or kind == "door" or kind == "wall" then return end
+    count[ch] = (count[ch] or 0) + 1
+  end
+  look(r - 1, c)
+  look(r + 1, c)
+  look(r, c - 1)
+  look(r, c + 1)
+  local best, most = nil, 0
+  for _, ch in ipairs(m.order) do          -- the legend's order breaks a tie
+    if (count[ch] or 0) > most then best, most = ch, count[ch] end
+  end
+  return best or fallback
 end
 
 -- A name for this map's patterns, unique on a page that carries two maps.
@@ -572,15 +725,33 @@ end
 -- and enough dots to read as the squares it stands for.
 local function patterns(size, ink, id, suffix)
   local h = round(size / 4)
+  local m = size / 2.6                  -- the mesh a pit is drawn with
+  local w = size / 2.2                  -- one wave of water
   return table.concat {
+    -- a wall: close diagonal lines, the densest mark on the map
     '<pattern id="', id, '-hatch', suffix, '" width="', h, '" height="', h,
       '" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">',
       '<line x1="0" y1="0" x2="0" y2="', h, '" stroke="', ink,
       '" stroke-width="', round(size / 11), '"/></pattern>',
+    -- difficult ground: fine dots
     '<pattern id="', id, '-stipple', suffix, '" width="', round(size / 3),
       '" height="', round(size / 3), '" patternUnits="userSpaceOnUse">',
       '<circle cx="', round(size / 6), '" cy="', round(size / 6), '" r="',
       round(size / 20), '" fill="', ink, '" opacity="0.6"/></pattern>',
+    -- a pit: the same diagonal crossed, and drawn open and thin, so it
+    -- reads as a mesh you could fall through against a wall's solid hatch
+    '<pattern id="', id, '-cross', suffix, '" width="', round(m), '" height="', round(m),
+      '" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">',
+      '<line x1="0" y1="0" x2="0" y2="', round(m), '" stroke="', ink,
+      '" stroke-width="', round(size / 26), '"/>',
+      '<line x1="0" y1="0" x2="', round(m), '" y2="0" stroke="', ink,
+      '" stroke-width="', round(size / 26), '"/></pattern>',
+    -- water: waves across, which no other mark here looks like
+    '<pattern id="', id, '-wave', suffix, '" width="', round(w), '" height="', round(w / 2),
+      '" patternUnits="userSpaceOnUse">',
+      '<path d="M0,', round(w / 4), ' Q', round(w / 4), ',0 ', round(w / 2), ',', round(w / 4),
+      ' T', round(w), ',', round(w / 4), '" fill="none" stroke="', ink,
+      '" stroke-width="', round(size / 24), '" opacity="0.85"/></pattern>',
   }
 end
 
@@ -624,6 +795,80 @@ local function ringed(cx, cy, size, ch, ink)
   }
 end
 
+-- A thing rather than a creature: the same letter in a box. Shape is what
+-- tells the two apart, so they stay apart in grayscale. A hidden one is
+-- drawn with a broken edge, which reads as not-apparent without needing a
+-- second colour or a second shape.
+local function boxed(cx, cy, size, ch, ink, dashed)
+  local s = size * 0.62
+  return table.concat {
+    '<rect x="', round(cx - s / 2), '" y="', round(cy - s / 2), '" width="', round(s),
+      '" height="', round(s), '" fill="#ffffff" stroke="', ink,
+      '" stroke-width="', round(size / 13), '"',
+      dashed and (' stroke-dasharray="' .. round(size / 7) .. " " .. round(size / 11) .. '"') or "",
+      "/>",
+    '<text x="', round(cx), '" y="', round(cy + size * 0.14), '" text-anchor="middle" fill="', ink,
+      '" font-family="Georgia, serif" font-size="', round(size * 0.44), '">', esc(ch), "</text>",
+  }
+end
+
+-- A thing worth taking: a chest, a prize, a strongbox. A triangle, the
+-- last silhouette in this set that is unmistakable at a square's size; the
+-- letter sits low in it, where a triangle has room for one.
+local function wedge(cx, cy, size, ch, ink)
+  local s = size * 0.3
+  return table.concat {
+    '<polygon points="', round(cx), ",", round(cy - s * 1.15), " ",
+      round(cx + s * 1.1), ",", round(cy + s * 0.8), " ",
+      round(cx - s * 1.1), ",", round(cy + s * 0.8),
+      '" fill="#ffffff" stroke="', ink, '" stroke-width="', round(size / 13), '"/>',
+    -- a triangle is widest at its foot, so the letter sits low, and smaller
+    '<text x="', round(cx), '" y="', round(cy + size * 0.19), '" text-anchor="middle" fill="', ink,
+      '" font-family="Georgia, serif" font-size="', round(size * 0.29), '">', esc(ch), "</text>",
+  }
+end
+
+-- A thing you work rather than a thing that is there: a lever, a button, a
+-- handle, a valve. A diamond, because a silhouette tells itself apart from
+-- a ring and a box at any size and in any ink.
+local function diamond(cx, cy, size, ch, ink)
+  local s = size * 0.33
+  return table.concat {
+    '<polygon points="', round(cx), ",", round(cy - s), " ", round(cx + s), ",", round(cy),
+      " ", round(cx), ",", round(cy + s), " ", round(cx - s), ",", round(cy),
+      '" fill="#ffffff" stroke="', ink, '" stroke-width="', round(size / 13), '"/>',
+    -- a diamond narrows away from its centre, so the letter sits smaller
+    '<text x="', round(cx), '" y="', round(cy + size * 0.12), '" text-anchor="middle" fill="', ink,
+      '" font-family="Georgia, serif" font-size="', round(size * 0.33), '">', esc(ch), "</text>",
+  }
+end
+
+-- Which pattern fills each kind of terrain. Open floor fills with nothing.
+local FILL = {
+  wall = "-hatch", rough = "-stipple", pit = "-cross", water = "-wave",
+}
+
+-- A thing, in the silhouette its kind is drawn with. Every one of them is
+-- drawn inside the same box, so a silhouette fits wherever another does --
+-- in a square of the grid, and in a swatch of the key.
+local function thing(kind, cx, cy, size, ch, ink)
+  if kind == "token" then return ringed(cx, cy, size, ch, ink) end
+  if kind == "control" then return diamond(cx, cy, size, ch, ink) end
+  if kind == "treasure" then return wedge(cx, cy, size, ch, ink) end
+  return boxed(cx, cy, size, ch, ink, kind == "hidden")
+end
+
+-- A door: a bar across the gap, athwart the way through, so it reads as a
+-- way that can be shut rather than a way out.
+local function doorBar(cx, cy, s, dx, dy, ink, weight)
+  local px, py = -dy * s, dx * s
+  return table.concat {
+    '<line x1="', round(cx - px), '" y1="', round(cy - py), '" x2="', round(cx + px),
+      '" y2="', round(cy + py), '" stroke="', ink, '" stroke-width="', round(weight),
+      '" stroke-linecap="round"/>',
+  }
+end
+
 -- A label broken to fit, at about this font's average character width. An
 -- estimate is enough: it only decides where a long line wraps, and it comes
 -- out the same under every Lua, which is what a built edition needs.
@@ -655,7 +900,10 @@ function maps.svg(m, opts)
   local cols = rows > 0 and #grid[1] or 0
   if rows == 0 or cols == 0 then return nil, 0, note end
   local ink = opts.ink or "#111111"
-  local id = opts.id or patternId(m, grid, opts.tokens)
+  -- the DM's layer: creatures, and anything hidden. "tokens" was its name
+  -- in 1.1, when creatures were the only thing it covered.
+  local dm = opts.dm == true or opts.tokens == true
+  local id = opts.id or patternId(m, grid, dm)
   local width = opts.width or maps.setting("width")
   local pad, foot = 1, 24
   local KEY_ROW, KEY_SWATCH, KEY_SIZE = 17, 15, 10.5
@@ -670,7 +918,7 @@ function maps.svg(m, opts)
     end
     for _, ch in ipairs(m.order) do
       local e = m.legend[ch]
-      if e and drawn[ch] and (opts.tokens or e.kind ~= "token") then
+      if e and drawn[ch] and (dm or not SECRET[e.kind]) then
         keys[#keys + 1] = e
       end
     end
@@ -699,18 +947,18 @@ function maps.svg(m, opts)
       local ch = grid[r][c]
       local e = m.legend[ch]
       local kind = e and e.kind or "floor"
-      -- a creature stands on the ground, so draw the ground under it
-      if kind == "token" then
-        local g = under and m.legend[under]
+      -- a thing stands on the ground, so draw the ground under it: without
+      -- this the map drawn without its DM layer has a bare square exactly
+      -- where the thing was
+      if THING[kind] then
+        local g = m.legend[groundAt(m, grid, r, c, under)]
         kind = g and g.kind or "floor"
       end
       local x, y = round(pad + (c - 1) * cell), round(pad + (r - 1) * cell)
-      if kind == "wall" then
+      local fill = FILL[kind]
+      if fill then
         put('<rect x="', x, '" y="', y, '" width="', round(cell), '" height="', round(cell),
-            '" fill="url(#', id, '-hatch)"/>')
-      elseif kind == "rough" then
-        put('<rect x="', x, '" y="', y, '" width="', round(cell), '" height="', round(cell),
-            '" fill="url(#', id, '-stipple)"/>')
+            '" fill="url(#', id, fill, ')"/>')
       end
     end
   end
@@ -730,11 +978,26 @@ function maps.svg(m, opts)
       local e = m.legend[ch]
       local kind = e and e.kind or "floor"
       local x, y = pad + (c - 1) * cell, pad + (r - 1) * cell
-      if kind == "exit" then
+      if kind == "exit" or kind == "door" then
         local dx, dy = exitDir(r, c, rows, cols)
-        put(arrowAt(x + cell / 2, y + cell / 2, cell * 0.32, dx, dy, ink, cell / 11))
-      elseif kind == "token" and opts.tokens then
-        local body = ringed(x + cell / 2, y + cell / 2, cell, ch, ink)
+        local cx, cy = x + cell / 2, y + cell / 2
+        if kind == "exit" then
+          put(arrowAt(cx, cy, cell * 0.32, dx, dy, ink, cell / 11))
+        else
+          put(doorBar(cx, cy, cell * 0.34, dx, dy, ink, cell / 9))
+        end
+      elseif THING[kind] and (dm or not SECRET[kind]) then
+        local body = thing(kind, x + cell / 2, y + cell / 2, cell, ch, ink)
+        -- and what it is, under it, so the drawing says so itself. Only
+        -- where a square is big enough to carry the words.
+        if e.label and cell >= 22 then
+          body = body .. table.concat {
+            '<text class="gmm-label" x="', round(x + cell / 2), '" y="', round(y + cell * 0.97),
+              '" text-anchor="middle" fill="', ink,
+              '" font-family="Georgia, serif" font-size="', round(cell * 0.23),
+              '" opacity="0.9">', esc(e.label), "</text>",
+          }
+        end
         local _, url = tokenPage(e.page)
         if url and opts.link then
           put('<a href="', esc(url), '"><title>', esc(e.text), "</title>", body, "</a>")
@@ -771,38 +1034,44 @@ function maps.svg(m, opts)
   for _, e in ipairs(keys) do
     local cy = y + KEY_SWATCH / 2
     local swatch
-    if e.kind == "wall" or e.kind == "rough" then
-      swatch = table.concat {
-        '<rect x="', round(pad), '" y="', round(y), '" width="', round(KEY_SWATCH),
-          '" height="', round(KEY_SWATCH), '" fill="url(#', id,
-          e.kind == "wall" and "-hatchk" or "-stipplek", ')"/>',
+    local function box(fill)
+      return table.concat {
+        fill and table.concat {
+          '<rect x="', round(pad), '" y="', round(y), '" width="', round(KEY_SWATCH),
+            '" height="', round(KEY_SWATCH), '" fill="url(#', id, fill, 'k)"/>',
+        } or "",
         '<rect x="', round(pad), '" y="', round(y), '" width="', round(KEY_SWATCH),
           '" height="', round(KEY_SWATCH), '" fill="none" stroke="', ink,
           '" stroke-width="0.6" opacity="0.5"/>',
       }
-    elseif e.kind == "exit" then
+    end
+    if FILL[e.kind] then
+      swatch = box(FILL[e.kind])
+    elseif e.kind == "exit" or e.kind == "door" then
+      -- the arrow points the way this map's own gap points
       local dx, dy = 0, -1
       for r = 1, rows do
         for c = 1, cols do
           if grid[r][c] == e.char then dx, dy = exitDir(r, c, rows, cols) end
         end
       end
-      swatch = arrowAt(pad + KEY_SWATCH / 2, cy, KEY_SWATCH * 0.36, dx, dy, ink, 1.6)
-    elseif e.kind == "token" then
-      swatch = ringed(pad + KEY_SWATCH / 2, cy, KEY_SWATCH * 1.45, e.char, ink)
+      if e.kind == "exit" then
+        swatch = arrowAt(pad + KEY_SWATCH / 2, cy, KEY_SWATCH * 0.36, dx, dy, ink, 1.6)
+      else
+        swatch = doorBar(pad + KEY_SWATCH / 2, cy, KEY_SWATCH * 0.38, dx, dy, ink, 1.9)
+      end
+    elseif THING[e.kind] then
+      swatch = thing(e.kind, pad + KEY_SWATCH / 2, cy, KEY_SWATCH * 1.45, e.char, ink)
     else
-      swatch = table.concat {
-        '<rect x="', round(pad), '" y="', round(y), '" width="', round(KEY_SWATCH),
-          '" height="', round(KEY_SWATCH), '" fill="none" stroke="', ink,
-          '" stroke-width="0.6" opacity="0.5"/>',
-      }
+      swatch = box(nil)
     end
     local left = pad + KEY_SWATCH + 6
     local lines = wrapLabel(e.text, canvas - left - pad, KEY_SIZE)
     local label = {}
     for i, line in ipairs(lines) do
       label[#label + 1] = table.concat {
-        '<text x="', round(left), '" y="', round(cy + 3.5 + (i - 1) * (KEY_SIZE + 1.5)),
+        '<text class="gmm-key" x="', round(left),
+          '" y="', round(cy + 3.5 + (i - 1) * (KEY_SIZE + 1.5)),
           '" fill="', ink, '" font-family="Georgia, serif" font-size="', round(KEY_SIZE), '">',
           esc(line), "</text>",
       }
@@ -841,7 +1110,7 @@ function maps.legendMarkdown(m, opts)
   local lines = {}
   for _, ch in ipairs(m.order) do
     local e = m.legend[ch]
-    if e and (opts.tokens or e.kind ~= "token") then
+    if e and (opts.dm or opts.tokens or not SECRET[e.kind]) then
       lines[#lines + 1] = "- " .. e.text
     end
   end
@@ -889,11 +1158,12 @@ function maps.draw(ref, opts)
   if not source then return missing(ref or maps.here()) end
   local m = maps.parse(source, opts.printing)
   local live, _, note = maps.svg(m, {
-    tokens = true, link = true, width = opts.width, legend = opts.legend,
+    dm = true, link = true, width = opts.width, legend = opts.legend,
   })
   if not live then return missing(ref or maps.here()) end
   local printed = (maps.svg(m, {
-    tokens = opts.tokens == true, link = false, width = opts.width, legend = opts.legend,
+    dm = opts.dm == true or opts.tokens == true,
+    link = false, width = opts.width, legend = opts.legend,
   }))
 
   local html = { '<div class="gmmaps">', live }
