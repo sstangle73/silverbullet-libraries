@@ -1,0 +1,418 @@
+// Runs the GM libraries in SilverBullet 2.11's own Lua runtime, over the test
+// campaign as a DM space holds it: test/fixture/, with each library from src/
+// where test/install.json puts it. SBLIB is the silverbullet-libraries root.
+//
+// The plain-Lua suite (test/run.py) is the wide one. This one is narrow and
+// honest: Space Lua is not Lua 5.4, and a library that passes there can
+// still fail here, as GM Kit's marks once did.
+import { expect, test } from "vitest";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+import { parseBlock } from "./parse.ts";
+import { luaBuildStandardEnv } from "./stdlib.ts";
+import { LuaEnv, LuaNativeJSFunction, LuaStackFrame, LuaTable } from "./runtime.ts";
+import { evalStatement } from "./eval.ts";
+import { extractSpaceLuaFromPageText } from "../boot_config.ts";
+import { parse } from "../markdown_parser/parse_tree.ts";
+import { buildExtendedMarkdownLanguage } from "../markdown_parser/parser.ts";
+
+const ROOT = process.env.SBLIB!;
+const SB = process.cwd();
+const SCENE2 = "Adventure/Campaign/Act I/Scene 2";
+const LANTERN = "Adventure/World/Items/Lantern";
+const RECORD = "State/Items/Lantern";
+const WARDEN = "Adventure/World/People/The Warden";
+
+function loadTree(root: string): Map<string, string> {
+  const pages = new Map<string, string>();
+  const fixture = join(root, "test", "fixture");
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir)) {
+      const p = join(dir, e);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (e.endsWith(".md")) {
+        pages.set(relative(fixture, p).split(sep).join("/").replace(/\.md$/, ""), readFileSync(p, "utf-8"));
+      }
+    }
+  };
+  walk(fixture);
+  const install: Record<string, string[]> = JSON.parse(readFileSync(join(root, "test", "install.json"), "utf-8"));
+  for (const [folder, libs] of Object.entries(install)) {
+    for (const lib of libs) pages.set(folder + lib, readFileSync(join(root, "src", lib + ".md"), "utf-8"));
+  }
+  // As the plain-Lua suite's reset does, start from a campaign nobody has
+  // played: State/, Sessions/ and the players' copies go, the revealed list
+  // stays.
+  for (const name of [...pages.keys()]) {
+    const rest = name.match(/^(?:State|Sessions|Player)\/(.*)$/)?.[1];
+    if (rest && !/^(index|CONFIG|Revealed)$/.test(rest) && !/^(Notes|Library)\//.test(rest)) {
+      pages.delete(name);
+    }
+  }
+  return pages;
+}
+
+function scalar(v: string): unknown {
+  if (v === "") return null;
+  if (v === "true") return true;
+  if (v === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
+  const q = v.match(/^"(.*)"$/) || v.match(/^'(.*)'$/);
+  return q ? q[1] : v;
+}
+
+function frontmatter(text: string): Record<string, unknown> {
+  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  const out: Record<string, unknown> = {};
+  if (!m) return out;
+  for (const line of m[1].split("\n")) {
+    const kv = line.match(/^([\w-]+):\s*(.*?)\s*$/);
+    if (kv && kv[1] !== "name") out[kv[1]] = scalar(kv[2]);
+  }
+  return out;
+}
+
+const PRELUDE = `
+-- dom, as plain tables: enough to draw, read and click a bar
+dom = setmetatable({}, { __index = function(_, tag)
+  return function(spec)
+    return setmetatable({ tag = tag, spec = spec }, { __index = function(node, key)
+      if key == "outerHTML" then
+        local out = {}
+        for _, c in ipairs(spec) do out[#out + 1] = type(c) == "string" and c or c.outerHTML end
+        return "<" .. tag .. ">" .. (spec.__rawText or table.concat(out)) .. "</" .. tag .. ">"
+      end
+    end })
+  end
+end })
+
+function __text(node)
+  if type(node) == "string" then return node end
+  local out = {}
+  if node.spec.__rawText then out[#out + 1] = node.spec.__rawText end
+  for _, c in ipairs(node.spec) do out[#out + 1] = __text(c) end
+  return table.concat(out, " ")
+end
+
+local function collect(node, out)
+  if type(node) ~= "table" then return end
+  if node.tag == "button" then out[#out + 1] = node end
+  for _, c in ipairs(node.spec) do collect(c, out) end
+end
+
+function __buttons(node)
+  local found, names = {}, {}
+  collect(node, found)
+  for i, b in ipairs(found) do names[i] = __text(b) end
+  return table.concat(names, " | ")
+end
+
+function __click(node, label)
+  local found = {}
+  collect(node, found)
+  for _, b in ipairs(found) do
+    if __text(b) == label then return b.spec.onclick() end
+  end
+  error("no button " .. label .. " in " .. __buttons(node))
+end
+`;
+
+async function setup(root: string) {
+  const pages = loadTree(root);
+  const notes: { message: string; kind: string; options: any }[] = [];
+  const printed: string[] = [];
+  const store: Record<string, any> = {};
+  const picks: string[] = [];
+  const state = { current: "index" };
+  const lagged: { known: Set<string> | null } = { known: null };
+  const freeze = () => {
+    lagged.known = new Set(pages.keys());
+  };
+  (globalThis as any).client = {
+    config: { get: (_k: string, fallback: unknown) => fallback ?? {} },
+  };
+  const env = new LuaEnv(luaBuildStandardEnv());
+  const stub = (name: string, fns: Record<string, (...a: any[]) => unknown>) => {
+    const t = new LuaTable();
+    for (const [k, f] of Object.entries(fns)) t.rawSet(k, new LuaNativeJSFunction(f));
+    env.set(name, t);
+  };
+  const getPath = (path: string) =>
+    path.split(".").reduce((o: any, k) => (o === null || o === undefined ? undefined : o[k]), store);
+  stub("config", {
+    get: (key: string, fallback: unknown) => {
+      const v = getPath(key);
+      return v === undefined ? (fallback ?? null) : v;
+    },
+    set: (key: string, value: unknown) => {
+      const parts = key.split(".");
+      let o = store;
+      for (const p of parts.slice(0, -1)) o = o[p] ??= {};
+      o[parts.at(-1)!] = value;
+    },
+  });
+  stub("editor", {
+    getCurrentPage: () => state.current,
+    flashNotification: (message: string, kind: string, options: any) => {
+      notes.push({ message, kind: kind ?? "info", options });
+    },
+    filterBox: (_label: string, options: any[]) => {
+      const want = picks.shift();
+      return options.find((o) => o.name === want) ?? null;
+    },
+    prompt: () => null,
+    confirm: () => true,
+    save: () => null,
+    reloadPage: () => null,
+    navigate: (p: string) => {
+      state.current = p;
+    },
+    openUrl: () => null,
+  });
+  stub("space", {
+    readPage: (n: string) => {
+      const t = pages.get(n);
+      if (t === undefined) throw new Error("Not found: " + n);
+      return t;
+    },
+    writePage: (n: string, t: string) => {
+      pages.set(n, t);
+      return { name: n };
+    },
+    // As in SilverBullet 2.11 (client/plugos/syscalls/space.ts): link
+    // resolution, an exact name or else any page whose path ends in it,
+    // ignoring case, over a list that lags writes (freeze() holds it), and
+    // not the look at the page that getPageMeta is.
+    pageExists: (n: string) => {
+      const names = lagged.known ?? new Set(pages.keys());
+      if (names.has(n)) return true;
+      const tail = "/" + n.toLowerCase();
+      return [...names].some((p) => ("/" + p.toLowerCase()).endsWith(tail));
+    },
+    getPageMeta: (n: string) => {
+      if (!pages.has(n)) throw new Error("Not found");
+      return { name: n };
+    },
+    deletePage: (n: string) => {
+      pages.delete(n);
+    },
+  });
+  stub("index", {
+    pages: () => [...pages].map(([name, text]) => ({ ...frontmatter(text), name })),
+  });
+  stub("markdown", {
+    parseMarkdown: (text: string) => parse(buildExtendedMarkdownLanguage({}), text),
+  });
+  stub("codeWidget", { refreshAll: () => null });
+  stub("command", { define: () => null });
+  stub("actionButton", { define: () => null });
+  stub("event", { listen: () => null });
+  stub("jsonschema", { validateObject: () => null });
+  stub("system", { getURLPrefix: () => "/dm/" });
+  env.set("print", new LuaNativeJSFunction((...a: unknown[]) => {
+    printed.push(a.join(" "));
+  }));
+
+  // A Lua error holds its stack frame, and through it the whole environment:
+  // pass on the message alone, or vitest runs out of memory reporting it.
+  const run = async (code: string) => {
+    const c = parseBlock(code, {});
+    try {
+      await evalStatement(c, env, LuaStackFrame.createWithGlobalEnv(env, c.ctx));
+    } catch (e: any) {
+      throw new Error(String(e?.message ?? e));
+    }
+  };
+  await run(PRELUDE);
+  // Every GM library the DM space loads, in SilverBullet's order: priority
+  // first, then page name.
+  const priority = (md: string) => Number(md.match(/```space-lua\n\s*--\s*priority:\s*(-?\d+)/)?.[1] ?? 0);
+  const gmLibs = [...pages.keys()]
+    .filter((n) => /(^|\/)Library\/Storie\/GM [^/]+$/.test(n))
+    .sort((a, b) => priority(pages.get(b)!) - priority(pages.get(a)!) || (a < b ? -1 : a > b ? 1 : 0));
+  const libs = [
+    readFileSync(join(SB, "libraries/Library/Std/APIs/Widget.md"), "utf-8"),
+    ...gmLibs.map((n) => pages.get(n)!),
+  ];
+  for (const md of libs) await run(extractSpaceLuaFromPageText(md));
+  return { env, run, pages, notes, printed, picks, state, freeze };
+}
+
+// Run a notification's action, passing on only the message of an error.
+async function action(note: { options: any }, name: string) {
+  try {
+    await note.options.actions.find((a: any) => a.name === name).run();
+  } catch (e: any) {
+    throw new Error(String(e?.message ?? e));
+  }
+}
+
+test("Scene 2's bar draws, with a row for the lantern", async () => {
+  const { env, run, printed } = await setup(ROOT);
+  await run(`__bar = gm.bar("${SCENE2}")`);
+  await run(`__b = __buttons(__bar.html); __t = __text(__bar.html)`);
+  expect(env.get("__b")).toBe("Reveal | Mark planned | Mark started | Mark found");
+  expect(env.get("__t")).toContain("six wicks here");
+  expect(printed).toEqual([]);
+}, 60000);
+
+test("the lantern is found, used, refunded and undone from its buttons", async () => {
+  const { env, run, pages, notes, state } = await setup(ROOT);
+  state.current = SCENE2;
+  await run(`__click(gm.bar().html, "Mark found")`);
+  expect(notes.filter((n) => n.message.startsWith("GM Kit:"))).toEqual([]);
+  expect(notes.at(-1)!.message).toBe("Lantern: found in session 1, with six wicks.");
+  expect(notes.at(-1)!.options.actions.map((a: any) => a.name)).toEqual(["Reveal", "Undo"]);
+  const found = pages.get(RECORD)!;
+  expect(found).toContain(
+    'found: true\nfound_in: "[[' + SCENE2 + ']]"\nfound_session: 1\nunit: wick\nunits: wicks\nuses: 6\nuses_found: 6\n',
+  );
+  expect(found).toContain("- [[Sessions/Session 1|Session 1]]: found in [[" + SCENE2 + "]], with six wicks\n");
+  await run(`__click(gm.bar().html, "Use a wick")`);
+  await run(`__click(gm.bar().html, "Use a wick")`);
+  expect(notes.filter((n) => n.message.startsWith("GM Kit:"))).toEqual([]);
+  expect(notes.at(-1)!.message).toBe("Lantern: a wick used. 4 of 6 wicks left.");
+  expect(pages.get(RECORD)).toContain("\nuses: 4\n");
+  await run(`__t = __text(gm.bar().html)`);
+  expect(env.get("__t")).toContain("●●●●○○ 4 of 6 wicks left");
+  await action(notes.at(-1)!, "Undo");
+  expect(pages.get(RECORD)).toContain("\nuses: 5\n");
+  expect(notes.at(-1)!.message).toBe("Undone: Lantern is back to 5 of 6 wicks left");
+  await run(`__click(gm.bar().html, "Refund a wick")`);
+  expect(pages.get(RECORD)).toContain("\nuses: 6\n");
+  expect(pages.get(RECORD)).toContain("- [[Sessions/Session 1|Session 1]]: a wick refunded, 6 left\n");
+  expect(notes.filter((n) => n.message.startsWith("GM Kit:"))).toEqual([]);
+}, 60000);
+
+test("a find recorded by mistake comes off again", async () => {
+  const { env, run, pages, notes, state } = await setup(ROOT);
+  state.current = SCENE2;
+  await run(`__click(gm.bar().html, "Mark found")`);
+  await run(`gm.spend("${LANTERN}", -1)`);
+  state.current = LANTERN;
+  await run(`__click(gm.bar().html, "Unmark found")`);
+  expect(notes.filter((n) => n.message.startsWith("GM Kit:"))).toEqual([]);
+  expect(notes.at(-1)!.message).toBe("Lantern: no longer marked found, and its uses with it.");
+  const record = pages.get(RECORD)!;
+  expect(record).not.toContain("found: true");
+  expect(record).not.toContain("uses:");
+  expect(record).toContain("- [[Sessions/Session 1|Session 1]]: not found after all");
+  await run(`__b = __buttons(gm.bar().html)`);
+  expect(env.get("__b")).toBe("Reveal | Mark found");
+  await action(notes.at(-1)!, "Undo");
+  expect(pages.get(RECORD)).toContain("\nuses: 5\n");
+  expect(pages.get(RECORD)).not.toContain("not found after all");
+}, 60000);
+
+test("a second mark keeps the first, whatever space.pageExists says", async () => {
+  const { env, run, pages, freeze } = await setup(ROOT);
+  // the list pageExists reads stays as it was before the first mark, the way
+  // a client's lags a write: GM Kit 3.1 then rebuilt the record and lost it
+  freeze();
+  await run(`gm.mark("${WARDEN}", "met"); gm.mark("${WARDEN}", "dead")`);
+  const record = pages.get("State/People/The Warden")!;
+  expect(record).toContain("met: true");
+  expect(record).toContain("status: dead");
+  // pageExists answers the way a link resolves; gm.exists asks for the page
+  await run(`__e = gm.exists("World/Items/Lantern"); __f = space.pageExists("World/Items/Lantern")`);
+  expect(env.get("__f")).toBe(true);
+  expect(env.get("__e")).toBe(false);
+}, 60000);
+
+test("marking someone met writes their play state", async () => {
+  const { run, pages, notes } = await setup(ROOT);
+  await run(`gm.mark("${WARDEN}", "met")`);
+  expect(pages.get("State/People/The Warden")).toContain("met: true\nmet_session: 1\n");
+  expect(notes.at(-1)!.message).toBe("The Warden: met in session 1, and revealed.");
+}, 60000);
+
+test("the Session Table's Found query reads the uses", async () => {
+  const { env, run, pages } = await setup(ROOT);
+  await run(`gm.markFound("${LANTERN}", "${SCENE2}"); gm.spend("${LANTERN}", -1)`);
+  const table = pages.get("Session Table")!;
+  const src = table.slice(table.indexOf("## Found")).match(/\$\{(query\[\[[\s\S]*?\]\])\}/)![1];
+  env.set("__src", src);
+  await run(`__rows = spacelua.evalExpression(spacelua.parseExpression(__src))`);
+  const rows = env.get("__rows") as any[];
+  expect(rows.length).toBe(1);
+  expect(rows[0].Left).toBe("●●●●●○ 5 of 6 wicks left");
+  // the number is the Session Table's own, not a constant
+  const n = Number(table.match(/^---\n[\s\S]*?\nsession: (\d+)\n[\s\S]*?---/)![1]);
+  expect(rows[0].Session).toBe(`[[Sessions/Session ${n}|Session ${n}]]`);
+}, 60000);
+
+test("party.value gives the count as a number", async () => {
+  const { env, run } = await setup(ROOT);
+  await run(`__v = party.value{"wick", plus = 1}; __w = party.value({"wick"}, 7)`);
+  expect(env.get("__v")).toBe(6);
+  expect(env.get("__w")).toBe(7);
+}, 60000);
+
+test("the book builds as committed, with the pointer, and in place when asked", async () => {
+  const { run, pages, notes } = await setup(ROOT);
+  const committed = {
+    dm: pages.get("Adventure/Build/Book DM")!,
+    player: pages.get("Adventure/Build/Book Player")!,
+  };
+  await run(`gmbook.build({ "dm", "player" })`);
+  // say what the warning was, if there is one
+  expect(notes.at(-1)!.message).not.toContain("nothing to print");
+  expect(notes.at(-1)!.kind).toBe("info");
+  expect(pages.get("Adventure/Build/Book DM")).toBe(committed.dm);
+  expect(pages.get("Adventure/Build/Book Player")).toBe(committed.player);
+  expect(committed.dm).toContain("every traveller after.\n\n*See Lantern: Rules.*\n\n");
+  // in place, the section sits one level under the heading it follows: the
+  // scene's title
+  await run(`config.set("gmBook.transclusions", "inline"); gmbook.compile({ "dm" })`);
+  expect(pages.get("Adventure/Build/Book DM")).toContain("every traveller after.\n\n## Rules\n\n- **Wicks.**");
+}, 300000);
+
+// DM-only text, in SilverBullet's own Lua: the cases tests/dmonly.lua runs in
+// plain Lua, read from that file so the two suites can't drift apart.
+test("DM-only text: each way of marking it strips and shows as in plain Lua", async () => {
+  const { env, run } = await setup(ROOT);
+  const src = readFileSync(join(ROOT, "test", "tests", "dmonly.lua"), "utf-8");
+  const from = src.indexOf("local DM_CASES = {");
+  const cases = src.slice(from + "local ".length, src.indexOf("\n}\n", from) + 2);
+  await run(cases + `
+__bad = {}
+for _, c in ipairs(DM_CASES) do
+  local function check(got, want, what)
+    if got ~= want then __bad[#__bad + 1] = what .. ", " .. c[1] .. ": [" .. got .. "]" end
+  end
+  check(gm.stripSecrets(c[2]), c[3], "GM Kit")
+  check(gmbook.stripSecrets(c[2]), c[3], "GM Book's player edition")
+  check(gmbook.showSecrets(c[2]), c[4], "GM Book's DM edition")
+end
+__bad = table.concat(__bad, " | ")`);
+  expect(env.get("DM_CASES").length).toBeGreaterThan(20);
+  expect(env.get("__bad")).toBe("");
+}, 60000);
+
+test("DM-only text: publishing and both editions leave it where it belongs", async () => {
+  const { run, pages } = await setup(ROOT);
+  const crypt = [
+    "# Crypt", "",
+    'The door is locked. <span class="dm">The key is under the mat.</span> It is heavy.', "",
+    "> **dm** Who waits below", "> The lich, asleep.", "",
+    "Stone steps lead down.", "",
+    "<!--#dm-->", "", "| Clue | Where |", "|---|---|", "| The torn letter | The cellar |", "", "<!--/dm-->", "",
+    "## DM Only", "", "The third step is a pressure plate.", "",
+  ].join("\n");
+  pages.set("Adventure/World/Places/Crypt", "---\ntype: place\n---\n\n" + crypt);
+  pages.set("Adventure/Campaign/Crypt", "---\nbook_order: 11\n---\n\n" + crypt);
+  await run(`gm.writeRevealed({ "Adventure/World/Places/Crypt" }); gm.publish(); gmbook.compile({ "dm", "player" })`);
+  expect(pages.get("Player/World/Places/Crypt")).toBe(
+    "---\ntype: place\n---\n\n# Crypt\n\nThe door is locked. It is heavy.\n\nStone steps lead down.\n",
+  );
+  const dm = pages.get("Adventure/Build/Book DM")!;
+  const player = pages.get("Adventure/Build/Book Player")!;
+  expect(dm).toContain("The door is locked. The key is under the mat. It is heavy.");
+  expect(dm).toContain("**Who waits below.** The lich, asleep.");
+  expect(dm).toContain("| The torn letter | The cellar |");
+  expect(player).toContain("The door is locked. It is heavy.\n\nStone steps lead down.");
+  for (const secret of ["key is under", "The lich", "torn letter", "pressure plate", "**dm**", "<!--#dm"]) {
+    expect(player).not.toContain(secret);
+  }
+  for (const syntax of ["**dm**", "<!--#dm", "<!--/dm", 'class="dm"']) expect(dm).not.toContain(syntax);
+}, 300000);

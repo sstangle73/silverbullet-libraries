@@ -1,0 +1,4 @@
+__pycache__/
+# The local server's data, the campaign copy it serves, and its binary
+test/instance/work/
+test/instance/bin/
