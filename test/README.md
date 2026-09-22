@@ -19,6 +19,7 @@ About ten seconds. PyYAML stands in for SilverBullet's `yaml.parse`, which GM Sh
 | `tests/*.lua` | The tests, a file for each library or feature |
 | `install.json` | Which library goes in which space's `Library/Storie/` |
 | `fixture/` | The campaign |
+| `ddb/` | Two made-up characters as D&D Beyond's character service sends them, for GM Beyond's import |
 | `build_book.py` | Builds the campaign's book, to diff or to commit |
 | `spacelua/` | The same libraries in SilverBullet's own Lua |
 | `instance/` | A real SilverBullet server over the campaign |

@@ -131,6 +131,8 @@ async function setup(root: string) {
   const opened: string[] = [];
   // files other than pages, such as a printed PDF: path to lastModified, in ms
   const files = new Map<string, number>();
+  // what net.proxyFetch answers, by URL: anything else is a 404
+  const responses = new Map<string, unknown>();
   const state = { current: "index" };
   const lagged: { known: Set<string> | null } = { known: null };
   const freeze = () => {
@@ -226,6 +228,9 @@ async function setup(root: string) {
   // As SilverBullet's own yaml.parse: js-yaml, its result handed to Lua as
   // plain JavaScript values, unconverted, as every syscall's result is
   stub("yaml", { parse: (text: string) => YAML.load(text) });
+  // As SilverBullet's net.proxyFetch: a JSON body arrives parsed, as plain
+  // JavaScript values that Lua indexes as they are
+  stub("net", { proxyFetch: (url: string) => responses.get(url) ?? { ok: false, status: 404 } });
   stub("codeWidget", { refreshAll: () => null });
   stub("command", { define: () => null });
   stub("actionButton", { define: () => null });
@@ -261,7 +266,7 @@ async function setup(root: string) {
     ...gmLibs.map((n) => pages.get(n)!),
   ];
   for (const md of libs) await run(extractSpaceLuaFromPageText(md));
-  return { env, run, pages, notes, printed, picks, prompts, state, freeze, opened, files };
+  return { env, run, pages, notes, printed, picks, prompts, state, freeze, opened, files, responses };
 }
 
 // Run a notification's action, passing on only the message of an error.
@@ -706,5 +711,57 @@ __sample = sheets.printed.draw("Adventure/Rules/Sample Characters/Tamsin Reed")`
   const sample = (env.get("__sample") as string).match(/<svg[\s\S]*?<\/svg>/)![0];
   expect(book).toContain(sample);
   expect(sample).not.toContain(">Sam</text>");
+  expect(printed).toEqual([]);
+}, 120000);
+
+test("D&D Beyond characters import in SilverBullet's own Lua, from JavaScript's own objects", async () => {
+  const { env, run, pages, notes, responses, printed } = await setup(ROOT);
+  for (const name of ["bram", "ilse"]) {
+    const body = JSON.parse(readFileSync(join(ROOT, "test", "ddb", name + ".json"), "utf-8"));
+    responses.set("https://character-service.dndbeyond.com/character/v5/character/" + body.data.id, {
+      ok: true,
+      status: 200,
+      body,
+    });
+  }
+  await run(`__bram = gmb.import("https://www.dndbeyond.com/characters/1001/AbCdEf")
+__ilse = gmb.import("1002")`);
+  expect(notes.filter((n) => n.kind === "error")).toEqual([]);
+  expect(env.get("__bram")).toBe("Characters/Bram Holloway");
+  const bram = pages.get("Characters/Bram Holloway")!;
+  expect(bram.startsWith("---\ntype: pc\nddb: 1001\nlevel: 5\nclass: Fighter 3 / Wizard 2\n")).toBe(true);
+  for (const line of [
+    "\nstr: 15\ndex: 12\ncon: 16\nint: 13\nwis: 11\ncha: 8\n",
+    "\nsaves: [str, con]\n",
+    "\nstr_save: 6\n",
+    "\nac: 21\nhp: 68\nhit_dice: 3d10 + 2d6\nspeed: 25\n",
+    '\n  - {name: Longsword, hit: 5, damage: 1d8+2 Slashing, notes: "Versatile (1d10), Sap"}\n',
+    "\n  - {name: Fire Bolt, hit: 4, damage: 2d10 Fire, notes: 120 ft.}\n",
+    "\nslots: [3]\n",
+    "\n      ***Second Wind.*** Catch your breath *twice*, then:\n      - stand\n      - fight\n",
+    "\ncoins: {sp: 5, gp: 23}\n",
+  ]) {
+    expect(bram).toContain(line);
+  }
+  const ilse = pages.get("Characters/Ilse Marrow")!;
+  for (const line of [
+    "\nint: 19\n",
+    "\ninitiative: 5\n",
+    "\nstealth: 10\n",
+    "\nac: 15\nhp: 35\nhit_dice: 2d8 + 2d8 + 1d8\nspeed: 40\n",
+    "\n  - {name: Vicious Mockery, hit: DC 13 Wis, damage: 2d6 Psychic, notes: 60 ft.}\n",
+    "\n  - {name: Unarmed Strike, hit: 6, damage: 1d6+3 Bludgeoning}\n",
+    "\npact_slots: 1\npact_level: 1\n",
+    "\n  - {name: Bardic Inspiration, uses: 2, reset: Long Rest}\n",
+  ]) {
+    expect(ilse).toContain(line);
+  }
+  // nothing changed on D&D Beyond, so a refresh writes nothing
+  await run(`gmb.refresh("Characters/Bram Holloway")`);
+  expect(notes.at(-1)!.message).toContain("already up to date");
+  // and GM Sheets draws what the import wrote
+  await run(`__w = sheets.draw("Characters/Ilse Marrow").markdown`);
+  expect(env.get("__w")).toContain("### Jack of All Trades");
+  expect(env.get("__w")).toContain(">Monk 2 / Bard 2 / Warlock 1</text>");
   expect(printed).toEqual([]);
 }, 120000);

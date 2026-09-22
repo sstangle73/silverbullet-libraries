@@ -1,0 +1,1407 @@
+{
+ "id": 0,
+ "success": true,
+ "message": "Character successfully received.",
+ "data": {
+  "id": 1001,
+  "name": "Bram Holloway",
+  "stats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": 15
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": 12
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": 13
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": 8
+   }
+  ],
+  "bonusStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "overrideStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "baseHitPoints": 38,
+  "bonusHitPoints": null,
+  "overrideHitPoints": null,
+  "race": {
+   "fullName": "Hill Dwarf",
+   "sizeId": 4,
+   "weightSpeeds": {
+    "normal": {
+     "walk": 25,
+     "fly": 0,
+     "burrow": 0,
+     "swim": 0,
+     "climb": 0
+    }
+   },
+   "racialTraits": [
+    {
+     "definition": {
+      "name": "Darkvision",
+      "hideInSheet": false,
+      "description": "<p>You see in the dark, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "name": "Dwarven Resilience",
+      "hideInSheet": false,
+      "description": "<p>Hardy, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "name": "Age",
+      "hideInSheet": true,
+      "description": "<p>Hidden on the sheet.</p>"
+     }
+    }
+   ]
+  },
+  "background": {
+   "definition": {
+    "name": "Soldier",
+    "featureName": "Military Rank",
+    "featureDescription": "<p>Soldiers still salute you, <strong>in the tests</strong>.</p>",
+    "grantedFeats": []
+   }
+  },
+  "classes": [
+   {
+    "id": 5001,
+    "level": 3,
+    "isStartingClass": true,
+    "definition": {
+     "id": 2,
+     "name": "Fighter",
+     "hitDice": 10,
+     "canCastSpells": false,
+     "spellCastingAbilityId": null
+    },
+    "subclassDefinition": {
+     "name": "Champion"
+    },
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 101,
+       "name": "Fighting Style",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Fighting Style: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 102,
+       "name": "Second Wind",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p><strong><em>Second Wind.</em></strong> Catch your breath&nbsp;<em>twice</em>, then:<ul><li>stand</li><li>fight</li></ul></p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 103,
+       "name": "Action Surge",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Action Surge: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 104,
+       "name": "Martial Archetype",
+       "requiredLevel": 3,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Martial Archetype: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 105,
+       "name": "Improved Critical",
+       "requiredLevel": 3,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Improved Critical: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 106,
+       "name": "Ability Score Improvement",
+       "requiredLevel": 4,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Ability Score Improvement: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 107,
+       "name": "Proficiencies",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Proficiencies: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 108,
+       "name": "Hit Points",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Hit Points: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   },
+   {
+    "id": 5002,
+    "level": 2,
+    "isStartingClass": false,
+    "definition": {
+     "id": 8,
+     "name": "Wizard",
+     "hitDice": 6,
+     "canCastSpells": true,
+     "spellCastingAbilityId": 4,
+     "spellRules": {
+      "multiClassSpellSlotDivisor": 1,
+      "multiClassSpellSlotRounding": 1,
+      "levelSpellSlots": [
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ]
+      ]
+     }
+    },
+    "subclassDefinition": {
+     "name": "Evoker"
+    },
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 201,
+       "name": "Spellcasting",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Spellcasting: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 202,
+       "name": "Arcane Recovery",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Arcane Recovery: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 203,
+       "name": "Arcane Tradition",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Arcane Tradition: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   }
+  ],
+  "feats": [
+   {
+    "definition": {
+     "name": "Tough",
+     "description": "<p>Tougher, for the tests.</p>"
+    }
+   }
+  ],
+  "modifiers": {
+   "race": [
+    {
+     "type": "bonus",
+     "subType": "constitution-score",
+     "value": 2,
+     "fixedValue": 2,
+     "statId": null,
+     "entityId": 3,
+     "entityTypeId": 1472902489,
+     "restriction": "",
+     "friendlySubtypeName": "Constitution Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "wisdom-score",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": 5,
+     "entityTypeId": 1472902489,
+     "restriction": "",
+     "friendlySubtypeName": "Wisdom Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "set-base",
+     "subType": "darkvision",
+     "value": 60,
+     "fixedValue": 60,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Darkvision",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "hit-points-per-level",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Hit Points Per Level",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "language",
+     "subType": "common",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Common",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "language",
+     "subType": "dwarvish",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Dwarvish",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    }
+   ],
+   "class": [
+    {
+     "type": "proficiency",
+     "subType": "strength-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Strength Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "constitution-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Constitution Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "light-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Light Armor",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "medium-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Medium Armor",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "heavy-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Heavy Armor",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "shields",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Shields",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "simple-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Simple Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "martial-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Martial Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "perception",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Perception",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "survival",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Survival",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 107,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "armored-armor-class",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Armored Armor Class",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 9001,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "strength-score",
+     "value": 2,
+     "fixedValue": 2,
+     "statId": null,
+     "entityId": 1,
+     "entityTypeId": 1472902489,
+     "restriction": "",
+     "friendlySubtypeName": "Strength Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 106,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "intelligence-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Intelligence Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 201,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "arcana",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Arcana",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 201,
+     "componentTypeId": 12168134
+    }
+   ],
+   "background": [
+    {
+     "type": "proficiency",
+     "subType": "athletics",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Athletics",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "intimidation",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Intimidation",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "dice-set",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 2103445194,
+     "restriction": "",
+     "friendlySubtypeName": "Dice Set",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    }
+   ],
+   "feat": [
+    {
+     "type": "bonus",
+     "subType": "hit-points-per-level",
+     "value": 2,
+     "fixedValue": 2,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Hit Points Per Level",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    }
+   ],
+   "item": [],
+   "condition": []
+  },
+  "inventory": [
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Chain Mail +1",
+     "filterType": "Armor",
+     "type": "Armor",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [
+      {
+       "type": "bonus",
+       "subType": "armor-class",
+       "value": 1,
+       "fixedValue": 1,
+       "statId": null,
+       "entityId": null,
+       "entityTypeId": null,
+       "restriction": "",
+       "friendlySubtypeName": "Armor Class",
+       "isGranted": true,
+       "availableToMulticlass": true,
+       "componentId": 0,
+       "componentTypeId": 12168134
+      }
+     ],
+     "armorTypeId": 3,
+     "armorClass": 16
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Shield",
+     "filterType": "Armor",
+     "type": "Armor",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "armorTypeId": 4,
+     "armorClass": 2
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Longsword",
+     "filterType": "Weapon",
+     "type": "Longsword",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 2,
+     "attackType": 1,
+     "damage": {
+      "diceString": "1d8"
+     },
+     "damageType": "Slashing",
+     "properties": [
+      {
+       "name": "Versatile",
+       "notes": "1d10"
+      },
+      {
+       "name": "Sap",
+       "notes": null
+      }
+     ]
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Longbow",
+     "filterType": "Weapon",
+     "type": "Longbow",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 2,
+     "attackType": 2,
+     "damage": {
+      "diceString": "1d8"
+     },
+     "damageType": "Piercing",
+     "range": 150,
+     "longRange": 600,
+     "properties": [
+      {
+       "name": "Ammunition"
+      },
+      {
+       "name": "Heavy"
+      },
+      {
+       "name": "Two-Handed"
+      },
+      {
+       "name": "Slow"
+      }
+     ]
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": false,
+    "isAttuned": false,
+    "definition": {
+     "name": "Dagger",
+     "filterType": "Weapon",
+     "type": "Dagger",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 1,
+     "attackType": 1,
+     "damage": {
+      "diceString": "1d4"
+     },
+     "damageType": "Piercing",
+     "range": 20,
+     "longRange": 60,
+     "properties": [
+      {
+       "name": "Finesse"
+      },
+      {
+       "name": "Light"
+      },
+      {
+       "name": "Thrown"
+      }
+     ]
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": true,
+    "definition": {
+     "name": "Ring of Protection",
+     "filterType": "Wondrous item",
+     "type": "Wondrous item",
+     "canAttune": true,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [
+      {
+       "type": "bonus",
+       "subType": "armor-class",
+       "value": 1,
+       "fixedValue": 1,
+       "statId": null,
+       "entityId": null,
+       "entityTypeId": null,
+       "restriction": "",
+       "friendlySubtypeName": "Armor Class",
+       "isGranted": true,
+       "availableToMulticlass": true,
+       "componentId": 0,
+       "componentTypeId": 12168134
+      },
+      {
+       "type": "bonus",
+       "subType": "saving-throws",
+       "value": 1,
+       "fixedValue": 1,
+       "statId": null,
+       "entityId": null,
+       "entityTypeId": null,
+       "restriction": "",
+       "friendlySubtypeName": "Saving Throws",
+       "isGranted": true,
+       "availableToMulticlass": true,
+       "componentId": 0,
+       "componentTypeId": 12168134
+      }
+     ]
+    }
+   },
+   {
+    "quantity": 5,
+    "equipped": false,
+    "isAttuned": false,
+    "definition": {
+     "name": "Rations (1 day)",
+     "filterType": "Other Gear",
+     "type": "Other Gear",
+     "canAttune": false,
+     "canEquip": false,
+     "isConsumable": false,
+     "grantedModifiers": []
+    }
+   },
+   {
+    "quantity": 20,
+    "equipped": false,
+    "isAttuned": false,
+    "definition": {
+     "name": "Arrows",
+     "filterType": "Other Gear",
+     "type": "Other Gear",
+     "canAttune": false,
+     "canEquip": false,
+     "isConsumable": false,
+     "grantedModifiers": []
+    }
+   }
+  ],
+  "customItems": [
+   {
+    "name": "Lucky Coin",
+    "quantity": 1
+   }
+  ],
+  "currencies": {
+   "cp": 0,
+   "sp": 5,
+   "gp": 23,
+   "ep": 0,
+   "pp": 0
+  },
+  "actions": {
+   "class": [
+    {
+     "name": "Second Wind",
+     "limitedUse": {
+      "maxUses": 1,
+      "resetType": 1,
+      "statModifierUsesId": null,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    },
+    {
+     "name": "Action Surge",
+     "limitedUse": {
+      "maxUses": 1,
+      "resetType": 1,
+      "statModifierUsesId": null,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    },
+    {
+     "name": "Arcane Recovery",
+     "limitedUse": {
+      "maxUses": 1,
+      "resetType": 2,
+      "statModifierUsesId": null,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    }
+   ],
+   "race": [],
+   "feat": []
+  },
+  "classSpells": [
+   {
+    "characterClassId": 5002,
+    "spells": [
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Fire Bolt",
+       "level": 0,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 120,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": true,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": [
+        {
+         "type": "damage",
+         "subType": "fire",
+         "friendlySubtypeName": "Fire",
+         "die": {
+          "diceString": "1d10"
+         },
+         "atHigherLevels": {
+          "higherLevelDefinitions": [
+           {
+            "level": 5,
+            "dice": {
+             "diceString": "2d10"
+            }
+           },
+           {
+            "level": 11,
+            "dice": {
+             "diceString": "3d10"
+            }
+           },
+           {
+            "level": 17,
+            "dice": {
+             "diceString": "4d10"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "prepared": true,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Shield",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 4
+       },
+       "range": {
+        "origin": "Self",
+        "rangeValue": 0,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     },
+     {
+      "prepared": true,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Magic Missile",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 120,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     },
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Sleep",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 90,
+        "aoeType": "Sphere",
+        "aoeValue": 20
+       },
+       "components": [
+        1,
+        2,
+        3
+       ],
+       "componentsDescription": "a pinch of sand",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     },
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Detect Magic",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Self",
+        "rangeValue": 0,
+        "aoeType": "Sphere",
+        "aoeValue": 30
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": true,
+       "concentration": true,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     }
+    ]
+   }
+  ],
+  "spells": {
+   "race": [],
+   "class": [],
+   "feat": [],
+   "item": []
+  },
+  "characterValues": [],
+  "preferences": {
+   "showUnarmedStrike": true
+  }
+ }
+}

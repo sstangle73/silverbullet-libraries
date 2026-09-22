@@ -25,7 +25,7 @@ description: "Session tracking and fog-of-war publishing for tabletop RPG campai
 name: "GM Beyond"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Beyond.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Beyond.md
-description: "Live party roster from D&D Beyond public character data. Does not embed sheets or compute AC/HP."
+description: "D&D Beyond characters: a live roster from public character data, and an import that writes a character's whole sheet into a page, every number worked out from the raw data, for GM Sheets to draw."
 ---
 name: "GM Book"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Book.md

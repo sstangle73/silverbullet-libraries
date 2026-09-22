@@ -25,7 +25,8 @@ test("kit: registers commands, header buttons and a top widget", "dm", function(
     ok(icons[icon], "no " .. icon .. " button")
     ok(icons[icon] < 1 and icons[icon] > 0, icon .. " should sit after the built-in buttons")
   end
-  eq(#H.listeners["hooks:renderTopWidgets"], 2)
+  -- GM Kit's bar, GM Book's on a built edition, and GM Beyond's on an imported character
+  eq(#H.listeners["hooks:renderTopWidgets"], 3)
 end)
 
 test("kit: the bar appears on adventure pages only", "dm", function()

@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Sheets"
 description: "Character sheets drawn from a character page's frontmatter: a page drawn like a sheet, on the wiki and as a page of its own in the printed book, then the features, spells and equipment in full. The page gives the choices, and the sheet does the SRD's sums."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # GM Sheets
@@ -104,7 +104,7 @@ Any kind of page can hold a sheet. What `type` a character's page has is the cam
 | `coins` | `{gp: 15, sp: 3}` |
 | `kit` | A second loadout, drawn on the same sheet under its `label`, with any of `ac`, `attacks` and `equipment`: a character who starts with nothing, and the gear they are given later |
 
-**Spellcasting:** `spellcasting`, the ability (`int`, `wis` or `cha`); `slots`, spell slots by level, `[4, 3, 2]`; `pact_slots` and `pact_level` for Pact Magic; `cantrips`, a list; `spells`, prepared spells by level, `{1: [Bless], 2: [Aid]}`; and `always_prepared`, the same, for spells always prepared. A spell is its name, or a name with more: `{name: Bless, time: Action, range: 30 ft., concentration: true}`, with `ritual`, `material` and `notes` the same way. A `material` can be the words for it: `material: a diamond worth 300+ GP`.
+**Spellcasting:** `spellcasting`, the ability (`int`, `wis` or `cha`); `slots`, spell slots by level, `[4, 3, 2]`; `pact_slots` and `pact_level` for Pact Magic; `cantrips`, a list; `spells`, prepared spells by level, `{1: [Bless], 2: [Aid]}`; and `always_prepared`, the same, for spells always prepared; and `spellbook`, the same again, for a wizard's spells in the book and not prepared today. A spell is its name, or a name with more: `{name: Bless, time: Action, range: 30 ft., concentration: true}`, with `ritual`, `material` and `notes` the same way. A `material` can be the words for it: `material: a diamond worth 300+ GP`.
 
 Quote any text in a list or `{...}` that holds a comma or a colon: `notes: "Versatile (1d10), Sap"`.
 
@@ -927,8 +927,8 @@ function sheets.svg(d, v, page)
       local entries = { { g[1], true } }
       for _, e in ipairs(g[2]) do entries[#entries + 1] = { nameOf(e), false } end
       for _, e in ipairs(entries) do
-        if fy + 12 > bottom - 6 and fcol == 0 then fcol, fy = 1, fstart end
-        if fy + 12 <= bottom - 6 then
+        if fy + 12 > bottom - 18 and fcol == 0 then fcol, fy = 1, fstart end
+        if fy + 12 <= bottom - 18 then
           fy = fy + (e[2] and 13 or 11)
           local lx = 8 + fcol * colW
           if e[2] then
@@ -956,7 +956,7 @@ function sheets.svg(d, v, page)
   local equipment = items(d.equipment)
   local eshown = 0
   for _, e in ipairs(equipment) do
-    if ey + 11 > bottom - 40 then break end
+    if ey + 11 > bottom - 56 then break end
     ey = ey + 11
     local en, esize = fitted(nameOf(e), ew - 18, 8.5, 7)
     c.text(ex + 10, ey, en, esize)
@@ -982,7 +982,7 @@ function sheets.svg(d, v, page)
     if n and n ~= 0 then c.text(cx + cw / 2, ey + 19, str(n), 9, { bold = true, anchor = "middle" }) end
   end
   ey = ey + 22
-  local ebottom = math.max(fmax + 8, ey + 8)
+  local ebottom = math.min(math.max(fmax + 8, ey + 8), maxH - 1)
   c.box(0, top, fxw, ebottom - top, { r = 6 })
   c.box(ex, top, ew, ebottom - top, { r = 6 })
   local H = math.min(math.floor(ebottom + 1), maxH)
@@ -1026,6 +1026,7 @@ local function paragraphs(text)
 end
 
 local function isItem(l) return l:match("^%s*[-*+]%s") or l:match("^%s*%d+[.)]%s") end
+local function isRow(l) return l:match("^%s*|") ~= nil end
 
 local function entryText(e)
   if type(e) == "table" then return str(e.name), e.text end
@@ -1062,7 +1063,8 @@ function sheets.text(d, v, cut)
   end
   local function block(lines)
     for i, l in ipairs(lines) do
-      if i > 1 and not (isItem(l) and isItem(lines[i - 1])) then add("") end
+      local together = (isItem(l) and isItem(lines[i - 1] or "")) or (isRow(l) and isRow(lines[i - 1] or ""))
+      if i > 1 and not together then add("") end
       add(l)
     end
     add("")
@@ -1129,7 +1131,8 @@ function sheets.text(d, v, cut)
   local cantrips = items(d.cantrips)
   local levels = byLevel(d.spells)
   local always = byLevel(d.always_prepared)
-  if #cantrips > 0 or #levels > 0 or #always > 0 then
+  local book = byLevel(d.spellbook)
+  if #cantrips > 0 or #levels > 0 or #always > 0 or #book > 0 then
     add("## Spells")
     add("")
     local ab = ""
@@ -1155,6 +1158,10 @@ function sheets.text(d, v, cut)
       all[l.level] = all[l.level] or {}
       all[l.level].always = l.list
     end
+    for _, l in ipairs(book) do
+      all[l.level] = all[l.level] or {}
+      all[l.level].book = l.list
+    end
     local order = {}
     for level in pairs(all) do order[#order + 1] = level end
     table.sort(order)
@@ -1166,6 +1173,7 @@ function sheets.text(d, v, cut)
       local parts = {}
       if e.mine and #e.mine > 0 then parts[#parts + 1] = names(e.mine) end
       if e.always and #e.always > 0 then parts[#parts + 1] = "always prepared: " .. names(e.always) end
+      if e.book and #e.book > 0 then parts[#parts + 1] = "in the spellbook, not prepared: " .. names(e.book) end
       add(head .. ".** " .. table.concat(parts, "; ") .. ".")
       add("")
     end

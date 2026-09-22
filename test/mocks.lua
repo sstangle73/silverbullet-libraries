@@ -17,6 +17,7 @@ local function fresh()
     picks = {}, filterBoxes = {}, clipboard = nil, clipboardFails = false, opened = {},
     reloads = 0, saves = 0, refreshes = 0, commands = {}, listeners = {}, printed = {},
     views = {}, viewOrder = {}, prefix = "/dm/", files = {}, modified = {},
+    responses = {}, fetched = {},
     config = {
       actionButtons = {
         { icon = "home", description = "Go to the index page", command = "Navigate: Home", priority = 3 },
@@ -432,6 +433,18 @@ function markdown.parseMarkdown(text)
     end
   end
   return { type = "Document", from = 0, to = n, children = children }
+end
+
+-- net.proxyFetch answers from H.responses, by URL, and counts what it was
+-- asked for in H.fetched; anything else is a 404, as D&D Beyond gives for a
+-- character that isn't public.
+net = {}
+function net.proxyFetch(url, options)
+  H.fetched[#H.fetched + 1] = url
+  local r = H.responses[url]
+  if r == nil then return { ok = false, status = 404 } end
+  if type(r) == "function" then return r(url, options) end
+  return r
 end
 
 -- markdown.markdownToHtml, reduced to a wrapper: the tests read the

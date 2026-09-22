@@ -202,6 +202,9 @@ def build(pages=None):
     g.REPOSITORY = repository.read_text(encoding="utf-8") if repository.exists() else None
     if pyyaml is not None:
         g.__yaml_parse = lambda text: to_lua(L, jsify(pyyaml.safe_load(text)))
+    # the made-up D&D Beyond characters, as the character service sends them
+    g.DDB = to_lua(L, {p.stem: json.loads(p.read_text(encoding="utf-8"))
+                       for p in sorted((TEST / "ddb").glob("*.json"))})
     L.execute((TEST / "mocks.lua").read_text(encoding="utf-8"))
     return L
 

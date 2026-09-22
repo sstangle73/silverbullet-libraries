@@ -1,0 +1,1359 @@
+{
+ "id": 0,
+ "success": true,
+ "message": "Character successfully received.",
+ "data": {
+  "id": 1002,
+  "name": "Ilse Marrow",
+  "stats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": 15
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": 12
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": 14
+   }
+  ],
+  "bonusStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "overrideStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "baseHitPoints": 30,
+  "bonusHitPoints": null,
+  "overrideHitPoints": null,
+  "race": {
+   "fullName": "Human",
+   "sizeId": 4,
+   "weightSpeeds": {
+    "normal": {
+     "walk": 30,
+     "fly": 0,
+     "burrow": 0,
+     "swim": 0,
+     "climb": 0
+    }
+   },
+   "racialTraits": [
+    {
+     "definition": {
+      "name": "Resourceful",
+      "hideInSheet": false,
+      "description": "<p>Ready, for the tests.</p>"
+     }
+    }
+   ]
+  },
+  "background": {
+   "definition": {
+    "name": "Wayfarer",
+    "grantedFeats": []
+   }
+  },
+  "classes": [
+   {
+    "id": 6001,
+    "level": 2,
+    "isStartingClass": true,
+    "definition": {
+     "id": 6,
+     "name": "Monk",
+     "hitDice": 8,
+     "canCastSpells": false,
+     "spellCastingAbilityId": null
+    },
+    "subclassDefinition": null,
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 301,
+       "name": "Unarmored Defense",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Unarmored Defense: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 302,
+       "name": "Martial Arts",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Martial Arts: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": {
+       "dice": {
+        "diceString": "1d6"
+       }
+      }
+     },
+     {
+      "definition": {
+       "id": 303,
+       "name": "Focus",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Focus: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 304,
+       "name": "Unarmored Movement",
+       "requiredLevel": 2,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Unarmored Movement: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 306,
+       "name": "Proficiencies",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Proficiencies: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   },
+   {
+    "id": 6002,
+    "level": 2,
+    "isStartingClass": false,
+    "definition": {
+     "id": 1,
+     "name": "Bard",
+     "hitDice": 8,
+     "canCastSpells": true,
+     "spellCastingAbilityId": 6,
+     "spellRules": {
+      "multiClassSpellSlotDivisor": 1,
+      "multiClassSpellSlotRounding": 1,
+      "levelSpellSlots": [
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ]
+      ]
+     }
+    },
+    "subclassDefinition": null,
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 401,
+       "name": "Spellcasting",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Spellcasting: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 402,
+       "name": "Bardic Inspiration",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Bardic Inspiration: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 403,
+       "name": "Jack of All Trades",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Jack of All Trades: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   },
+   {
+    "id": 6003,
+    "level": 1,
+    "isStartingClass": false,
+    "definition": {
+     "id": 9,
+     "name": "Warlock",
+     "hitDice": 8,
+     "canCastSpells": true,
+     "spellCastingAbilityId": 6,
+     "spellRules": {
+      "multiClassSpellSlotDivisor": 1,
+      "multiClassSpellSlotRounding": 1,
+      "levelSpellSlots": [
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ]
+      ]
+     }
+    },
+    "subclassDefinition": null,
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 501,
+       "name": "Pact Magic",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Pact Magic: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   }
+  ],
+  "feats": [
+   {
+    "definition": {
+     "name": "Skill Expert",
+     "description": "<p>Sharper, for the tests.</p>"
+    }
+   }
+  ],
+  "modifiers": {
+   "race": [
+    {
+     "type": "bonus",
+     "subType": "dexterity-score",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": 2,
+     "entityTypeId": 1472902489,
+     "restriction": "",
+     "friendlySubtypeName": "Dexterity Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "wisdom-score",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": 5,
+     "entityTypeId": 1472902489,
+     "restriction": "",
+     "friendlySubtypeName": "Wisdom Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "language",
+     "subType": "common",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Common",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    }
+   ],
+   "class": [
+    {
+     "type": "set",
+     "subType": "unarmored-armor-class",
+     "value": null,
+     "fixedValue": null,
+     "statId": 5,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Unarmored Armor Class",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 301,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "unarmored-movement",
+     "value": 10,
+     "fixedValue": 10,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Unarmored Movement",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 304,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "strength-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Strength Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 306,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "dexterity-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Dexterity Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 306,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "simple-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Simple Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 306,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "acrobatics",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Acrobatics",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 306,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "insight",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Insight",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 306,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "performance",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Performance",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 401,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "charisma-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Charisma Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 401,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "half-proficiency",
+     "subType": "ability-checks",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Ability Checks",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 403,
+     "componentTypeId": 12168134
+    }
+   ],
+   "background": [],
+   "feat": [
+    {
+     "type": "proficiency",
+     "subType": "stealth",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Stealth",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "expertise",
+     "subType": "stealth",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Stealth",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    }
+   ],
+   "item": [],
+   "condition": []
+  },
+  "inventory": [
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": true,
+    "definition": {
+     "name": "Stone of Good Luck",
+     "filterType": "Wondrous item",
+     "type": "Wondrous item",
+     "canAttune": true,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [
+      {
+       "type": "bonus",
+       "subType": "ability-checks",
+       "value": 1,
+       "fixedValue": 1,
+       "statId": null,
+       "entityId": null,
+       "entityTypeId": null,
+       "restriction": "",
+       "friendlySubtypeName": "Ability Checks",
+       "isGranted": true,
+       "availableToMulticlass": true,
+       "componentId": 0,
+       "componentTypeId": 12168134
+      },
+      {
+       "type": "bonus",
+       "subType": "saving-throws",
+       "value": 1,
+       "fixedValue": 1,
+       "statId": null,
+       "entityId": null,
+       "entityTypeId": null,
+       "restriction": "",
+       "friendlySubtypeName": "Saving Throws",
+       "isGranted": true,
+       "availableToMulticlass": true,
+       "componentId": 0,
+       "componentTypeId": 12168134
+      }
+     ]
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": true,
+    "definition": {
+     "name": "Headband of Intellect",
+     "filterType": "Wondrous item",
+     "type": "Wondrous item",
+     "canAttune": true,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [
+      {
+       "type": "set",
+       "subType": "intelligence-score",
+       "value": 19,
+       "fixedValue": 19,
+       "statId": null,
+       "entityId": 4,
+       "entityTypeId": 1472902489,
+       "restriction": "",
+       "friendlySubtypeName": "Intelligence Score",
+       "isGranted": true,
+       "availableToMulticlass": true,
+       "componentId": 0,
+       "componentTypeId": 12168134
+      }
+     ]
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Quarterstaff",
+     "filterType": "Weapon",
+     "type": "Quarterstaff",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 1,
+     "attackType": 1,
+     "damage": {
+      "diceString": "1d6"
+     },
+     "damageType": "Bludgeoning",
+     "isMonkWeapon": true,
+     "properties": [
+      {
+       "name": "Versatile",
+       "notes": "1d8"
+      },
+      {
+       "name": "Topple"
+      }
+     ]
+    }
+   }
+  ],
+  "customItems": [],
+  "currencies": {
+   "cp": 0,
+   "sp": 0,
+   "gp": 0,
+   "ep": 0,
+   "pp": 0
+  },
+  "actions": {
+   "class": [
+    {
+     "name": "Focus Points",
+     "limitedUse": {
+      "maxUses": 2,
+      "resetType": 1,
+      "statModifierUsesId": null,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    },
+    {
+     "name": "Bardic Inspiration",
+     "limitedUse": {
+      "maxUses": 0,
+      "resetType": 2,
+      "statModifierUsesId": 6,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    }
+   ],
+   "race": [],
+   "feat": []
+  },
+  "classSpells": [
+   {
+    "characterClassId": 6002,
+    "spells": [
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Vicious Mockery",
+       "level": 0,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 60,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": true,
+       "saveDcAbilityId": 5,
+       "modifiers": [
+        {
+         "type": "damage",
+         "subType": "psychic",
+         "friendlySubtypeName": "Psychic",
+         "die": {
+          "diceString": "1d6"
+         },
+         "atHigherLevels": {
+          "higherLevelDefinitions": [
+           {
+            "level": 5,
+            "dice": {
+             "diceString": "2d6"
+            }
+           },
+           {
+            "level": 11,
+            "dice": {
+             "diceString": "3d6"
+            }
+           },
+           {
+            "level": 17,
+            "dice": {
+             "diceString": "4d6"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Healing Word",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 3
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 60,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     }
+    ]
+   },
+   {
+    "characterClassId": 6003,
+    "spells": [
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Eldritch Blast",
+       "level": 0,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 120,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": true,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": [
+        {
+         "type": "damage",
+         "subType": "force",
+         "friendlySubtypeName": "Force",
+         "die": {
+          "diceString": "1d10"
+         },
+         "atHigherLevels": {
+          "higherLevelDefinitions": [
+           {
+            "level": 5,
+            "dice": {
+             "diceString": "2d10"
+            }
+           },
+           {
+            "level": 11,
+            "dice": {
+             "diceString": "3d10"
+            }
+           },
+           {
+            "level": 17,
+            "dice": {
+             "diceString": "4d10"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Hex",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 3
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 60,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2,
+        3
+       ],
+       "componentsDescription": "an eye of newt",
+       "ritual": false,
+       "concentration": true,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     }
+    ]
+   }
+  ],
+  "spells": {
+   "race": [],
+   "class": [],
+   "feat": [],
+   "item": []
+  },
+  "characterValues": [],
+  "preferences": {
+   "showUnarmedStrike": true
+  }
+ }
+}

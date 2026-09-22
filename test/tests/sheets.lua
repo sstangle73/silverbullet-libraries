@@ -402,3 +402,51 @@ test("sheets: a sample character builds into both editions with its sheet", "adv
   has(H.pages["Build/Book DM"], "**Her secret.** She owes the guild.")
   hasnt(H.pages["Build/Book Player"], "She owes the guild.")
 end)
+
+test("sheets: a wizard's spellbook prints beside the spells prepared", "dm", function()
+  page(TAMSIN, (RANGER:gsub("always_prepared:", "spellbook: {1: [Sleep, {name: Alarm, ritual: true}], 2: [Web]}\nalways_prepared:")))
+  local d = sheets.read(TAMSIN)
+  local md = sheets.text(d, sheets.values(d))
+  has(md, "**Level 1 (3 slots).** Cure Wounds, Goodberry (Action, Self; material: a sprig of mistletoe); " ..
+    "always prepared: Hunter's Mark (Bonus Action, 90 ft.; concentration); " ..
+    "in the spellbook, not prepared: Sleep, Alarm (ritual).")
+  has(md, "**Level 2.** in the spellbook, not prepared: Web.")
+end)
+
+test("sheets: a table in a feature's rules stays a table", "dm", function()
+  local text = table.concat({
+    "---", "level: 1", "str: 10", "dex: 10", "con: 10", "int: 10", "wis: 10", "cha: 10",
+    "features:",
+    "  - name: Wild Surge",
+    "    text: |",
+    "      Roll on the table.",
+    "      | d4 | Effect |",
+    "      |---|---|",
+    "      | 1 | A flash |",
+    "      | 2 | A bang |",
+    "      Then carry on.",
+    "---", "",
+  }, "\n")
+  page("Party/Test", text)
+  local d = sheets.read("Party/Test")
+  has(sheets.text(d, sheets.values(d)),
+    "Roll on the table.\n\n| d4 | Effect |\n|---|---|\n| 1 | A flash |\n| 2 | A bang |\n\nThen carry on.")
+end)
+
+test("sheets: the drawn page never runs past its height, however long the lists", "dm", function()
+  local gear, feats = {}, {}
+  for i = 1, 60 do gear[#gear + 1] = "Thing " .. i end
+  for i = 1, 60 do feats[#feats + 1] = "  - name: Feature " .. i end
+  page(TAMSIN, (RANGER:gsub("equipment: %[Longbow, Shortsword, Quiver %(20 arrows%)%]", "equipment: [" .. table.concat(gear, ", ") .. "]")
+    :gsub("features:\n", "features:\n" .. table.concat(feats, "\n") .. "\n")))
+  local svg = sheets.draw().html:match("(<svg.-</svg>)")
+  local h = tonumber(svg:match('^<svg[^>]-%sheight="(%d+)"'))
+  ok(h <= 918 and h > 880, "near the whole page and never past it: " .. tostring(h))
+  for y, height in svg:gmatch('<rect x="[%d.]+" y="([%d.]+)" width="[%d.]+" height="([%d.]+)"') do
+    ok(tonumber(y) + tonumber(height) <= h + 0.01, "a box ends at " .. (tonumber(y) + tonumber(height)))
+  end
+  for y in svg:gmatch('<text x="[%d.]+" y="([%d.]+)"') do
+    ok(tonumber(y) <= h, "text at " .. y)
+  end
+  has(svg, "more, after this page")
+end)
