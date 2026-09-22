@@ -9,7 +9,7 @@ The page kept open while running, powered by [[Library/Storie/GM Kit]].
 
 Currently session **${gm.currentSession()}**. ${widgets.commandButton("Next session", "GM: Next Session")}
 
-${widgets.commandButton("Scene started…", "GM: Mark Scene Started")} ${widgets.commandButton("Scene finished…", "GM: Mark Scene Finished")} ${widgets.commandButton("Log a decision", "GM: Log Decision")}
+${widgets.commandButton("Scene started…", "GM: Mark Scene Started")} ${widgets.commandButton("Scene finished…", "GM: Mark Scene Finished")} ${widgets.commandButton("Log a decision", "GM: Log Decision")} ${widgets.commandButton("Log a roll…", "GM: Log Roll")}
 
 ${widgets.commandButton("Met…", "GM: Mark Met")} ${widgets.commandButton("Died…", "GM: Mark Dead")} ${widgets.commandButton("Visited…", "GM: Mark Visited")} ${widgets.commandButton("Found…", "GM: Mark Found")} ${widgets.commandButton("Reveal a page…", "GM: Reveal Page")} ${widgets.commandButton("Publish to players", "GM: Publish to Players")}
 

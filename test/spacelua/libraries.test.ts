@@ -123,6 +123,7 @@ async function setup(root: string) {
   const printed: string[] = [];
   const store: Record<string, any> = {};
   const picks: string[] = [];
+  const prompts: string[] = [];
   const state = { current: "index" };
   const lagged: { known: Set<string> | null } = { known: null };
   const freeze = () => {
@@ -160,7 +161,7 @@ async function setup(root: string) {
       const want = picks.shift();
       return options.find((o) => o.name === want) ?? null;
     },
-    prompt: () => null,
+    prompt: () => prompts.shift() ?? null,
     confirm: () => true,
     save: () => null,
     reloadPage: () => null,
@@ -235,7 +236,7 @@ async function setup(root: string) {
     ...gmLibs.map((n) => pages.get(n)!),
   ];
   for (const md of libs) await run(extractSpaceLuaFromPageText(md));
-  return { env, run, pages, notes, printed, picks, state, freeze };
+  return { env, run, pages, notes, printed, picks, prompts, state, freeze };
 }
 
 // Run a notification's action, passing on only the message of an error.
@@ -431,3 +432,87 @@ test("DM-only text: publishing and both editions leave it where it belongs", asy
   }
   for (const syntax of ["**dm**", "<!--#dm", "<!--/dm", 'class="dm"']) expect(dm).not.toContain(syntax);
 }, 300000);
+
+// Rolls, in SilverBullet's own Lua: a check read off a scene with its string
+// library, and the words of each rung written into the session's log. The
+// scene is tests/rolls.lua's, read from that file so the two can't drift.
+test("a roll logs the words of each rung it reached, and takes itself back", async () => {
+  const { env, run, pages, notes, printed, picks, prompts, state } = await setup(ROOT);
+  const src = readFileSync(join(ROOT, "test", "tests", "rolls.lua"), "utf-8");
+  const mill = src.slice(src.indexOf("[==[") + 4, src.indexOf("]==]"));
+  const MILL = "Adventure/Campaign/Act I/Scene 4";
+  const LOG = "Sessions/Session 1";
+  const STATE = "State/Scenes/Act I/Scene 4";
+  const bank = "[[" + MILL + "#The bank|Scene 4]]";
+  pages.set(MILL, mill);
+  state.current = MILL;
+  const errors = () => notes.filter((n) => n.message.startsWith("GM Kit:"));
+
+  await run(`__names = {}; for i, c in ipairs(gm.checks("${MILL}")) do __names[i] = c.name .. "=" .. c.kind end; __names = table.concat(__names, " | ")`);
+  expect(env.get("__names")).toBe(
+    "Wisdom (Perception)=ladder | Intelligence (Investigation) · The bank=ladder | Wisdom (Insight)=ladder | " +
+      "Intelligence (History)=ladder | Dexterity (Stealth), group, DC 12=dc | Intelligence (Investigation) · The loft=finds",
+  );
+
+  picks.push("Wisdom (Perception)", "15 to 19");
+  await run(`__click(gm.bar().html, "Log a roll…")`);
+  expect(errors()).toEqual([]);
+  expect(pages.get(LOG)).toBe(
+    "---\ntype: session\nsession: 1\n---\n\n# Session 1\n\n## Scenes\n\n## Rolls\n\n" +
+      "- " + bank + " · Wisdom (Perception), 15 to 19:\n" +
+      "  - Bootprints in the mud, heading for [[Adventure/World/Places/Fordtown|Fordtown]]\n" +
+      "  - One set is a child's\n" +
+      "  - The child was running, and the bigger prints were following\n\n## Decisions\n",
+  );
+  expect(pages.get(STATE)).toContain("roll_wisdom_perception: 15\nroll_wisdom_perception_session: 1\n");
+  expect(notes.at(-1)!.message).toBe("Wisdom (Perception), 15 to 19: three things they know, logged to session 1.");
+  await run(`__t = __text(gm.bar().html); __b = __buttons(gm.bar().html)`);
+  expect(env.get("__t")).toContain("✓ Perception: [[Sessions/Session 1|15 to 19]]");
+  expect(env.get("__t")).toContain("○ Stealth");
+  expect(env.get("__b")).toBe("Reveal | Reveal part… | Mark planned | Mark started | Log a roll… | Unlog a roll…");
+
+  // a better roll adds only what is new, and its Undo leaves the first
+  picks.push("Wisdom (Perception)", "20 or more");
+  await run(`gm.logRoll()`);
+  expect(notes.at(-1)!.message).toBe("Wisdom (Perception), now 20 or more: one more thing they know, logged to session 1.");
+  expect(pages.get(LOG)).toContain("- " + bank + " · Wisdom (Perception), now 20 or more:\n  - Whoever followed stopped at the water, and went back\n");
+  await action(notes.at(-1)!, "Undo");
+  expect(pages.get(STATE)).toContain("roll_wisdom_perception: 15\n");
+  expect(pages.get(LOG)).not.toContain("now 20 or more");
+
+  // a DC, a table of finds, a ladder in paragraphs with a live value, and
+  // a roll the page doesn't set
+  picks.push("Dexterity (Stealth), group, DC 12", "Failed");
+  picks.push("Intelligence (Investigation) · The loft", "The sack", "10 or more");
+  picks.push("Intelligence (History)", "15 or more");
+  picks.push("Another roll…", "Wisdom (Survival)");
+  prompts.push("14: the prints are a day old");
+  await run(`gm.logRoll(); gm.logRoll(); gm.logRoll(); gm.logRoll()`);
+  expect(errors()).toEqual([]);
+  const log = pages.get(LOG)!;
+  expect(log).toContain("- [[" + MILL + "#Getting away|Scene 4]] · Dexterity (Stealth), group, DC 12: failed\n");
+  expect(log).toContain("The loft, The sack, 10 or more:\n  - Flour, gone grey\n  - A key sewn into the hem\n");
+  expect(log).toContain("  - **If somebody reads the ledger.** Intelligence (History) says the last five pages are torn out.\n");
+  expect(log).toContain("  - The last entry is in a different hand.\n");
+  expect(log).toContain("- [[" + MILL + "|Scene 4]] · Wisdom (Survival): 14: the prints are a day old\n");
+  await run(`__t = __text(gm.bar().html)`);
+  expect(env.get("__t")).toContain("✗ Stealth: [[Sessions/Session 1|failed]]");
+  expect(env.get("__t")).toContain("✓ Investigation: 1 of 2 found");
+
+  // a link to another site stays, an image stays, and the page's own go
+  // where they went
+  await run(`__r = gm.rollText("${MILL}", "See [the map](https://example.org/map), ![a](<x.png>) and [Fordtown](<../../World/Places/Fordtown>)")`);
+  expect(env.get("__r")).toBe("See [the map](https://example.org/map), ![a](<x.png>) and [[Adventure/World/Places/Fordtown|Fordtown]]");
+
+  // unlogged, the logs say so, and Undo puts it back
+  picks.push("Wisdom (Perception)");
+  await run(`__click(gm.bar().html, "Unlog a roll…")`);
+  expect(errors()).toEqual([]);
+  expect(pages.get(STATE)).not.toContain("roll_wisdom_perception:");
+  expect(pages.get(LOG)).toContain("- " + bank + " · Wisdom (Perception): not rolled after all\n");
+  await action(notes.at(-1)!, "Undo");
+  expect(pages.get(STATE)).toContain("roll_wisdom_perception: 15\n");
+  expect(pages.get(LOG)).not.toContain("not rolled after all");
+  expect(pages.get(MILL)).toBe(mill);
+  expect(printed).toEqual([]);
+}, 120000);

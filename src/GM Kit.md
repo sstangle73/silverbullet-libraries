@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.4.0"
+version: "3.5.0"
 ---
 
 # GM Kit
@@ -26,13 +26,13 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 
 ## Buttons
 
-**The GM bar.** In the DM space, every adventure page gets a bar across the top. It shows whether the players can see the page, with buttons to reveal it, or part of it, or take it back: ◉ revealed and published, ◉ revealed but not published yet, ◔ revealed in part, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*.
+**The GM bar.** In the DM space, every adventure page gets a bar across the top. It shows whether the players can see the page, with buttons to reveal it, or part of it, or take it back: ◉ revealed and published, ◉ revealed but not published yet, ◔ revealed in part, or ○ hidden. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*. A page that sets checks gets a row of them, with *Log a roll…*: see *Rolls*.
 
 **A session's own notes.** A page in `Sessions/` gets a bar of its own instead: the scene before, the scene the session is on, and the scene after. See *Scenes*.
 
-**The header.** Three buttons: the session table, *Log a decision* and *Publish to players*.
+**The header.** Four buttons: the session table, *Log a decision*, *Log a roll* and *Publish to players*.
 
-**Notifications.** Marking, unmarking, revealing, unrevealing and starting a session each come with *Undo*. A reveal also offers *Publish now*. *Undo* takes back what its own action did and nothing else, so a mark, a use or a decision made since stays made. It only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
+**Notifications.** Marking, unmarking, revealing, unrevealing, logging a roll and starting a session each come with *Undo*. A reveal also offers *Publish now*. *Undo* takes back what its own action did and nothing else, so a mark, a use or a decision made since stays made. It only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
 
 **Taking a page back.** *Unreveal* takes a page off the revealed list and deletes the copy the players were sent, so a page revealed or published by mistake is gone from the Player space at once. *Undo* puts both back, and so does revealing it and publishing again. A page that isn't revealed but that the players still have a copy of, say one hidden before 2.4, shows ◐ on its bar, with *Delete their copy*.
 
@@ -61,6 +61,8 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 | `GM: Unreveal Page` | | Takes a page back: off the revealed list, and the players' copy deleted |
 | `GM: Publish to Players` | | Copies every revealed page into the Player space, leaving out its DM-only text |
 | `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
+| `GM: Log Roll` | `Ctrl-Alt-k` | Logs a roll against one of the page's checks, with the words of every rung it reached, into this session's log |
+| `GM: Unlog Roll` | | Takes a roll off again, for one logged by mistake |
 | `GM: Next Session` | | Increments the session counter |
 
 On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and unreveal on any adventure page; off one, `GM: Unreveal Page` lists what the players can see or still have. `GM: Hide Page`, its name before 2.4, still works. Found, use and refund also act at once on a page with a row for just one item. The scene marks work like the rest: on a scene page they mark that scene, and anywhere else they ask which. Publishing and starting a session ask first.
@@ -99,6 +101,46 @@ A session sits on the last scene it started, failing that the first scene planne
 
 Playing a scene never reveals it: what the players can see of the adventure stays your business.
 
+## Rolls
+
+A roll is logged against a check the page sets, so a session's notes say what the party rolled for and what it got them, in the adventure's own words. The page is only read: nothing is added to it.
+
+**Writing a check.** A check is a paragraph that names one, *Wisdom (Perception)*, followed by what the roll gives, before the next check or heading. It can give it four ways:
+
+- a table whose rows start with a rung: **Any roll**, **No roll**, **10**, **15 or better**;
+- paragraphs that start with one, `At **15**,` or `**At 15**,`, where whatever comes between the check and the first of them is what any roll gets, or else the check's own paragraph;
+- a table with a column for each rung and a row for each thing to find, `| They find | Any roll | 10 or better also gets |`, where each character rolls for a row;
+- a DC and nothing more, *group Dexterity (Stealth), DC 12*, for a check that is passed or failed.
+
+A ladder in a table reads like this:
+
+    **Wisdom (Perception)** — what the bank gives you from the water.
+
+    | | |
+    |---|---|
+    | **Any roll** | Bootprints in the mud, heading for the town |
+    | **10** | One set is a child's |
+    | **15** | The child was running |
+
+Rungs count up, so a 15 gets what any roll gets, what 10 gets and what 15 gets. A check with none of these, *don't call for Wisdom (Survival) here*, is only mentioned, and isn't offered. Nor is anything in fenced code or an HTML comment.
+
+**Logging one.** *Log a roll* in the header, `Ctrl-Alt-k`, or *Log a roll…* on the page's bar lists the checks on the page you are on, and off an adventure page those of the scene the session is on. Pick the check, then how high they rolled. The rungs make bands, *Under 10*, *10 to 14*, *15 to 19* and *20 or more*, and each band shows what it adds. A DC asks *Passed* or *Failed*, and a table of finds asks which thing first. Once there are character pages it asks who rolled, with *The party* first for the best roll at the table. A group check is everybody's, so it doesn't ask.
+
+**What the log gets.** The session's log gets a line under `## Rolls`, which comes in ahead of `## Decisions`, with the words of every rung reached:
+
+    ## Rolls
+
+    - [[Campaign/Act I/Scene 4#The bank|Scene 4]] · Wisdom (Perception), 15 to 19:
+      - Bootprints in the mud, heading for the town
+      - One set is a child's
+      - The child was running
+
+A better roll later logs only what is new, "now 20 or more", and a roll that reaches nothing new says so. The page's links are written to work from the log, and its live values, a GM Party number say, go in as they read.
+
+**Another roll.** Most rolls at a table aren't in the book. *Another roll…*, at the foot of the list, asks which skill, save or ability check, then what they got, in your words, and logs that.
+
+**The bar.** A page that sets checks gets a row of them: "✓ Perception: 15 to 19", linked to the session it was rolled in, "✗ Stealth: failed", or "○ Investigation" for one nobody has rolled. A roll comes with *Undo*. Afterwards *Unlog a roll…* takes one off, for a roll logged by mistake: the logs say it was taken back, and the next roll counts afresh.
+
 ## Revealing part of a page
 
 Players rarely learn all of a page at once. They meet the Warden and see a tall figure in a grey coat; what the Warden wants comes later, if it comes at all. So a page can be revealed a section at a time.
@@ -121,8 +163,9 @@ Players rarely learn all of a page at once. They meet the Warden and see a tall 
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
 - `State/Items/<name>`: found, the uses left of those found, and where, with a log
 - `State/Scenes/<act>/<scene>`: planned, started and finished, with a log; the act comes too, so scenes numbered alike in two acts stay apart
+- A page's rolls, on its own play state: `roll_wisdom_perception: 15`, the lowest number of the highest band reached, or `passed` or `failed` for a DC, with `roll_wisdom_perception_session`, the session that reached it
 - Each log line names its session and links to it
-- `Sessions/Session N`: the scenes under `## Scenes`, the decisions under `## Decisions`, one line each
+- `Sessions/Session N`: the scenes under `## Scenes`, the rolls under `## Rolls`, the decisions under `## Decisions`, one line each, and a roll's rungs under its line
 
 ## Players' own notes
 
@@ -168,6 +211,12 @@ A private page that is on the revealed list from before, or that the players alr
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven arrows" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.5
+
+**Rolls.** *Log a roll* records what the party rolled for and what it got them, in the session's log and in the adventure's own words. It reads the checks a page sets from the page itself, asks how high they rolled, and who, and writes the words of every rung reached under `## Rolls`. A roll the page doesn't set goes in as *Another roll…*, and the page's bar shows how each of its checks stands. See *Rolls*.
+
+`gm.appendUnder` takes a fourth argument, the section a new one goes in ahead of.
 
 ## Changes in 3.4
 
@@ -1191,14 +1240,20 @@ function gm.appendItem(text, item)
 end
 
 -- Adds a list item at the end of one `## Heading` section, making the
--- heading at the end of the page when it isn't there yet. A session log
--- keeps two sections, and appending to the page would file every line
+-- heading when it isn't there yet: ahead of the `## <before>` section if
+-- one is named and there, else at the end of the page. A session log keeps
+-- sections of its own, and appending to the page would file every line
 -- under whichever of them came last.
-function gm.appendUnder(text, heading, item)
+function gm.appendUnder(text, heading, item, before)
   if text:sub(-1) ~= "\n" then text = text .. "\n" end
   local head = "## " .. heading
   local _, to = text:find("\n" .. head .. "[ \t]*\n")
   if not to then
+    local at = before and text:find("\n## " .. before .. "[ \t]*\n")
+    if at then
+      local lead = (text:sub(1, at):gsub("[ \t\r\n]+$", ""))
+      return lead .. "\n\n" .. head .. "\n\n- " .. item .. "\n\n" .. text:sub(at + 1)
+    end
     local trimmed = (text:gsub("[ \t\r\n]+$", ""))
     return trimmed .. "\n\n" .. head .. "\n\n- " .. item .. "\n"
   end
@@ -1210,6 +1265,22 @@ function gm.appendUnder(text, heading, item)
   body = (body:gsub("[ \t\r\n]*$", ""))
   body = (body == "" and "" or body .. "\n") .. "- " .. item .. "\n"
   return text:sub(1, to) .. "\n" .. body .. (tail ~= "" and "\n" .. tail or "")
+end
+
+-- Takes a `## Heading` line back out when nothing but blank lines is under
+-- it, so taking a section's last line out leaves the page as it was before
+-- the section came.
+function gm.dropEmptySection(text, heading)
+  local s, e = text:find("\n## " .. heading .. "[ \t]*\n")
+  if not s then return text end
+  local rest = text:sub(e + 1)
+  local stop = rest:find("^##[^#]") and 0 or rest:find("\n##[^#]")
+  local body = stop and rest:sub(1, stop) or rest
+  if body:find("%S") then return text end
+  local tail = stop and rest:sub(stop + 1) or ""
+  local lead = (text:sub(1, s):gsub("[ \t\r\n]+$", ""))
+  if tail == "" then return lead .. "\n" end
+  return lead .. "\n\n" .. tail
 end
 
 -- What a session's log starts as. Scenes come first, because they say what
@@ -1933,6 +2004,838 @@ function gm.pickItem(label, help, pages, notes)
   return gm.pick(label, help, pages, notes)
 end
 
+------------------------------------------------------------------ rolls
+-- A roll is logged against a check a page sets, read from the page as the
+-- DM has it. A check is a paragraph that names one, "Wisdom (Perception)",
+-- followed, before the next check or heading, by what the roll gives:
+--   a table whose rows start with a rung: **Any roll**, **No roll**, **10**;
+--   paragraphs that start with one, At **15** or **At 15**, where whatever
+--     comes between the check and the first of them is what any roll gets;
+--   a table with a column for each rung and a row for each thing to find,
+--     one roll a row;
+--   or a DC and nothing else, for a check that is passed or failed.
+-- A check with none of these is only mentioned, and isn't one. The page is
+-- never written to: a roll goes into the session's log, with the words of
+-- every rung it reached, and into the page's play state.
+
+gm.abilities = { "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" }
+
+-- The skills, for a roll the page doesn't set.
+gm.skills = {
+  "Strength (Athletics)", "Dexterity (Acrobatics)", "Dexterity (Sleight of Hand)",
+  "Dexterity (Stealth)", "Intelligence (Arcana)", "Intelligence (History)",
+  "Intelligence (Investigation)", "Intelligence (Nature)", "Intelligence (Religion)",
+  "Wisdom (Animal Handling)", "Wisdom (Insight)", "Wisdom (Medicine)",
+  "Wisdom (Perception)", "Wisdom (Survival)", "Charisma (Deception)",
+  "Charisma (Intimidation)", "Charisma (Performance)", "Charisma (Persuasion)",
+}
+
+-- The option that logs a roll the page doesn't set.
+local OTHER = "Another roll…"
+
+-- A number written as one, or nil: tonumber alone reads "" as 0 in
+-- SilverBullet, which runs on JavaScript's Number.
+local function num(v)
+  if type(v) == "number" then return v end
+  if type(v) ~= "string" or not v:match("^%-?%d+$") then return nil end
+  return tonumber(v)
+end
+
+-- Text as it reads: a link as its label, and no stars or tags.
+function gm.flat(s)
+  s = (s:gsub("%[%[([^%]|]*)|([^%]]*)%]%]", function(_, label) return label end))
+  s = (s:gsub("%[%[([^%]]*)%]%]", function(p) return p:match("([^/#]+)$") or p end))
+  s = (s:gsub("!?%[([^%]]*)%]%(<[^>]*>%)", function(label) return label end))
+  s = (s:gsub("!?%[([^%]]*)%]%([^%)]*%)", function(label) return label end))
+  s = (s:gsub("<[^>]+>", ""))
+  return (s:gsub("%*", ""))
+end
+
+-- A line for a picker: flat, on one line, and cut at a word near n
+-- characters.
+local function shortText(s, n)
+  s = (gm.flat(s):gsub("%s+", " "))
+  s = (s:match("^%s*(.-)%s*$"))
+  if #s <= n then return s end
+  local stop, i = nil, 1
+  while true do
+    local at = s:find(" ", i, true)
+    if not at or at > n then break end
+    stop, i = at, at + 1
+  end
+  local cut = s:sub(1, (stop or (n + 1)) - 1)
+  return (cut:gsub("[%s,;:%.]+$", "")) .. "…"
+end
+
+-- A rung as a scene writes one: "Any roll" and "No roll" are the floor, 0;
+-- "15", "15+", "15 or better", and a column's "10 or better also gets",
+-- are that number. nil for anything else.
+local function rungAt(cell)
+  local s = (gm.flat(cell):lower():match("^%s*(.-)[%s%.:]*$"))
+  if s:find("^any roll") or s:find("^no roll") then return 0 end
+  local n = s:match("^(%d+)%+?$") or s:match("^(%d+)%+? or %a") or s:match("^(%d+)%+? and up")
+    or s:match("^(%d+) to %d+$") or s:match("^dc (%d+)$")
+  return num(n)
+end
+
+-- A table row's cells, trimmed. An escaped pipe, \|, stays in its cell.
+local function rowCells(line)
+  local s = (line:match("^%s*|(.*)$")) or ""
+  s = (s:gsub("\\|", "&#124;"))
+  if not s:find("|%s*$") then s = s .. "|" end
+  local out = {}
+  for cell in s:gmatch("([^|]*)|") do
+    local c = (cell:gsub("&#124;", "|"))
+    out[#out + 1] = (c:match("^%s*(.-)%s*$"))
+  end
+  return out
+end
+
+local function separatorRow(cells)
+  for _, c in ipairs(cells) do
+    if not c:match("^:?%-+:?$") then return false end
+  end
+  return #cells > 0
+end
+
+-- A page's body as headings, paragraphs and tables, with quote markers
+-- taken off, and without its frontmatter, fenced code or HTML comments.
+local function rollBlocks(text)
+  local _, body = gm.splitFrontmatter(text)
+  body = body or text
+  local out, para, rows, fence = {}, nil, nil, nil
+  local function endPara()
+    if para then out[#out + 1] = { kind = "para", text = table.concat(para, " ") } end
+    para = nil
+  end
+  local function endTable()
+    if rows then out[#out + 1] = { kind = "table", rows = rows } end
+    rows = nil
+  end
+  for line in (body .. "\n"):gmatch("([^\n]*)\n") do
+    local q = line
+    while q:find("^%s*>") do q = (q:gsub("^%s*> ?", "", 1)) end
+    local mark = q:match("^%s*(```+)") or q:match("^%s*(~~~+)")
+    if fence then
+      if mark and mark:sub(1, 1) == fence:sub(1, 1) and #mark >= #fence then fence = nil end
+    elseif mark then
+      endPara()
+      endTable()
+      fence = mark
+    elseif not q:find("%S") or q:find("^%s*<!%-%-") then
+      endPara()
+      endTable()
+    elseif q ~= line and (q:find("^%s*%*%*[%w_%-]+%*%*") or q:find("^%s*%[![%w_%-]+%]")) then
+      -- a callout's type and title are a line of their own
+      endPara()
+      endTable()
+      para = { (q:match("^%s*(.-)%s*$")) }
+      endPara()
+    elseif q:find("^#+%s") then
+      endPara()
+      endTable()
+      out[#out + 1] = { kind = "heading", text = (q:match("^#+%s+(.-)%s*$")) }
+    elseif q:find("^%s*|") then
+      endPara()
+      rows = rows or {}
+      rows[#rows + 1] = rowCells(q)
+    else
+      endTable()
+      para = para or {}
+      para[#para + 1] = (q:match("^%s*(.-)%s*$"))
+    end
+  end
+  endPara()
+  endTable()
+  return out
+end
+
+-- Where a paragraph's plain text names a check, "Wisdom (Perception)", from
+-- its first character to its last. Two named together, "Strength (Athletics)
+-- or Dexterity (Acrobatics)", are one check.
+local function namedCheck(plain)
+  local found = {}
+  for _, ability in ipairs(gm.abilities) do
+    local from = 1
+    while true do
+      local s, e = plain:find(ability .. " %(%u[%a' ]*%)", from)
+      if not s then break end
+      found[#found + 1] = { s = s, e = e }
+      from = e + 1
+    end
+  end
+  if #found == 0 then return nil end
+  table.sort(found, function(x, y) return x.s < y.s end)
+  local first, last = found[1].s, found[1].e
+  for i = 2, #found do
+    local gap = plain:sub(last + 1, found[i].s - 1)
+    if not (gap:match("^,? or $") or gap:match("^ ?/ ?$") or gap:match("^,? and $")) then break end
+    last = found[i].e
+  end
+  return first, last
+end
+
+-- The sentence of a plain paragraph that holds from..to.
+local function sentenceOf(plain, from, to)
+  local start, i = 1, 1
+  while true do
+    local s, e = plain:find("[%.!?]%s+", i)
+    if not s or s >= from then break end
+    start, i = e + 1, e + 1
+  end
+  local stop = plain:find("[%.!?]%s", to) or plain:find("[%.!?]$", to) or #plain
+  return (plain:sub(start, stop):match("^%s*(.-)%s*$"))
+end
+
+-- A paragraph that opens a rung, "At **15**, ..." or "**At 15**, ...": its
+-- threshold, and the rest of the paragraph with a capital to start it.
+local function proseRung(text)
+  local n, rest = text:match("^%*%*At (%d+)%+?[^%*]*%*%*[%s,:;%.]*(.*)$")
+  if not n then n, rest = text:match("^At %*%*(%d+)%+?[^%*]*%*%*[%s,:;%.]*(.*)$") end
+  if not n then return nil end
+  return num(n), (rest:gsub("^%l", function(c) return c:upper() end))
+end
+
+-- What a table under a check gives: its rungs, when its rows start with
+-- them, or else the things to find, when its columns do.
+local function readTable(rows)
+  local head, body = rows[1] or {}, {}
+  for i = 2, #rows do
+    if not separatorRow(rows[i]) then body[#body + 1] = rows[i] end
+  end
+  local candidates = {}
+  if head[1] and rungAt(head[1]) then candidates[1] = head end
+  for _, r in ipairs(body) do candidates[#candidates + 1] = r end
+  local rungs = {}
+  for _, r in ipairs(candidates) do
+    local at = r[1] and rungAt(r[1])
+    if at then
+      local words = {}
+      for j = 2, #r do
+        if r[j] ~= "" then words[#words + 1] = r[j] end
+      end
+      rungs[#rungs + 1] = { at = at, text = table.concat(words, " ") }
+    end
+  end
+  if #rungs > 0 then return rungs, nil end
+  local cols = {}
+  for j = 2, #head do
+    local at = rungAt(head[j])
+    if at then cols[#cols + 1] = { j = j, at = at } end
+  end
+  if #cols == 0 then return nil, nil end
+  local found = {}
+  for _, r in ipairs(body) do
+    local name = (gm.flat(r[1] or ""):match("^%s*(.-)%s*$"))
+    local given = {}
+    for _, c in ipairs(cols) do
+      if (r[c.j] or "") ~= "" then given[#given + 1] = { at = c.at, text = r[c.j] } end
+    end
+    if name ~= "" and #given > 0 then found[#found + 1] = { name = name, rungs = given } end
+  end
+  if #found == 0 then return nil, nil end
+  return nil, found
+end
+
+-- Rungs lowest first, keeping the page's order among equals.
+local function byRung(rungs)
+  local out = {}
+  for _, r in ipairs(rungs) do
+    local k = #out + 1
+    while k > 1 and out[k - 1].at > r.at do
+      out[k] = out[k - 1]
+      k = k - 1
+    end
+    out[k] = r
+  end
+  return out
+end
+
+-- "wisdom_perception", for a key in the play state.
+local function slug(s)
+  s = (gm.flat(s):lower():gsub("[^%w]+", "_"))
+  s = (s:gsub("^_+", ""))
+  return (s:gsub("_+$", ""))
+end
+
+-- The checks a page sets, in page order, each with `name` (unique on the
+-- page), `short` (the skill), `sentence`, `section`, `kind` ("ladder",
+-- "finds" or "dc"), `group`, `dc`, and `rungs` or `rows`.
+function gm.checks(page, text)
+  text = text or (page and gm.exists(page) and space.readPage(page)) or ""
+  if not text:find("%u%l+ %(%u") then return {} end
+  local out, current, section = {}, nil, nil
+  local function finish()
+    local c = current
+    current = nil
+    if not c then return end
+    if c.rows then
+      c.kind = "finds"
+    else
+      local rungs = {}
+      for _, r in ipairs(c.table or {}) do rungs[#rungs + 1] = r end
+      if #c.prose > 0 and not c.table then
+        -- a ladder in paragraphs gives any roll what comes before its first
+        -- rung, or else the check's own paragraph
+        rungs[#rungs + 1] = { at = 0, text = #c.pending > 0 and table.concat(c.pending, " ") or c.own }
+      end
+      for _, r in ipairs(c.prose) do rungs[#rungs + 1] = r end
+      if #rungs > 0 then
+        c.kind, c.rungs = "ladder", byRung(rungs)
+      elseif c.dc then
+        c.kind = "dc"
+      else
+        return
+      end
+    end
+    out[#out + 1] = c
+  end
+  for _, b in ipairs(rollBlocks(text)) do
+    if b.kind == "heading" then
+      finish()
+      section = b.text
+    elseif b.kind == "table" then
+      if current and not current.table and not current.rows then
+        current.table, current.rows = readTable(b.rows)
+      end
+    else
+      local at, rest
+      if current then at, rest = proseRung(b.text) end
+      if at then
+        current.prose[#current.prose + 1] = { at = at, text = rest }
+      else
+        local plain = gm.flat(b.text)
+        local from, to = namedCheck(plain)
+        if from then
+          finish()
+          local sentence = sentenceOf(plain, from, to)
+          local dc = sentence:match("DC (%d+)")
+          current = {
+            label = plain:sub(from, to), sentence = sentence, section = section,
+            own = b.text, pending = {}, prose = {}, dc = num(dc),
+            group = (" " .. sentence:lower() .. " "):find("[^%a]group[^%a]") ~= nil,
+          }
+        elseif current and #current.prose == 0 and not current.table and not current.rows
+            and not b.text:find("^%$%{") and not b.text:find("^!%[%[") then
+          current.pending[#current.pending + 1] = b.text
+        end
+      end
+    end
+  end
+  finish()
+  local used, count, taken = {}, {}, {}
+  for _, c in ipairs(out) do
+    local base, n = slug(c.label), 1
+    c.id = base
+    while used[c.id] do
+      n = n + 1
+      c.id = base .. "_" .. int(n)
+    end
+    used[c.id] = true
+    c.short = (c.label:gsub("%a+ %(([^%)]*)%)", function(skill) return skill end))
+    c.name = c.label .. (c.group and ", group" or "") ..
+             ((c.kind == "dc") and (", DC " .. int(c.dc)) or "")
+    count[c.name] = (count[c.name] or 0) + 1
+    local keys = {}
+    for _, r in ipairs(c.rows or {}) do
+      local k, m = slug(r.name), 1
+      r.key = k
+      while keys[r.key] do
+        m = m + 1
+        r.key = k .. "_" .. int(m)
+      end
+      keys[r.key] = true
+    end
+  end
+  for _, c in ipairs(out) do
+    if count[c.name] > 1 and c.section then c.name = c.name .. " · " .. gm.flat(c.section) end
+    local name, n = c.name, 1
+    while taken[name] do
+      n = n + 1
+      name = c.name .. " (" .. int(n) .. ")"
+    end
+    taken[name] = true
+    c.name = name
+  end
+  return out
+end
+
+-- The bands a check's rungs make, lowest first, "Under 10", "10 to 14",
+-- "15 to 19", "20 or more", each with the rungs it adds.
+function gm.bands(rungs)
+  local ats, seen = { 0 }, { [0] = true }
+  for _, r in ipairs(rungs) do
+    if not seen[r.at] then
+      seen[r.at] = true
+      ats[#ats + 1] = r.at
+    end
+  end
+  table.sort(ats)
+  local out = {}
+  for i, at in ipairs(ats) do
+    local up, label = ats[i + 1], nil
+    if not up then
+      label = at == 0 and "Any roll" or (int(at) .. " or more")
+    elseif at == 0 then
+      label = "Under " .. int(up)
+    elseif up == at + 1 then
+      label = int(at)
+    else
+      label = int(at) .. " to " .. int(up - 1)
+    end
+    local adds = {}
+    for _, r in ipairs(rungs) do
+      if r.at == at then adds[#adds + 1] = r end
+    end
+    out[i] = { floor = at, label = label, adds = adds }
+  end
+  return out
+end
+
+local function bandLabel(rungs, floor)
+  for _, b in ipairs(gm.bands(rungs)) do
+    if b.floor == floor then return b.label end
+  end
+  return int(floor) .. " or more"
+end
+
+local function rollKey(check, row)
+  return "roll_" .. check.id .. (row and ("_" .. row.key) or "")
+end
+
+-- Where a link on `page` goes, as a page name, or nil for another site's.
+local function linkTarget(page, path)
+  if path:find("^%a[%w+%.%-]*:") or path:sub(1, 1) == "#" then return nil end
+  local anchor = path:match("(#.*)$") or ""
+  path = (path:gsub("#.*$", ""))
+  path = (path:gsub("%.md$", ""))
+  local parts = {}
+  if path:sub(1, 1) ~= "/" then
+    for seg in (page:match("^(.*)/[^/]*$") or ""):gmatch("[^/]+") do parts[#parts + 1] = seg end
+  end
+  for seg in path:gmatch("[^/]+") do
+    if seg == ".." then
+      parts[#parts] = nil
+    elseif seg ~= "." then
+      parts[#parts + 1] = seg
+    end
+  end
+  return table.concat(parts, "/") .. anchor
+end
+
+-- A rung's words for the session's log: live values printed, and the page's
+-- own links written so they still go where they went from another folder.
+function gm.rollText(page, raw)
+  local text = gm.print(raw, page)
+  local function relink(bang, label, path)
+    if bang == "!" then return nil end
+    local to = linkTarget(page, path)
+    if not to then return nil end
+    return "[[" .. to .. "|" .. label .. "]]"
+  end
+  text = (text:gsub("(!?)%[([^%]]*)%]%(<([^>]*)>%)", relink))
+  text = (text:gsub("(!?)%[([^%]]*)%]%(([^%)%s]*)%)", relink))
+  text = (text:gsub("%s+", " "))
+  return (text:match("^%s*(.-)%s*$"))
+end
+
+-- Where a roll's line in the log points: the check's section of its page,
+-- where the section's name can go in a link, or else the page.
+local function rollPlace(page, check)
+  local sec = check and check.section
+  if sec and not sec:find("[%[%]|#%^{}$]") then
+    return "[[" .. page .. "#" .. sec .. "|" .. gm.name(page) .. "]]"
+  end
+  return "[[" .. page .. "|" .. gm.name(page) .. "]]"
+end
+
+-- The characters at the table tonight, by name: GM Party's when it is
+-- there, else the character pages'. None while there are no character pages.
+function gm.rollers()
+  local out = {}
+  if party and party.get then
+    local ok, p = pcall(party.get)
+    if ok and type(p) == "table" then
+      if p.source == "characters" then
+        for _, m in ipairs(p.here or {}) do out[#out + 1] = m.name end
+      end
+      return out
+    end
+  end
+  local pcs = query[[
+    from p = index.pages()
+    where p.type == "pc"
+    order by p.name
+    select p.name
+  ]]
+  for _, name in ipairs(pcs) do out[#out + 1] = gm.name(name) end
+  return out
+end
+
+-- Who rolled: "the party", a character's name, false where nobody is
+-- asked (no character pages, or a group check, which is everybody's), or
+-- nil for a question cancelled.
+local function pickWho(check)
+  if check and check.group then return false end
+  local people = gm.rollers()
+  if #people == 0 then return false end
+  local options = { { name = "The party", description = "The best roll at the table", orderId = 1 } }
+  for i, name in ipairs(people) do options[#options + 1] = { name = name, orderId = i + 1 } end
+  local choice = editor.filterBox("Who rolled?", options,
+    "The party, for the best roll at the table, or the one it belongs to", "Type to filter")
+  if not choice then return nil end
+  if choice.name == "The party" then return "the party" end
+  return choice.name
+end
+
+-- How a check stands, for a bar: "✓ Perception: 15 to 19", linked to the
+-- log of the session it was rolled in, "✗ Stealth: failed", or
+-- "○ Investigation" for one nobody has rolled. `hint` gives the words
+-- alone, for a picker, and "" for a check not rolled.
+function gm.rollStanding(check, state, hint)
+  if check.kind == "finds" then
+    local got = 0
+    for _, r in ipairs(check.rows) do
+      if state[rollKey(check, r)] then got = got + 1 end
+    end
+    if got == 0 then return hint and "" or ("○ " .. check.short) end
+    local words = int(got) .. " of " .. int(#check.rows) .. " found"
+    return "✓ " .. (hint and words or (check.short .. ": " .. words))
+  end
+  local key = rollKey(check)
+  local v, s = state[key], state[key .. "_session"]
+  if not v then return hint and "" or ("○ " .. check.short) end
+  local words = v
+  if check.kind ~= "dc" and num(v) then words = bandLabel(check.rungs, num(v)) end
+  local glyph = (check.kind == "dc" and v == "failed") and "✗ " or "✓ "
+  if hint then return glyph .. words .. (s and (", session " .. s) or "") end
+  if s then words = "[[" .. gm.config.sessionsFolder .. "Session " .. s .. "|" .. words .. "]]" end
+  return glyph .. check.short .. ": " .. words
+end
+
+-- A roll's line for its session's log, worked out before anything is
+-- written. It goes under ## Rolls, which comes in ahead of ## Decisions.
+local function rollPlan(s, item)
+  local log = gm.config.sessionsFolder .. "Session " .. s
+  local existed = gm.exists(log)
+  return { log = log, session = s, item = item,
+           text = existed and gm.read(log) or gm.sessionTemplate(s) }
+end
+
+local function rollLogged(plan)
+  gm.write(plan.log, gm.appendUnder(plan.text, "Rolls", plan.item, "Decisions"))
+  return plan
+end
+
+-- Takes a roll's line back out of its log and nothing else. The Rolls
+-- heading goes with the last line under it, and a log left as nothing but
+-- its template goes, as it does for a mark.
+local function rollUnlogged(done)
+  if not done or not gm.exists(done.log) then return end
+  local text = gm.removeItem(gm.read(done.log), done.item)
+  text = gm.dropEmptySection(text, "Rolls")
+  local function squeeze(t) return (t:gsub("%s+", " ")) end
+  if squeeze(text) == squeeze(gm.sessionTemplate(done.session)) then
+    space.deletePage(done.log)
+  else
+    gm.write(done.log, text)
+  end
+end
+
+local WORDS = { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten" }
+
+-- "three things they know", "one more thing they know"
+local function things(n, more)
+  return (WORDS[n] or int(n)) .. (more and " more" or "") ..
+         (n == 1 and " thing" or " things") .. " they know"
+end
+
+-- "under 10", for the middle of a line.
+local function lowerFirst(s)
+  return (s:gsub("^%u", function(c) return c:lower() end))
+end
+
+-- Logs a roll against one of a page's checks. `pick` says how it went:
+-- `band`, one of gm.bands, and `row`, the thing found in a table of finds;
+-- or `result`, "passed" or "failed", for a DC. `who` names who rolled. The
+-- log gets the words of each rung reached that no roll has reached before,
+-- and the page's play state the highest rung reached.
+function gm.recordRoll(page, check, pick)
+  local s = gm.currentSession()
+  local key, path = rollKey(check, pick.row), gm.statePath(page)
+  local before = gm.exists(path) and gm.read(path) or nil
+  local was = before and gm.frontmatter(before)[key] or nil
+  local label = check.name .. (pick.row and (", " .. pick.row.name) or "")
+  local who = pick.who and (", " .. pick.who) or ""
+  local fields, lines, what, outcome, note = {}, {}, nil, nil, nil
+  if check.kind == "dc" then
+    fields[key], fields[key .. "_session"] = pick.result, s
+    what, outcome = label .. who, pick.result
+    note = outcome
+  else
+    local floor, best = pick.band.floor, num(was)
+    local band = lowerFirst(pick.band.label)
+    if best and floor <= best then
+      what, outcome, note = label .. ", " .. band .. who, "nothing new", ", nothing new"
+    else
+      what = label .. ", " .. (best and ("now " .. band) or band) .. who
+      for _, r in ipairs(pick.row and pick.row.rungs or check.rungs) do
+        if r.at <= floor and (not best or r.at > best) then
+          lines[#lines + 1] = gm.rollText(page, r.text)
+        end
+      end
+      fields[key], fields[key .. "_session"] = int(floor), s
+      outcome = #lines > 0 and things(#lines, best ~= nil) or "nothing from this check"
+    end
+  end
+  local item = rollPlace(page, check) .. " · " .. what
+  if #lines > 0 then
+    item = item .. ":"
+    for _, l in ipairs(lines) do item = item .. "\n  - " .. l end
+  else
+    item = item .. ": " .. outcome
+  end
+  local line = gm.sessionLink(s, true) .. ": " .. what ..
+               ((check.kind == "dc") and (", " .. note) or (note or ""))
+  -- everything read before anything is written, so a read that fails
+  -- stops the roll before any of it has happened
+  local plan = rollPlan(s, item)
+  local _, written = gm.recordState(page, fields, line)
+  local created = not before and written or nil
+  local logged = rollLogged(plan)
+  gm.refresh()
+  local keys = {}
+  for k in pairs(fields) do keys[#keys + 1] = k end
+  table.sort(keys)
+  gm.notify(what .. ": " .. outcome .. ", logged to session " .. s .. ".", {
+    { name = "Open log", run = function() editor.navigate(logged.log) end },
+    -- Undo takes back this roll and nothing logged since
+    { name = "Undo", run = function()
+      gm.revert(path, before, keys, { line }, created)
+      rollUnlogged(logged)
+      gm.refresh()
+      gm.notify("Undone: " .. what .. " is no longer logged")
+    end },
+  })
+  return true
+end
+
+-- Asks how a roll against one of a page's checks went, and logs it: passed
+-- or failed for a DC; else the thing found, for a table of finds, and how
+-- high they rolled; then who, where there is anyone to ask about.
+function gm.logCheck(page, check)
+  local state = gm.readState(page, true)
+  local pick = {}
+  if check.kind == "dc" then
+    local options = {
+      { name = "Passed", orderId = 1, description = check.group and "Half of them or more made it"
+          or ("They met or beat DC " .. int(check.dc)) },
+      { name = "Failed", orderId = 2, description = check.group and "Fewer than half of them made it"
+          or ("They rolled under DC " .. int(check.dc)) },
+    }
+    local choice = editor.filterBox(check.name, options, "Did they make it?", "Type to filter")
+    if not choice then return false end
+    pick.result = choice.name:lower()
+  else
+    local rungs = check.rungs
+    if check.kind == "finds" then
+      local options = {}
+      for i, r in ipairs(check.rows) do
+        local v = num(state[rollKey(check, r)])
+        options[i] = { name = r.name, orderId = i, description = shortText(gm.print(r.rungs[1].text, page), 120),
+                       hint = v and ("✓ " .. bandLabel(r.rungs, v)) or nil }
+      end
+      local choice = editor.filterBox(check.name, options, "What did they find?", "Type to filter")
+      if not choice then return false end
+      for _, r in ipairs(check.rows) do
+        if r.name == choice.name then pick.row = r end
+      end
+      if not pick.row then return false end
+      rungs = pick.row.rungs
+    end
+    local best = num(state[rollKey(check, pick.row)])
+    local bands, options = gm.bands(rungs), {}
+    for i, b in ipairs(bands) do
+      local words = {}
+      for _, r in ipairs(b.adds) do words[#words + 1] = r.text end
+      local d = table.concat(words, " ")
+      if d == "" then d = "Nothing from this check" elseif i > 1 then d = "+ " .. d end
+      options[i] = { name = b.label, orderId = i, description = shortText(gm.print(d, page), 140),
+                     hint = (best == b.floor) and "✓ so far" or nil }
+    end
+    local choice = editor.filterBox(check.name .. (pick.row and (", " .. pick.row.name) or ""),
+      options, "How high did they roll?", "Type to filter")
+    if not choice then return false end
+    for _, b in ipairs(bands) do
+      if b.label == choice.name then pick.band = b end
+    end
+    if not pick.band then return false end
+  end
+  local who = pickWho(check)
+  if who == nil then return false end
+  if who then pick.who = who end
+  return gm.recordRoll(page, check, pick)
+end
+
+-- The page a roll is logged against: the open page, when it is a scene or
+-- sets checks of its own, else the scene the session is on.
+function gm.rollPage()
+  local current = editor.getCurrentPage()
+  if gm.isAdventurePage(current) and (gm.isScene(current) or #gm.checks(current) > 0) then
+    return current
+  end
+  local here = gm.sessionScene(gm.currentSession())
+  if here then return here end
+  if gm.isAdventurePage(current) then return current end
+  return nil
+end
+
+-- A roll the page doesn't set: which skill or save, what they got, and
+-- who. It goes into the session's log alone, since there is no check for
+-- the page's play state to keep.
+function gm.logOtherRoll(page)
+  local options = {}
+  for i, skill in ipairs(gm.skills) do options[i] = { name = skill, orderId = i } end
+  for _, ability in ipairs(gm.abilities) do
+    options[#options + 1] = { name = ability .. " saving throw", orderId = #options + 1 }
+  end
+  for _, ability in ipairs(gm.abilities) do
+    options[#options + 1] = { name = ability .. " check", orderId = #options + 1 }
+  end
+  local choice = editor.filterBox("Another roll", options, "What did they roll?", "Type to filter")
+  if not choice then return false end
+  local s = gm.currentSession()
+  local got = editor.prompt(choice.name .. ": what did they get? (session " .. s .. ")", "")
+  got = got and got:match("^%s*(.-)%s*$") or ""
+  if got == "" then return false end
+  local who = pickWho(nil)
+  if who == nil then return false end
+  local what = choice.name .. (who and (", " .. who) or "")
+  local item = (page and (rollPlace(page, nil) .. " · ") or "") .. what .. ": " .. got
+  local logged = rollLogged(rollPlan(s, item))
+  gm.refresh()
+  gm.notify(what .. ": logged to session " .. s .. ".", {
+    { name = "Open log", run = function() editor.navigate(logged.log) end },
+    { name = "Undo", run = function()
+      rollUnlogged(logged)
+      gm.refresh()
+      gm.notify("Undone: " .. what .. " is no longer logged")
+    end },
+  })
+  return true
+end
+
+-- Logs a roll: which of the page's checks, then how it went. A page that
+-- sets none goes straight to a roll it doesn't set.
+function gm.logRoll(page)
+  page = page or gm.rollPage()
+  local checks = page and gm.checks(page) or {}
+  if #checks == 0 then return gm.logOtherRoll(page) end
+  local state = gm.readState(page, true)
+  local options = {}
+  for i, c in ipairs(checks) do
+    local standing = gm.rollStanding(c, state, true)
+    options[i] = { name = c.name, orderId = i, description = shortText(gm.print(c.sentence, page), 140),
+                   hint = standing ~= "" and standing or nil }
+  end
+  options[#options + 1] = { name = OTHER, orderId = #options + 1,
+    description = "A roll this page doesn't set: say what it was and what they got" }
+  local title = gm.isScene(page) and gm.sceneTitle(page) or gm.name(page)
+  local choice = editor.filterBox("Log a roll", options, title .. ": which check?", "Type to filter")
+  if not choice then return false end
+  if choice.name == OTHER then return gm.logOtherRoll(page) end
+  for _, c in ipairs(checks) do
+    if c.name == choice.name then return gm.logCheck(page, c) end
+  end
+  return false
+end
+
+-- The rolls a page's play state records: each check rolled, and each
+-- thing found of a table of finds.
+local function rolledOn(checks, state)
+  local out = {}
+  for _, c in ipairs(checks) do
+    if c.kind == "finds" then
+      for _, r in ipairs(c.rows) do
+        if state[rollKey(c, r)] then out[#out + 1] = { check = c, row = r } end
+      end
+    elseif state[rollKey(c)] then
+      out[#out + 1] = { check = c }
+    end
+  end
+  return out
+end
+
+-- Takes a roll off a page's play state, for one logged by mistake, with
+-- Undo. Both logs keep what they said and add that it was taken back, the
+-- way an unmark's do, so a later roll counts afresh.
+function gm.unlogRoll(page, check, row)
+  local key, path, s = rollKey(check, row), gm.statePath(page), gm.currentSession()
+  local label = check.name .. (row and (", " .. row.name) or "")
+  local before = gm.exists(path) and gm.read(path) or nil
+  if not before or not gm.frontmatter(before)[key] then
+    gm.notify(label .. " isn't logged")
+    return false
+  end
+  local text = gm.clearFrontmatter(gm.clearFrontmatter(before, key), key .. "_session")
+  local line = gm.sessionLink(s, true) .. ": " .. label .. ", not rolled after all"
+  local plan = rollPlan(s, rollPlace(page, check) .. " · " .. label .. ": not rolled after all")
+  gm.write(path, gm.appendItem(text, line))
+  local logged = rollLogged(plan)
+  gm.refresh()
+  gm.notify(label .. ": no longer logged.", {
+    { name = "Undo", run = function()
+      if not gm.revert(path, before, { key, key .. "_session" }, { line }) then gm.write(path, before) end
+      rollUnlogged(logged)
+      gm.refresh()
+      gm.notify("Undone: " .. label .. " is logged again")
+    end },
+  })
+  return true
+end
+
+-- Asks which of a page's rolls was logged by mistake, and takes it off.
+function gm.pickUnlog(page)
+  local state = gm.readState(page, true)
+  local rolled = rolledOn(gm.checks(page), state)
+  if #rolled == 0 then
+    gm.notify(gm.name(page) .. ": no rolls logged to take back")
+    return false
+  end
+  local options = {}
+  for i, x in ipairs(rolled) do
+    local v = state[rollKey(x.check, x.row)]
+    local rungs = x.row and x.row.rungs or x.check.rungs
+    local words = (rungs and num(v)) and bandLabel(rungs, num(v)) or v
+    local at = state[rollKey(x.check, x.row) .. "_session"]
+    options[i] = { name = x.check.name .. (x.row and (", " .. x.row.name) or ""), orderId = i,
+                   description = words .. (at and (", session " .. at) or "") }
+  end
+  local choice = editor.filterBox("Unlog a roll", options, "Which roll was logged by mistake?", "Type to filter")
+  if not choice then return false end
+  for i, x in ipairs(rolled) do
+    if options[i].name == choice.name then return gm.unlogRoll(page, x.check, x.row) end
+  end
+  return false
+end
+
+-- A row on a page's bar for the checks it sets: how each stands, and the
+-- buttons to log a roll and to take one back.
+function gm.rollRow(page, checks, state)
+  local spec = { class = "gmkit-item" }
+  local function add(x) spec[#spec + 1] = x end
+  local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
+  note("**Checks**")
+  local any = false
+  for _, c in ipairs(checks) do
+    if gm.rollStanding(c, state, true) ~= "" then any = true end
+    note(gm.rollStanding(c, state))
+  end
+  add(gm.button("Log a roll…", function() gm.logRoll(page) end))
+  if any then add(gm.button("Unlog a roll…", function() gm.pickUnlog(page) end)) end
+  return dom.div(spec)
+end
+
 -- What the notification says of a private page, for reveal and publish.
 local function privateNote(page)
   return gm.name(page) .. " is a " .. tostring(gm.pageType(page)) ..
@@ -2403,6 +3306,8 @@ function gm.bar(page)
   end
   local items, given = gm.itemsOn(page)
   for _, item in ipairs(items) do add(gm.itemRow(item, page, given[item])) end
+  local checks = gm.checks(page)
+  if #checks > 0 then add(gm.rollRow(page, checks, state)) end
   return widget.new { display = "block", html = dom.div(spec) }
 end
 ```
@@ -2630,6 +3535,25 @@ command.define {
   run = function() gm.logDecision() end
 }
 
+-- Ctrl-Alt-r is SilverBullet's own System: Reload, so a roll is k, for check.
+command.define {
+  name = "GM: Log Roll",
+  key = "Ctrl-Alt-k",
+  run = function() gm.logRoll() end
+}
+
+command.define {
+  name = "GM: Unlog Roll",
+  run = function()
+    local page = gm.rollPage()
+    if not page then
+      gm.notify("There is no page here with rolls to take back", nil, "warning")
+      return
+    end
+    gm.pickUnlog(page)
+  end
+}
+
 command.define {
   name = "GM: Next Session",
   run = function() gm.nextSession() end
@@ -2647,6 +3571,14 @@ actionButton.define {
   description = "Log a decision",
   command = "GM: Log Decision",
   priority = 0.8,
+}
+
+-- Feather has no die; a d20's outline is a hexagon.
+actionButton.define {
+  icon = "hexagon",
+  description = "Log a roll",
+  command = "GM: Log Roll",
+  priority = 0.75,
 }
 
 actionButton.define {
