@@ -15,6 +15,12 @@ ${widgets.commandButton("Met…", "GM: Mark Met")} ${widgets.commandButton("Died
 
 ${widgets.commandButton("Use one…", "GM: Spend Use")} ${widgets.commandButton("Refund one…", "GM: Refund Use")} ${widgets.commandButton("Unmark…", "GM: Unmark")}
 
+## Owed
+
+Rungs a roll missed that come back later. Log each one when it does.
+
+${gm.owed()}
+
 ## Scenes
 
 ${query[[

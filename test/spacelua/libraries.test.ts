@@ -549,3 +549,32 @@ test("a roll logs the words of each rung it reached, and takes itself back", asy
   expect(pages.get(MILL)).toBe(mill);
   expect(printed).toEqual([]);
 }, 120000);
+
+// Late, not lost, in SilverBullet's own Lua: the weir from tests/rolls.lua.
+test("a rung the page calls late, not lost is owed until a roll reaches it", async () => {
+  const { env, run, pages, notes, printed, picks, state } = await setup(ROOT);
+  const src = readFileSync(join(ROOT, "test", "tests", "rolls.lua"), "utf-8");
+  const at = src.indexOf("local WEIR_TEXT = [==[");
+  const weir = src.slice(src.indexOf("[==[", at) + 4, src.indexOf("]==]", at));
+  const WEIR = "Adventure/Campaign/Act I/Scene 5";
+  pages.set(WEIR, weir);
+  state.current = WEIR;
+  picks.push("Intelligence (Arcana)", "10 to 19");
+  await run(`gm.logRoll()`);
+  expect(notes.filter((n) => n.message.startsWith("GM Kit:"))).toEqual([]);
+  expect(notes.at(-1)!.message).toBe("Intelligence (Arcana), 10 to 19: two things they know, the 20 owed, logged to session 1.");
+  expect(pages.get("Sessions/Session 1")).toContain(
+    "  - Owed: the 20, late, not lost. The next time that character crosses running water, it comes back to them.\n",
+  );
+  await run(`__o = gm.owed().markdown; __t = __text(gm.bar().html); __l = gm.checks("${WEIR}")[3].late`);
+  expect(env.get("__o")).toBe(
+    "- [[" + WEIR + "#The weir|Scene 5]] · Intelligence (Arcana): the 20, owed since [[Sessions/Session 1|session 1]]. " +
+      "The next time that character crosses running water, it comes back to them.",
+  );
+  expect(env.get("__t")).toContain("✓ Arcana: [[Sessions/Session 1|10 to 19]] · 20 owed");
+  expect(env.get("__l")).toBe("they see it the next time he lies.");
+  picks.push("Intelligence (Arcana)", "20 or more");
+  await run(`gm.logRoll(); __o = gm.owed().markdown`);
+  expect(env.get("__o")).toBe("Nothing is owed.");
+  expect(printed).toEqual([]);
+}, 60000);

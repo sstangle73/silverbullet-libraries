@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.5.0"
+version: "3.6.0"
 ---
 
 # GM Kit
@@ -141,6 +141,15 @@ A better roll later logs only what is new, "now 20 or more", and a roll that rea
 
 **The bar.** A page that sets checks gets a row of them: "✓ Perception: 15 to 19", linked to the session it was rolled in, "✗ Stealth: failed", or "○ Investigation" for one nobody has rolled. A roll comes with *Undo*. Afterwards *Unlog a roll…* takes one off, for a roll logged by mistake: the logs say it was taken back, and the next roll counts afresh.
 
+**Late, not lost.** A ladder only one character can roll often says what happens when nobody reaches its top rung, that it comes back later: *If nobody reaches the 20, it is late, not lost. The next time that character crosses running water, it comes back to them.* A roll below that rung then logs it as owed, with when it comes back:
+
+    - [[Campaign/Act I/Scene 5#The weir|Scene 5]] · Intelligence (Arcana), 10 to 19:
+      - Something old holds the water back
+      - It was made, not grown
+      - Owed: the 20, late, not lost. The next time that character crosses running water, it comes back to them.
+
+The page's bar says "· 20 owed", the picker marks the band owed, and `${gm.owed()}` on your session page lists every rung owed, in the order the adventure is played, until a roll that reaches it is logged. The words it looks for are `gm.config.latePhrases`: *late, not lost* and *late and not lost*.
+
 ## Revealing part of a page
 
 Players rarely learn all of a page at once. They meet the Warden and see a tall figure in a grey coat; what the Warden wants comes later, if it comes at all. So a page can be revealed a section at a time.
@@ -211,6 +220,10 @@ A private page that is on the revealed list from before, or that the players alr
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven arrows" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.6
+
+**Late, not lost.** A top rung that a check's page says comes back later, and that a roll missed, is kept as owed: the roll's line in the log says so and when it comes back, the page's bar shows it, and `${gm.owed()}` lists everything owed. Logging a roll that reaches it clears it. See *Rolls*.
 
 ## Changes in 3.5
 
@@ -325,6 +338,9 @@ gm.config = {
   revealFirstKey  = "reveal_first",
   -- ...or else whichever of these sections it has, or else its name alone.
   firstReveal     = { "First Impressions" },
+  -- A check whose text says one of these of its top rung keeps that rung
+  -- owed after a roll that misses it, until a roll reaches it.
+  latePhrases     = { "late, not lost", "late and not lost" },
 }
 
 -- What GM Kit tracks, and what each kind's pages can be marked. The first
@@ -2251,6 +2267,32 @@ local function byRung(rungs)
   return out
 end
 
+-- Whether a paragraph says a missed top rung comes back later: one of
+-- gm.config.latePhrases, "late, not lost".
+local function isLate(text)
+  local low = gm.flat(text):lower()
+  for _, phrase in ipairs(gm.config.latePhrases) do
+    if low:find(phrase, 1, true) then return true end
+  end
+  return false
+end
+
+-- When such a paragraph says the rung comes back: the rest of it, after the
+-- sentence that says it is late.
+local function lateWhen(text)
+  local bold, rest = text:match("^%*%*(.-)%*%*[%s%.,;:]*(.*)$")
+  if bold and isLate(bold) then return (rest:match("^%s*(.-)%s*$")) end
+  local low = text:lower()
+  for _, phrase in ipairs(gm.config.latePhrases) do
+    local _, e = low:find(phrase, 1, true)
+    if e then
+      local stop = text:find("[%.!?]%s", e)
+      return stop and (text:sub(stop + 1):match("^%s*(.-)%s*$")) or ""
+    end
+  end
+  return ""
+end
+
 -- "wisdom_perception", for a key in the play state.
 local function slug(s)
   s = (gm.flat(s):lower():gsub("[^%w]+", "_"))
@@ -2260,7 +2302,9 @@ end
 
 -- The checks a page sets, in page order, each with `name` (unique on the
 -- page), `short` (the skill), `sentence`, `section`, `kind` ("ladder",
--- "finds" or "dc"), `group`, `dc`, and `rungs` or `rows`.
+-- "finds" or "dc"), `group`, `dc`, and `rungs` or `rows`. `late` is set
+-- when the page says a missed top rung is late, not lost: what it says of
+-- when the rung comes back, or "".
 function gm.checks(page, text)
   text = text or (page and gm.exists(page) and space.readPage(page)) or ""
   if not text:find("%u%l+ %(%u") then return {} end
@@ -2303,6 +2347,9 @@ function gm.checks(page, text)
       if current then at, rest = proseRung(b.text) end
       if at then
         current.prose[#current.prose + 1] = { at = at, text = rest }
+      elseif current and isLate(b.text) then
+        -- a missed top rung comes back later, and this says when
+        current.late = lateWhen(b.text)
       else
         local plain = gm.flat(b.text)
         local from, to = namedCheck(plain)
@@ -2403,6 +2450,24 @@ local function rollKey(check, row)
   return "roll_" .. check.id .. (row and ("_" .. row.key) or "")
 end
 
+local function topAt(rungs)
+  local top = 0
+  for _, r in ipairs(rungs) do
+    if r.at > top then top = r.at end
+  end
+  return top
+end
+
+-- The top rung a check's rolls still owe, for a check its page calls late,
+-- not lost, once a roll has been logged below it; nil for anything else.
+local function owedAt(check, state, row)
+  local rungs = row and row.rungs or check.rungs
+  if not check.late or not rungs then return nil end
+  local best, top = num(state[rollKey(check, row)]), topAt(rungs)
+  if best and best < top then return top end
+  return nil
+end
+
 -- Where a link on `page` goes, as a page name, or nil for another site's.
 local function linkTarget(page, path)
   if path:find("^%a[%w+%.%-]*:") or path:sub(1, 1) == "#" then return nil end
@@ -2490,16 +2555,19 @@ end
 
 -- How a check stands, for a bar: "✓ Perception: 15 to 19", linked to the
 -- log of the session it was rolled in, "✗ Stealth: failed", or
--- "○ Investigation" for one nobody has rolled. `hint` gives the words
--- alone, for a picker, and "" for a check not rolled.
+-- "○ Investigation" for one nobody has rolled, with "· 20 owed" after a
+-- rung still owed. `hint` gives the words alone, for a picker, and "" for
+-- a check not rolled.
 function gm.rollStanding(check, state, hint)
   if check.kind == "finds" then
-    local got = 0
+    local got, owed = 0, 0
     for _, r in ipairs(check.rows) do
       if state[rollKey(check, r)] then got = got + 1 end
+      if owedAt(check, state, r) then owed = owed + 1 end
     end
     if got == 0 then return hint and "" or ("○ " .. check.short) end
-    local words = int(got) .. " of " .. int(#check.rows) .. " found"
+    local words = int(got) .. " of " .. int(#check.rows) .. " found" ..
+                  (owed > 0 and (", " .. int(owed) .. " owed") or "")
     return "✓ " .. (hint and words or (check.short .. ": " .. words))
   end
   local key = rollKey(check)
@@ -2508,9 +2576,13 @@ function gm.rollStanding(check, state, hint)
   local words = v
   if check.kind ~= "dc" and num(v) then words = bandLabel(check.rungs, num(v)) end
   local glyph = (check.kind == "dc" and v == "failed") and "✗ " or "✓ "
-  if hint then return glyph .. words .. (s and (", session " .. s) or "") end
+  local owed = owedAt(check, state)
+  if hint then
+    return glyph .. words .. (s and (", session " .. s) or "") ..
+           (owed and (", " .. int(owed) .. " owed") or "")
+  end
   if s then words = "[[" .. gm.config.sessionsFolder .. "Session " .. s .. "|" .. words .. "]]" end
-  return glyph .. check.short .. ": " .. words
+  return glyph .. check.short .. ": " .. words .. (owed and (" · " .. int(owed) .. " owed") or "")
 end
 
 -- A roll's line for its session's log, worked out before anything is
@@ -2559,7 +2631,9 @@ end
 -- `band`, one of gm.bands, and `row`, the thing found in a table of finds;
 -- or `result`, "passed" or "failed", for a DC. `who` names who rolled. The
 -- log gets the words of each rung reached that no roll has reached before,
--- and the page's play state the highest rung reached.
+-- and the page's play state the highest rung reached. A top rung the page
+-- calls late, not lost, and the roll missed, is logged as owed, with when
+-- it comes back.
 function gm.recordRoll(page, check, pick)
   local s = gm.currentSession()
   local key, path = rollKey(check, pick.row), gm.statePath(page)
@@ -2567,34 +2641,37 @@ function gm.recordRoll(page, check, pick)
   local was = before and gm.frontmatter(before)[key] or nil
   local label = check.name .. (pick.row and (", " .. pick.row.name) or "")
   local who = pick.who and (", " .. pick.who) or ""
-  local fields, lines, what, outcome, note = {}, {}, nil, nil, nil
+  local fields, lines, what, outcome, note, owed = {}, {}, nil, nil, nil, nil
   if check.kind == "dc" then
     fields[key], fields[key .. "_session"] = pick.result, s
     what, outcome = label .. who, pick.result
     note = outcome
   else
+    local rungs = pick.row and pick.row.rungs or check.rungs
     local floor, best = pick.band.floor, num(was)
     local band = lowerFirst(pick.band.label)
     if best and floor <= best then
       what, outcome, note = label .. ", " .. band .. who, "nothing new", ", nothing new"
     else
       what = label .. ", " .. (best and ("now " .. band) or band) .. who
-      for _, r in ipairs(pick.row and pick.row.rungs or check.rungs) do
+      for _, r in ipairs(rungs) do
         if r.at <= floor and (not best or r.at > best) then
           lines[#lines + 1] = gm.rollText(page, r.text)
         end
       end
       fields[key], fields[key .. "_session"] = int(floor), s
       outcome = #lines > 0 and things(#lines, best ~= nil) or "nothing from this check"
+      if check.late and floor < topAt(rungs) then
+        owed = "Owed: the " .. int(topAt(rungs)) .. ", late, not lost." ..
+               (check.late ~= "" and (" " .. gm.rollText(page, check.late)) or "")
+        outcome = outcome .. ", the " .. int(topAt(rungs)) .. " owed"
+      end
     end
   end
   local item = rollPlace(page, check) .. " · " .. what
-  if #lines > 0 then
-    item = item .. ":"
-    for _, l in ipairs(lines) do item = item .. "\n  - " .. l end
-  else
-    item = item .. ": " .. outcome
-  end
+  if #lines > 0 then item = item .. ":" else item = item .. ": " .. outcome end
+  for _, l in ipairs(lines) do item = item .. "\n  - " .. l end
+  if owed then item = item .. "\n  - " .. owed end
   local line = gm.sessionLink(s, true) .. ": " .. what ..
                ((check.kind == "dc") and (", " .. note) or (note or ""))
   -- everything read before anything is written, so a read that fails
@@ -2654,14 +2731,17 @@ function gm.logCheck(page, check)
       rungs = pick.row.rungs
     end
     local best = num(state[rollKey(check, pick.row)])
+    local owed = owedAt(check, state, pick.row)
     local bands, options = gm.bands(rungs), {}
     for i, b in ipairs(bands) do
       local words = {}
       for _, r in ipairs(b.adds) do words[#words + 1] = r.text end
       local d = table.concat(words, " ")
       if d == "" then d = "Nothing from this check" elseif i > 1 then d = "+ " .. d end
+      local hint = nil
+      if best == b.floor then hint = "✓ so far" elseif owed == b.floor then hint = "owed" end
       options[i] = { name = b.label, orderId = i, description = shortText(gm.print(d, page), 140),
-                     hint = (best == b.floor) and "✓ so far" or nil }
+                     hint = hint }
     end
     local choice = editor.filterBox(check.name .. (pick.row and (", " .. pick.row.name) or ""),
       options, "How high did they roll?", "Type to filter")
@@ -2834,6 +2914,58 @@ function gm.rollRow(page, checks, state)
   add(gm.button("Log a roll…", function() gm.logRoll(page) end))
   if any then add(gm.button("Unlog a roll…", function() gm.pickUnlog(page) end)) end
   return dom.div(spec)
+end
+
+-- Every top rung still owed, late, not lost, in the order the adventure is
+-- played: { page, check, row, at, since, when }. Only a check somebody has
+-- rolled owes anything.
+function gm.owedRungs()
+  local pages, seen, out = {}, {}, {}
+  for _, page in ipairs(gm.scenes()) do
+    pages[#pages + 1] = page
+    seen[page] = true
+  end
+  for _, page in ipairs(gm.adventurePages()) do
+    if not seen[page] then pages[#pages + 1] = page end
+  end
+  for _, page in ipairs(pages) do
+    local state, rolled = gm.readState(page), false
+    for k in pairs(state) do
+      if k:sub(1, 5) == "roll_" then rolled = true end
+    end
+    if rolled then
+      for _, c in ipairs(gm.checks(page)) do
+        local function add(row)
+          local at = owedAt(c, state, row)
+          if at then
+            out[#out + 1] = { page = page, check = c, row = row, at = at,
+                              since = state[rollKey(c, row) .. "_session"], when = c.late }
+          end
+        end
+        if c.rows then
+          for _, row in ipairs(c.rows) do add(row) end
+        else
+          add(nil)
+        end
+      end
+    end
+  end
+  return out
+end
+
+-- What is owed, for the session table: a line for each rung a roll missed
+-- that its page says comes back later, with when.
+function gm.owed()
+  local lines = {}
+  for _, o in ipairs(gm.owedRungs()) do
+    local line = "- " .. rollPlace(o.page, o.check) .. " · " .. o.check.name ..
+                 (o.row and (", " .. o.row.name) or "") .. ": the " .. int(o.at) ..
+                 (o.since and (", owed since " .. gm.sessionLink(o.since)) or "")
+    if o.when and o.when ~= "" then line = line .. ". " .. gm.rollText(o.page, o.when) end
+    lines[#lines + 1] = line
+  end
+  local md = #lines > 0 and table.concat(lines, "\n") or "Nothing is owed."
+  return widget.new { markdown = md, display = "block" }
 end
 
 -- What the notification says of a private page, for reveal and publish.

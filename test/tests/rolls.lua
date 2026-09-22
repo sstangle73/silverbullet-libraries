@@ -494,3 +494,139 @@ test("rolls: a rung's links still go where they went, from the log", "dm", funct
      "[[Adventure/Campaign/Act I/Notes/Here|notes]] and [[World/Items/Lantern|top]]",
      "a link from the page's own folder, and one from the space's root")
 end)
+
+------------------------------------------------------------------ Late, not lost (GM Kit 3.6)
+
+local WEIR = "Adventure/Campaign/Act I/Scene 5"
+local WEIR_TEXT = [==[---
+type: scene
+scene: 5
+scene_title: The Weir
+book_order: 15
+---
+
+# Scene 5 — The Weir
+
+## The weir
+
+**Intelligence (Arcana)**, on the weir, only for a character with magic of their own.
+
+| | |
+|---|---|
+| **No roll** | Something old holds the water back |
+| **10** | It was made, not grown |
+| **20** | Whoever made it is still paying for it |
+
+**If nobody reaches the 20, it is late, not lost.** The next time that character crosses running water, it comes back to them.
+
+**Wisdom (Perception)** — the far bank.
+
+| | |
+|---|---|
+| **Any roll** | A path |
+| **15** | Somebody walked it today |
+
+## The keeper
+
+**Wisdom (Insight)**, on the keeper.
+
+**If nobody reaches the 15, it is late and not lost:** they see it the next time he lies.
+
+At **15**, he has been paid to keep them here.
+]==]
+local WEIR_WATER = "[[" .. WEIR .. "#The weir|Scene 5]]"
+local ARCANA = "Intelligence (Arcana)"
+
+local function useWeir()
+  H.pages[WEIR] = WEIR_TEXT
+  H.current = WEIR
+end
+
+test("rolls: a page that calls its top rung late, not lost says when it comes back", "dm", function()
+  useWeir()
+  local checks = gm.checks(WEIR)
+  eq(list(names(checks)), "Intelligence (Arcana) | Wisdom (Perception) | Wisdom (Insight)")
+  eq(checks[1].late, "The next time that character crosses running water, it comes back to them.")
+  eq(checks[2].late, nil, "the bank's ladder says nothing of it")
+  eq(checks[3].late, "they see it the next time he lies.", "said in the middle of a sentence")
+  eq(checks[3].rungs[1].text, "**Wisdom (Insight)**, on the keeper.",
+     "and the sentence that says so is not what any roll gets")
+end)
+
+test("rolls: a roll below a late rung logs it owed, and a roll that reaches it clears it", "dm", function()
+  useWeir()
+  eq(gm.owed().markdown, "Nothing is owed.", "nothing rolled, nothing owed")
+  H.picks = { ARCANA, "10 to 19" }
+  gm.logRoll()
+  has(H.pages[LOG1], "- " .. WEIR_WATER .. " · Intelligence (Arcana), 10 to 19:\n" ..
+      "  - Something old holds the water back\n  - It was made, not grown\n" ..
+      "  - Owed: the 20, late, not lost. The next time that character crosses running water, it comes back to them.\n")
+  eq(lastNotification().message,
+     "Intelligence (Arcana), 10 to 19: two things they know, the 20 owed, logged to session 1.")
+  has(textOf(gm.bar().html), "✓ Arcana: [[Sessions/Session 1|10 to 19]] · 20 owed")
+  eq(gm.owed().markdown, "- " .. WEIR_WATER .. " · Intelligence (Arcana): the 20, owed since " ..
+     "[[Sessions/Session 1|session 1]]. The next time that character crosses running water, it comes back to them.")
+  eq(gm.owed().display, "block")
+  -- the picker says so, on the check and on the band
+  gm.patch("Session Table", "session", 2)
+  H.picks = { ARCANA, "20 or more" }
+  gm.logRoll()
+  local checks, bands = H.filterBoxes[#H.filterBoxes - 1], H.filterBoxes[#H.filterBoxes]
+  eq(checks.options[1].hint, "✓ 10 to 19, session 1, 20 owed")
+  eq(bands.options[2].hint, "✓ so far")
+  eq(bands.options[3].hint, "owed")
+  has(H.pages[LOG2], "- " .. WEIR_WATER .. " · Intelligence (Arcana), now 20 or more:\n" ..
+      "  - Whoever made it is still paying for it\n")
+  hasnt(H.pages[LOG2], "Owed:", "reached, so owed no more")
+  eq(gm.owed().markdown, "Nothing is owed.")
+  hasnt(textOf(gm.bar().html), "owed")
+end)
+
+test("rolls: only a late check's top rung is owed, and a roll that adds nothing repeats nothing", "dm", function()
+  useWeir()
+  H.picks = { "Wisdom (Perception)", "Under 15" }
+  gm.logRoll()
+  hasnt(H.pages[LOG1], "Owed:", "the bank's ladder isn't late, not lost")
+  H.picks = { ARCANA, "Under 10" }
+  gm.logRoll()
+  has(H.pages[LOG1], "Intelligence (Arcana), under 10:\n  - Something old holds the water back\n" ..
+      "  - Owed: the 20, late, not lost.")
+  H.picks = { ARCANA, "Under 10" }
+  gm.logRoll()
+  has(H.pages[LOG1], "Intelligence (Arcana), under 10: nothing new\n")
+  eq(count(H.pages[LOG1], "Owed:"), 1, "said once")
+  eq(#gm.owedRungs(), 1)
+end)
+
+test("rolls: unlogging a roll takes what it owed with it, and undo brings it back", "dm", function()
+  useWeir()
+  H.picks = { ARCANA, "10 to 19" }
+  gm.logRoll()
+  H.picks = { ARCANA }
+  gm.pickUnlog(WEIR)
+  eq(gm.owed().markdown, "Nothing is owed.")
+  runAction(lastNotification(), "Undo")
+  eq(#gm.owedRungs(), 1)
+  eq(gm.owedRungs()[1].at, 20)
+  eq(gm.owedRungs()[1].since, "1")
+end)
+
+test("rolls: the owed list runs in the adventure's order, across its pages", "dm", function()
+  useMill()
+  useWeir()
+  H.pages[MILL] = MILL_TEXT .. "\n## The mark\n\n**Intelligence (Arcana)** — the mark on the wheel.\n\n" ..
+    "| | |\n|---|---|\n| **Any roll** | It is fresh |\n| **15** | It is a warning |\n\n" ..
+    "**If nobody reaches it, it is late and not lost.**\n"
+  H.picks = { ARCANA, "10 to 19" }
+  gm.logRoll(WEIR)
+  H.picks = { "Intelligence (Arcana)", "Under 15" }
+  gm.logRoll(MILL)
+  local owed = gm.owedRungs()
+  eq(#owed, 2)
+  eq(owed[1].page, MILL, "Scene 4 before Scene 5")
+  eq(owed[2].page, WEIR)
+  eq(owed[1].when, "", "a page that says only that it is late")
+  local lines = gm.owed().markdown
+  has(lines, "· Intelligence (Arcana): the 15, owed since [[Sessions/Session 1|session 1]]\n- ")
+  has(H.pages["Session Table"], "${gm.owed()}", "the session table lists them")
+end)
