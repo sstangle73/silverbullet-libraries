@@ -156,6 +156,46 @@ test("book: bar in the DM space sits on Adventure/Build", "dm", function()
   ok(gmbook.bar("Adventure/Build/Book DM"), "no bar on Adventure/Build/Book DM")
 end)
 
+test("book: the bar opens a PDF printed beside its edition", "adventure", function()
+  gmbook.compile({ "dm", "player" })
+  H.files["Build/Book DM.pdf"] = { lastModified = 2000, contentType = "application/pdf" }
+  local bar = gmbook.bar("Build/Book DM")
+  eq(list(buttonsOf(bar.html)), "Build again | Open PDF | Copy for Homebrewery | Open Homebrewery")
+  click(bar, "Open PDF")
+  eq(H.opened[#H.opened], "https://wiki.example.org/adventure/.fs/Build/Book%20DM.pdf")
+  -- the player edition has no PDF of its own yet
+  eq(list(buttonsOf(gmbook.bar("Build/Book Player").html)),
+    "Build again | Copy for Homebrewery | Open Homebrewery")
+end)
+
+test("book: a PDF older than its edition says so", "adventure", function()
+  gmbook.compile({ "dm", "player" })
+  H.modified["Build/Book Player.md"] = 1000
+  H.files["Build/Book Player.pdf"] = { lastModified = 999 }
+  eq(list(buttonsOf(gmbook.bar("Build/Book Player").html)),
+    "Build again | Open PDF (older) | Copy for Homebrewery | Open Homebrewery")
+  -- printed from the edition as it is, it carries the edition's own time
+  H.files["Build/Book Player.pdf"].lastModified = 1000
+  has(list(buttonsOf(gmbook.bar("Build/Book Player").html)), " | Open PDF | ")
+end)
+
+test("book: in the DM space the PDF is the one beside Adventure/Build", "dm", function()
+  gmbook.compile({ "dm", "player" })
+  H.files["Build/Book DM.pdf"] = { lastModified = 2000 }
+  hasnt(list(buttonsOf(gmbook.bar("Adventure/Build/Book DM").html)), "Open PDF")
+  H.files["Adventure/Build/Book DM.pdf"] = { lastModified = 2000 }
+  click(gmbook.bar("Adventure/Build/Book DM"), "Open PDF")
+  eq(H.opened[#H.opened], "https://wiki.example.org/dm/.fs/Adventure/Build/Book%20DM.pdf")
+end)
+
+test("book: a file the client can't ask about leaves the bar as it was", "adventure", function()
+  gmbook.compile({ "dm", "player" })
+  H.files["Build/Book DM.pdf"] = { lastModified = 2000 }
+  H.failMeta = { ["Build/Book DM.pdf"] = "offline" }
+  eq(list(buttonsOf(gmbook.bar("Build/Book DM").html)),
+    "Build again | Copy for Homebrewery | Open Homebrewery")
+end)
+
 test("book: bar buttons copy, open Homebrewery and rebuild", "adventure", function()
   gmbook.compile({ "dm", "player" })
   H.current = "Build/Book Player"

@@ -43,9 +43,9 @@ test("kit: marking someone met records the session", "dm", function()
 end)
 ```
 
-Before each test, `reset()` gives it the space's pages, loads every `space-lua` block there in SilverBullet's order (priority first, then page name), and clears the play state: `State/`, `Sessions/` and the players' copies, all but `State/Revealed`. Everything a library does lands in `H`: `H.pages`, `H.notifications`, `H.commands`, `H.views`. A test answers the library's questions ahead of time with `H.picks`, `H.prompts` and `H.confirms`.
+Before each test, `reset()` gives it the space's pages, loads every `space-lua` block there in SilverBullet's order (priority first, then page name), and clears the play state: `State/`, `Sessions/` and the players' copies, all but `State/Revealed`. Everything a library does lands in `H`: `H.pages`, `H.notifications`, `H.commands`, `H.views`. A test answers the library's questions ahead of time with `H.picks`, `H.prompts` and `H.confirms`. A file that isn't a page, such as a printed PDF, is the test's to put in `H.files[path]`, with its `lastModified`.
 
-**The mocks answer as SilverBullet does where it has bitten.** `space.pageExists` is link resolution, as it is in 2.11: an exact name, or else any page whose path ends in it. `freezeFileList()` holds the list it reads the way a real client's lags behind a write, and `settle()` catches it up. `space.getPageMeta` asks for the page itself. A query's `where` reads `0` and `""` as false, as SilverBullet's does.
+**The mocks answer as SilverBullet does where it has bitten.** `space.pageExists` is link resolution, as it is in 2.11: an exact name, or else any page whose path ends in it. `freezeFileList()` holds the list it reads the way a real client's lags behind a write, and `settle()` catches it up. `space.getPageMeta` asks for the page itself, and `space.fileExists` and `space.getFileMeta` are exact, over pages and `H.files` alike. A query's `where` reads `0` and `""` as false, as SilverBullet's does.
 
 ## SilverBullet's own Lua
 

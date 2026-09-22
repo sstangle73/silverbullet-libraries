@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.8.2"
+version: "1.9.0"
 ---
 
 # GM Book
@@ -15,7 +15,7 @@ Self-contained as of 1.1: it no longer needs GM Kit, so it can live inside a sta
 ## Buttons
 
 - **In the header**, the printer builds both editions.
-- **On a built page**, a bar across the top has *Build again*, *Copy for Homebrewery* and *Open Homebrewery*. The bar isn't part of the page, so the copy is the manuscript alone.
+- **On a built page**, a bar across the top has *Build again*, *Copy for Homebrewery* and *Open Homebrewery*, and *Open PDF* when a PDF of that edition sits beside it: see *Rendering it*. The bar isn't part of the page, so the copy is the manuscript alone.
 - **After a build**, the notification has a button to open each edition.
 
 To put a build button on a page of your own:
@@ -130,6 +130,8 @@ It is an estimate, so each page keeps `gmbook.layout.slack` (one line) free at t
 ## Rendering it
 
 **Homebrewery**: open a built page, press *Copy for Homebrewery*, then *Open Homebrewery* and paste into the new brew. Free, authentic PHB look, PDF export.
+
+**A PDF beside the edition**: GM Book can't print a PDF itself, since that takes a browser's print engine, but something outside SilverBullet can print one and leave it beside the edition, `Build/Book DM.pdf` beside `Build/Book DM`. The bar then has *Open PDF*, which opens it in a tab of its own. A PDF older than its edition gets *Open PDF (older)*, so one from before the last build never passes for the current one.
 
 **Pandoc with a 5e LaTeX template**: for a fully local, reproducible build.
 
@@ -1085,26 +1087,54 @@ function gmbook.button(label, run, primary)
   }
 end
 
+-- When a space file last changed, or nil if that can't be told.
+local function modified(path)
+  local ok, meta = pcall(space.getFileMeta, path)
+  if not ok or not meta then return nil end
+  return tonumber(meta.lastModified)
+end
+
+-- The PDF something has printed beside an edition, as Build/Book DM.pdf
+-- beside Build/Book DM, and whether it is older than the edition. Nil when
+-- there is none.
+function gmbook.pdfOf(page)
+  local path = page .. ".pdf"
+  local ok, found = pcall(space.fileExists, path)
+  if not (ok and found) then return nil end
+  local pdf, md = modified(path), modified(page .. ".md")
+  return path, (pdf ~= nil and md ~= nil and pdf < md)
+end
+
+-- A space file in a tab of its own, as SilverBullet opens a document it has
+-- no editor for: the space's address, then .fs/ and the path.
+function gmbook.openFile(path)
+  local url = string.gsub(js.window.encodeURIComponent(path), "%%2F", "/")
+  editor.openUrl(system.getBaseURI() .. ".fs/" .. url)
+end
+
 -- The bar across the top of a built edition.
 function gmbook.bar(page)
   page = page or editor.getCurrentPage()
   local edition = gmbook.editionOf(page)
   if not edition then return nil end
   local label = gmbook.editions[edition].label
-  return widget.new {
-    display = "block",
-    html = dom.div {
-      class = "gmbook-bar",
-      dom.span {
-        class = "gmbook-bar-text",
-        "**" .. label:sub(1, 1):upper() .. label:sub(2) .. "**, built by GM Book. " ..
-        "A build replaces this page, so make changes in the pages it comes from.",
-      },
-      gmbook.button("Build again", function() gmbook.build({ "dm", "player" }) end, true),
-      gmbook.button("Copy for Homebrewery", function() gmbook.copy(edition) end),
-      gmbook.button("Open Homebrewery", gmbook.openHomebrewery),
+  local parts = {
+    class = "gmbook-bar",
+    dom.span {
+      class = "gmbook-bar-text",
+      "**" .. label:sub(1, 1):upper() .. label:sub(2) .. "**, built by GM Book. " ..
+      "A build replaces this page, so make changes in the pages it comes from.",
     },
+    gmbook.button("Build again", function() gmbook.build({ "dm", "player" }) end, true),
   }
+  local pdf, older = gmbook.pdfOf(page)
+  if pdf then
+    parts[#parts + 1] = gmbook.button(older and "Open PDF (older)" or "Open PDF",
+      function() gmbook.openFile(pdf) end)
+  end
+  parts[#parts + 1] = gmbook.button("Copy for Homebrewery", function() gmbook.copy(edition) end)
+  parts[#parts + 1] = gmbook.button("Open Homebrewery", gmbook.openHomebrewery)
+  return widget.new { display = "block", html = dom.div(parts) }
 end
 ```
 

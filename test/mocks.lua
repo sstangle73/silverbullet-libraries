@@ -16,7 +16,7 @@ local function fresh()
     notifications = {}, prompts = {}, promptsAsked = {}, confirms = {}, confirmsAsked = {},
     picks = {}, filterBoxes = {}, clipboard = nil, clipboardFails = false, opened = {},
     reloads = 0, saves = 0, refreshes = 0, commands = {}, listeners = {}, printed = {},
-    views = {}, viewOrder = {}, prefix = "/dm/",
+    views = {}, viewOrder = {}, prefix = "/dm/", files = {}, modified = {},
     config = {
       actionButtons = {
         { icon = "home", description = "Go to the index page", command = "Navigate: Home", priority = 3 },
@@ -65,6 +65,26 @@ function space.getPageMeta(name)
   end
   return { name = name, size = #t, perm = "rw", contentType = "text/markdown",
            lastModified = "2026-09-18T00:00:00" }
+end
+-- Any file in the space, by its path: a page is its name plus ".md", and
+-- anything else, such as a PDF, is a test's to put in H.files[path], as
+-- { lastModified = ms }. As in 2.11, fileExists is exact, and a file's
+-- lastModified is a number of milliseconds; a page's is H.modified[path],
+-- or 1000. H.failMeta[path] makes either fail, as getPageMeta does.
+function space.fileExists(name)
+  if H.failMeta and H.failMeta[name] then error(H.failMeta[name]) end
+  if name:endsWith(".md") then return H.pages[name:sub(1, -4)] ~= nil end
+  return H.files[name] ~= nil
+end
+function space.getFileMeta(name)
+  if H.failMeta and H.failMeta[name] then error(H.failMeta[name]) end
+  if name:endsWith(".md") and H.pages[name:sub(1, -4)] ~= nil then
+    return { name = name, contentType = "text/markdown", lastModified = H.modified[name] or 1000 }
+  end
+  local f = H.files[name]
+  if f == nil then error("Not found: " .. name) end
+  return { name = name, contentType = f.contentType or "application/octet-stream",
+           lastModified = f.lastModified or 1000 }
 end
 function freezeFileList()
   H.known = {}

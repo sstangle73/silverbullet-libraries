@@ -124,6 +124,9 @@ async function setup(root: string) {
   const store: Record<string, any> = {};
   const picks: string[] = [];
   const prompts: string[] = [];
+  const opened: string[] = [];
+  // files other than pages, such as a printed PDF: path to lastModified, in ms
+  const files = new Map<string, number>();
   const state = { current: "index" };
   const lagged: { known: Set<string> | null } = { known: null };
   const freeze = () => {
@@ -168,7 +171,9 @@ async function setup(root: string) {
     navigate: (p: string) => {
       state.current = p;
     },
-    openUrl: () => null,
+    openUrl: (url: string) => {
+      opened.push(url);
+    },
   });
   stub("space", {
     readPage: (n: string) => {
@@ -194,6 +199,14 @@ async function setup(root: string) {
       if (!pages.has(n)) throw new Error("Not found");
       return { name: n };
     },
+    // Exact, over every file: a page is its name plus ".md", last changed
+    // at 1000 ms; any other file is in files.
+    fileExists: (n: string) => (n.endsWith(".md") ? pages.has(n.slice(0, -3)) : files.has(n)),
+    getFileMeta: (n: string) => {
+      if (n.endsWith(".md") && pages.has(n.slice(0, -3))) return { name: n, lastModified: 1000 };
+      if (files.has(n)) return { name: n, lastModified: files.get(n) };
+      throw new Error("Not found");
+    },
     deletePage: (n: string) => {
       pages.delete(n);
     },
@@ -209,7 +222,10 @@ async function setup(root: string) {
   stub("actionButton", { define: () => null });
   stub("event", { listen: () => null });
   stub("jsonschema", { validateObject: () => null });
-  stub("system", { getURLPrefix: () => "/dm/" });
+  stub("system", {
+    getURLPrefix: () => "/dm/",
+    getBaseURI: () => "https://wiki.example.org/dm/",
+  });
   env.set("print", new LuaNativeJSFunction((...a: unknown[]) => {
     printed.push(a.join(" "));
   }));
@@ -236,7 +252,7 @@ async function setup(root: string) {
     ...gmLibs.map((n) => pages.get(n)!),
   ];
   for (const md of libs) await run(extractSpaceLuaFromPageText(md));
-  return { env, run, pages, notes, printed, picks, prompts, state, freeze };
+  return { env, run, pages, notes, printed, picks, prompts, state, freeze, opened, files };
 }
 
 // Run a notification's action, passing on only the message of an error.
@@ -382,6 +398,23 @@ test("the book builds as committed, with the pointer, and in place when asked", 
   await run(`config.set("gmBook.transclusions", "inline"); gmbook.compile({ "dm" })`);
   expect(pages.get("Adventure/Build/Book DM")).toContain("every traveller after.\n\n## Rules\n\n- **Wicks.**");
 }, 300000);
+
+test("a PDF printed beside an edition gets a button that opens it", async () => {
+  const { env, run, notes, opened, files } = await setup(ROOT);
+  const DM = "Adventure/Build/Book DM";
+  await run(`__b = __buttons(gmbook.bar("${DM}").html)`);
+  expect(env.get("__b")).toBe("Build again | Copy for Homebrewery | Open Homebrewery");
+  files.set(DM + ".pdf", 2000);
+  await run(`__b = __buttons(gmbook.bar("${DM}").html)`);
+  expect(env.get("__b")).toBe("Build again | Open PDF | Copy for Homebrewery | Open Homebrewery");
+  await run(`__click(gmbook.bar("${DM}").html, "Open PDF")`);
+  expect(notes.filter((n) => n.message.startsWith("GM Book:"))).toEqual([]);
+  expect(opened).toEqual(["https://wiki.example.org/dm/.fs/Adventure/Build/Book%20DM.pdf"]);
+  // printed before the edition last changed
+  files.set(DM + ".pdf", 999);
+  await run(`__b = __buttons(gmbook.bar("${DM}").html)`);
+  expect(env.get("__b")).toBe("Build again | Open PDF (older) | Copy for Homebrewery | Open Homebrewery");
+}, 60000);
 
 // DM-only text, in SilverBullet's own Lua: the cases tests/dmonly.lua runs in
 // plain Lua, read from that file so the two suites can't drift apart.
