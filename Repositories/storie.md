@@ -47,6 +47,11 @@ uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Map
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Maps.md
 description: "Encounter maps written as a grid of characters with a legend: drawn as a scaled plan with its own key, on the wiki and in the book, and sized to the party."
 ---
+name: "GM Sheets"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Sheets.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Sheets.md
+description: "Character sheets drawn from a character page's frontmatter: a page like a sheet on the wiki and a page of its own in the book, then the features, spells and equipment in full. The SRD's sums worked out."
+---
 name: "Space Switcher"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Space%20Switcher.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Space%20Switcher.md

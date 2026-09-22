@@ -15,6 +15,7 @@ import { evalStatement } from "./eval.ts";
 import { extractSpaceLuaFromPageText } from "../boot_config.ts";
 import { parse } from "../markdown_parser/parse_tree.ts";
 import { buildExtendedMarkdownLanguage } from "../markdown_parser/parser.ts";
+import YAML from "js-yaml";
 
 const ROOT = process.env.SBLIB!;
 const SB = process.cwd();
@@ -219,7 +220,12 @@ async function setup(root: string) {
   });
   stub("markdown", {
     parseMarkdown: (text: string) => parse(buildExtendedMarkdownLanguage({}), text),
+    // the tests read the Markdown it was given, not a rendering of it
+    markdownToHtml: (text: string) => '<div class="md">' + text + "</div>",
   });
+  // As SilverBullet's own yaml.parse: js-yaml, its result handed to Lua as
+  // plain JavaScript values, unconverted, as every syscall's result is
+  stub("yaml", { parse: (text: string) => YAML.load(text) });
   stub("codeWidget", { refreshAll: () => null });
   stub("command", { define: () => null });
   stub("actionButton", { define: () => null });
@@ -649,5 +655,56 @@ __five = tostring(party.creatureRef("World/Monsters/Barrow Lord", "barrow lord",
 __four = party.creatureRef("World/Monsters/Barrow Lord", "barrow lord", 4).warn`);
   expect(env.get("__five")).toBe("nil");
   expect(env.get("__four")).toBe("The barrow lord is CR 4 here, and CR 3 or 5 on Barrow Lord.");
+  expect(printed).toEqual([]);
+}, 120000);
+
+test("a character's sheet draws, and prints a page to itself, in SilverBullet's own Lua", async () => {
+  const { env, run, pages, printed } = await setup(ROOT);
+  // the ranger the plain-Lua tests draw, read from their file
+  const src = readFileSync(join(ROOT, "test", "tests", "sheets.lua"), "utf-8");
+  const at = src.indexOf("local RANGER = [==[");
+  const ranger = src.slice(src.indexOf("[==[", at) + 4, src.indexOf("]==]", at));
+  pages.set("Party/Tamsin Reed", ranger);
+  await run(`local w = sheets.draw("Party/Tamsin Reed")
+__html, __md = w.html, w.markdown
+local d = sheets.read("Party/Tamsin Reed")
+local v = sheets.values(d)
+__sums = table.concat({ v.pb, v.saves.dex, v.skills.survival, v.passive.perception, v.spellDC,
+  v.spellAttack, v.initiative }, " ")`);
+  expect(env.get("__sums")).toBe("2 5 6 19 12 4 3");
+  const md: string = env.get("__md");
+  const html: string = env.get("__html");
+  expect(md.startsWith('<div class="gmsheets-page" style="column-span:all">\n<svg ')).toBe(true);
+  const svg = md.match(/<svg[\s\S]*?<\/svg>/)![0];
+  expect(html).toContain(svg);
+  expect(svg).toContain('<text x="0" y="24" font-size="24" font-weight="bold">Tamsin Reed</text>');
+  expect(svg).toMatch(/width="672" height="\d+"/);
+  // every number written as the plain-Lua suite writes it: no float's ".0"
+  expect(svg).not.toMatch(/\.0"/);
+  expect(svg).toContain(">Once the guild outfits her</text>");
+  expect(md).toContain("### Deft Explorer\n\n***Expertise.*** You have Expertise in Survival.");
+  expect(md).toContain(
+    "**Level 1 (3 slots).** Cure Wounds, Goodberry (Action, Self; material: a sprig of mistletoe); " +
+      "always prepared: Hunter's Mark (Bonus Action, 90 ft.; concentration).",
+  );
+  expect(md).toContain("**Coins.** 12 GP, 4 SP.");
+
+  // a sample of the adventure's, in a chapter of its own, built into the book
+  pages.set("Adventure/Rules/Sample Characters", "---\nbook_order: 45\n---\n\n# Sample Characters\n\nOne of them.\n");
+  pages.set(
+    "Adventure/Rules/Sample Characters/Tamsin Reed",
+    ranger.replace("type: pc\nplayer: Sam\n", "type: sample\nbook_order: 45.01\nbook_section: true\n"),
+  );
+  await run(`__report = gmbook.compile({ "dm" })
+__left = table.concat(__report.live, ", ")
+__sample = sheets.printed.draw("Adventure/Rules/Sample Characters/Tamsin Reed")`);
+  expect(env.get("__left")).toBe("");
+  const book = pages.get("Adventure/Build/Book DM")!;
+  expect(book).toContain('\\page\n\n<div class="gmsheets-page" style="column-span:all">\n<svg ');
+  expect(book).toContain("</div>\n\n\\page\n\n### Class Features");
+  // the book's drawing is the sample's own, which has no player
+  const sample = (env.get("__sample") as string).match(/<svg[\s\S]*?<\/svg>/)![0];
+  expect(book).toContain(sample);
+  expect(sample).not.toContain(">Sam</text>");
   expect(printed).toEqual([]);
 }, 120000);

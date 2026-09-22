@@ -434,6 +434,25 @@ function markdown.parseMarkdown(text)
   return { type = "Document", from = 0, to = n, children = children }
 end
 
+-- markdown.markdownToHtml, reduced to a wrapper: the tests read the
+-- Markdown it was given, not a rendering of it.
+function markdown.markdownToHtml(text)
+  assert(type(text) == "string", "markdownToHtml needs a string")
+  return '<div class="md">' .. text .. "</div>"
+end
+
+-- yaml.parse, by PyYAML through run.py, the way SilverBullet hands js-yaml's
+-- result to Lua: a map's keys are always strings, as a JavaScript object's
+-- are, so a spell list's {1: [...]} is keyed "1", never 1.
+yaml = {}
+function yaml.parse(text)
+  assert(type(text) == "string", "yaml.parse needs a string")
+  assert(__yaml_parse, "yaml.parse: run.py needs PyYAML (pip install pyyaml)")
+  local ok, value = pcall(__yaml_parse, text)
+  if not ok then error("YAML: " .. tostring(value)) end
+  return value
+end
+
 -- spacelua.parseExpression / evalExpression over plain Lua. As in
 -- SilverBullet, each key of the augmentation table stands in for the global
 -- of that name while the expression runs.
@@ -558,8 +577,8 @@ function reset(layout)
   -- space is still there in the next. A library that caches the pages it
   -- found (GM Party, GM Bestiary, GM Maps) would otherwise answer the DM
   -- space with what it read in Adventure, and the two builds would differ.
-  gm, gmbook, spaceSwitcher, chapterNav, kb, gmb, party, bestiary, maps =
-    nil, nil, nil, nil, nil, nil, nil, nil, nil
+  gm, gmbook, spaceSwitcher, chapterNav, kb, gmb, party, bestiary, maps, sheets =
+    nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
   for name, text in pairs(FIXTURES[layout]) do H.pages[name] = text end
   clearPlay(layout, H.pages)
   for _, lib in ipairs(LIBS[layout]) do

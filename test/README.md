@@ -5,11 +5,11 @@ The libraries are Space Lua, and Space Lua only runs inside SilverBullet. These 
 ## Running them
 
 ```
-pip install lupa
+pip install lupa pyyaml
 python test/run.py
 ```
 
-About ten seconds. `--only kit,maps` runs only those files from `tests/`, `-k "mark met"` only the tests whose name holds those words, and `--src <folder>` tests the libraries in another folder instead of `src/`, such as an older release, to check that a regression test fails on the code before its fix.
+About ten seconds. PyYAML stands in for SilverBullet's `yaml.parse`, which GM Sheets reads a character's page with. `--only kit,maps` runs only those files from `tests/`, `-k "mark met"` only the tests whose name holds those words, and `--src <folder>` tests the libraries in another folder instead of `src/`, such as an older release, to check that a regression test fails on the code before its fix.
 
 | File | Holds |
 |---|---|

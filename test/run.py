@@ -26,6 +26,11 @@ import sys
 
 from lupa import lua54
 
+try:
+    import yaml as pyyaml
+except ImportError:  # the tests that read YAML say so
+    pyyaml = None
+
 TEST = pathlib.Path(__file__).parent
 FIXTURE = TEST / "fixture"
 SRC = TEST.parent / "src"
@@ -161,6 +166,18 @@ def to_lua(L, value):
     return value
 
 
+def jsify(value):
+    # js-yaml's result as SilverBullet hands it to Lua: every map key a
+    # string, as a JavaScript object's keys are, and a date as its text
+    if isinstance(value, dict):
+        return {str(k): jsify(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [jsify(v) for v in value]
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
+
+
 def build(pages=None):
     """A Lua runtime with the mocks loaded and each space's pages and libraries.
 
@@ -183,6 +200,8 @@ def build(pages=None):
     g.INSTALL = to_lua(L, install_map())
     repository = TEST.parent / "Repositories" / "storie.md"
     g.REPOSITORY = repository.read_text(encoding="utf-8") if repository.exists() else None
+    if pyyaml is not None:
+        g.__yaml_parse = lambda text: to_lua(L, jsify(pyyaml.safe_load(text)))
     L.execute((TEST / "mocks.lua").read_text(encoding="utf-8"))
     return L
 

@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.9.0"
+version: "1.10.0"
 ---
 
 # GM Book
@@ -124,6 +124,14 @@ Homebrewery never carries text over to the next page. Whatever doesn't fit in a 
 The layout comes from measurements of Homebrewery's 5ePHB theme on US Letter, taken in Chrome: character widths for each font, line heights, the space between blocks, the drop cap. A page breaks between blocks, never inside a paragraph, list item, quote, table or box, and a heading goes with the text under it. Your own `\page` and `\column` lines are kept. A single block taller than a page still spills, so split it in the source.
 
 **Raw HTML** is Homebrewery's own to lay out, so the builder leaves it out of the count — except where the element says how tall it is, with a `height` in px and `display: block`. Then it is measured at that height and spaced as the paragraph Homebrewery wraps it in, which is how [GM Maps](<GM Maps>) gets a drawn map onto a page without overflowing it.
+
+**A drawing wider than a column** gets a page to itself: a page break before it, unless it already starts one, and a page break after it. That is a drawing that also says how wide it is, with a `width` in px wider than a column, set in a block that spans both columns, the way [GM Sheets](<GM Sheets>) prints a character's sheet:
+
+    <div style="column-span:all">
+    <svg width="672" height="900" style="display:block">…</svg>
+    </div>
+
+Keep it to one block, with no blank line inside: Markdown ends an HTML block at the first blank line. A heading just above such a drawing stays on the page before it, so put the drawing after the text that belongs above it.
 
 It is an estimate, so each page keeps `gmbook.layout.slack` (one line) free at the foot. If a page still spills, raise it. The measurements only hold for 5ePHB on Letter. Set `paginate = false` in the config for chapter breaks only.
 
@@ -1493,13 +1501,18 @@ local function parse(text)
       -- Raw HTML is Homebrewery's to lay out and can't be measured, except
       -- where the element declares its own height in px and is displayed as
       -- a block: an inline SVG map does both, so it can be measured exactly.
-      local h, blocked = nil, false
+      local h, w, blocked = nil, nil, false
       for _, line in ipairs(html) do
-        h = h or tonumber(line:match('^<%a+[^>]-%sheight="(%d+%.?%d*)"'))
+        local lh = tonumber(line:match('^<%a+[^>]-%sheight="(%d+%.?%d*)"'))
+        if lh and not h then
+          h = lh
+          w = tonumber(line:match('^<%a+[^>]-%swidth="(%d+%.?%d*)"'))
+        end
         if line:find("display:%s*block") then blocked = true end
       end
       if h and blocked then
-        b.kind, b.h = "drawn", h
+        -- one wider than a column spans both, and gets a page to itself
+        b.kind, b.h, b.wide = "drawn", h, w ~= nil and w > W1 + 0.5
       end
     else
       b.kind, b.text = "p", l
@@ -1753,6 +1766,16 @@ local function fitPage(bs, s, trace, pageNo)
     local b = bs[i]
     local k = b.kind
     if k == "page" then return i + 1, true end
+    if k == "drawn" and b.wide then
+      -- a page to itself: whatever is already here stays on this page, and
+      -- whatever comes after it starts the next
+      if #placed > 0 then return i, false end
+      if trace then
+        trace[#trace + 1] = {line = b.first, kind = k, page = pageNo, col = 1, y = 0, h = b.h}
+      end
+      if bs[i + 1] and bs[i + 1].kind == "page" then return i + 2, true end
+      return i + 1, false
+    end
     if k == "h1" and #placed > 0 then return i, false end
     if k == "column" then
       if col == 2 then return i + 1, false end
