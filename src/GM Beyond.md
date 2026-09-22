@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Beyond"
 description: "D&D Beyond characters in SilverBullet: a live roster from public character data, and an import that turns a character's link into a full character page, with every number on the sheet worked out from D&D Beyond's raw data, ready for GM Sheets to draw."
 author: "Steven Storie"
-version: "2.0.0"
+version: "2.0.1"
 ---
 
 # GM Beyond
@@ -34,7 +34,7 @@ To put a button for it on a page of your own, such as the party's:
 
 **Refreshing.** An imported page has a bar across its top with *Refresh from D&D Beyond*, or run `GM: Refresh Character` on it. A refresh fetches the character again and rewrites every key the import writes, and nothing else: the page's text, and any key the import doesn't write, such as `player`, `away` or a campaign's own, stay as they are. Its notification has *Undo* too. Importing a character whose page already exists refreshes that page.
 
-**What the page holds.** The keys are [GM Sheets](<GM Sheets>)', and the import writes a number only where it isn't the SRD's sum, the way you would by hand: a Stone of Good Luck's bonus to every check, Jack of All Trades on the skills without proficiency, a magic item's bonus to spell attacks. Features, traits and feats carry their rules in full, from D&D Beyond's own text, so **keep the pages private**: that text is licensed to the account that owns the books, not yours to publish. A wizard's spellbook comes in as `spellbook`, the spells in it not prepared.
+**What the page holds.** The keys are [GM Sheets](<GM Sheets>)', and the import writes a number only where it isn't the SRD's sum, the way you would by hand: a Stone of Good Luck's bonus to every check, Jack of All Trades on the skills without proficiency, a magic item's bonus to spell attacks. Features, traits and feats carry their rules in full, from D&D Beyond's own text, so **keep the pages private**: that text is licensed to the account that owns the books, not yours to publish. A wizard's spellbook comes in as `spellbook`, the spells in it not prepared. Every spell, cantrips included, comes with how it is cast: its casting time and range, and whether it needs concentration, a ritual or a material.
 
 ## Settings
 
@@ -818,7 +818,7 @@ function gmb.sheet(c)
       if lvl == 0 then
         if not cantripSeen[def.name] then
           cantripSeen[def.name] = true
-          cantrips[#cantrips + 1] = def.name
+          cantrips[#cantrips + 1] = spellEntry(s)
           cantripDefs[#cantripDefs + 1] = def
         end
       elseif s.alwaysPrepared == true then addTo(always, lvl, spellEntry(s))
@@ -833,7 +833,7 @@ function gmb.sheet(c)
       if lvl == 0 then
         if not cantripSeen[def.name] then
           cantripSeen[def.name] = true
-          cantrips[#cantrips + 1] = def.name
+          cantrips[#cantrips + 1] = spellEntry(s)
           cantripDefs[#cantripDefs + 1] = def
         end
       else
@@ -1185,6 +1185,8 @@ local function yamlEntry(key, value)
         for l in (f.text .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = "      " .. l end
       end
     end
+  elseif key == "cantrips" then
+    lines[1] = "cantrips: " .. spellList(value)
   elseif key == "spells" or key == "always_prepared" or key == "spellbook" then
     lines[1] = key .. ":"
     local levels = {}

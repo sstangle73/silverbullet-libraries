@@ -22,6 +22,7 @@ About ten seconds. PyYAML stands in for SilverBullet's `yaml.parse`, which GM Sh
 | `ddb/` | Two made-up characters as D&D Beyond's character service sends them, for GM Beyond's import |
 | `build_book.py` | Builds the campaign's book, to diff or to commit |
 | `spacelua/` | The same libraries in SilverBullet's own Lua |
+| `handout_test.py` | `tools/handout.py`, which fills the 2024 character sheet: its sums held against GM Sheets' own, and a sheet filled on a stand-in |
 | `instance/` | A real SilverBullet server over the campaign |
 
 ## The campaign
@@ -61,7 +62,7 @@ cp <this repo>/test/spacelua/libraries.test.ts client/space_lua/
 SBLIB=<this repo> NODE_OPTIONS=--max-old-space-size=4096 npx vitest run client/space_lua/libraries.test.ts
 ```
 
-**Both pass, or the library doesn't go out.**
+**Both pass, or the library doesn't go out.** A change to `tools/handout.py` also needs `python test/handout_test.py`, which runs GM Sheets' Lua beside the script's Python.
 
 ## A real server
 

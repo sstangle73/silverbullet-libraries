@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Sheets"
 description: "Character sheets drawn from a character page's frontmatter: a page drawn like a sheet, on the wiki and as a page of its own in the printed book, then the features, spells and equipment in full. The page gives the choices, and the sheet does the SRD's sums."
 author: "Steven Storie"
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # GM Sheets
@@ -121,6 +121,16 @@ Whatever doesn't fit on the page is counted, "and 4 more", or cut short with an 
 The drawn page is two columns wide, so [GM Book](<GM Book>) 1.10 or later gives it a page to itself: a page break before it, unless it already starts a page, and one after it. The text follows as book text: the features under their headings, then the spells and the equipment. The widget's Markdown face is that page and that text, so GM Kit's copies for the players carry it too.
 
 A sheet's page break falls where the expression sits, so put `${sheets.draw()}` after whatever should stay on the page before it: a character's introduction reads well above it, and a heading alone at the foot of the page before it doesn't.
+
+## A printable handout
+
+`tools/handout.py`, beside this library in its repository, fills Wizards of the Coast's 2024 character sheet from a character's page, with the same numbers the drawn page shows:
+
+    python tools/handout.py <your space's folder> "Party/Tamsin Reed"
+
+It writes `Handouts/Tamsin Reed.pdf` in the space's folder: the sheet's two pages with the character written in, then plain pages for everything that outgrew a box, the features, traits and feats with their rules first. With no page named, it fills every page of `type: pc`, or of the type `--type` names. `--extras want:Want` writes a campaign's own key into the sheet's Backstory & Personality box.
+
+The sheet is Wizards of the Coast's, and its only terms are that you may print and photocopy it for personal use. So the script doesn't carry it: the first run fetches it from D&D Beyond into `~/.cache/gm-sheets`, and a filled copy is for your own table. **Keep `Handouts/` out of version control**, and out of anything you publish. It needs `pip install pypdf pyyaml`.
 
 ## Settings
 

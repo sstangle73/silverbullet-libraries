@@ -1,4 +1,8 @@
 __pycache__/
+# Wizards of the Coast's character sheet, and any sheet filled from it by
+# tools/handout.py: for your own table, never for this public repo
+DnD_2024_Character-Sheet.pdf
+Handouts/
 # The local server's data, the campaign copy it serves, and its binary
 test/instance/work/
 test/instance/bin/
