@@ -58,9 +58,12 @@ It needs a SilverBullet checkout at 2.11:
 ```
 git clone --depth 1 --branch 2.11.0 https://github.com/silverbulletmd/silverbullet sb211
 cd sb211 && npm ci --ignore-scripts
+echo '{"version":"2.11.0"}' > version.json
 cp <this repo>/test/spacelua/libraries.test.ts client/space_lua/
 SBLIB=<this repo> NODE_OPTIONS=--max-old-space-size=4096 npx vitest run client/space_lua/libraries.test.ts
 ```
+
+`--ignore-scripts` skips the build step that writes `version.json`, and `client/plugos/syscalls/system.ts` imports it, so write it by hand or the suite fails to load with *Cannot find module '../../../version.json'* and reports no tests at all.
 
 **Both pass, or the library doesn't go out.** A change to `tools/handout.py` also needs `python test/handout_test.py`, which runs GM Sheets' Lua beside the script's Python.
 
