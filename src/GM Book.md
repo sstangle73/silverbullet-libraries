@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.11.0"
+version: "1.12.0"
 ---
 
 # GM Book
@@ -165,6 +165,12 @@ gmbook.config = {
   -- "inline" prints it in place. %s is the page's title and the section.
   transclusions = "see",
   see          = "*See %s.*",
+  -- A build takes tens of seconds, so it drives SilverBullet's own progress
+  -- ring in the top bar. The ring is shared with syncing and indexing, and
+  -- takes only their two names; "sync" and "index" differ only in colour, and
+  -- neither is labelled unless the space is still doing its first index. false
+  -- turns the ring off.
+  progress     = "sync",
 }
 
 gmbook.editions = {
@@ -969,7 +975,10 @@ function gmbook.render(text, playerEdition, section, ctx)
 end
 
 -- Writes each edition asked for ("dm", "player") and reports what it did.
-function gmbook.compile(editions)
+-- `progress`, when given, is called as progress(done, total) after each page,
+-- before each edition is paginated, and after each is written. Only
+-- gmbook.build passes one: a build run headlessly has no editor to draw on.
+function gmbook.compile(editions, progress)
   local root = gmbook.root()
   local pages = gmbook.pages(root)
   local report = { pages = #pages, live = {}, written = {}, kept = {}, missing = {} }
@@ -990,6 +999,12 @@ function gmbook.compile(editions)
   end
   local sep = "\n\n" .. gmbook.config.pageBreak .. "\n\n"
   local liveAll = {}
+  -- each page of each edition, then paginating it, then writing it
+  local step, steps = 0, #editions * (#pages + 2)
+  local function tick()
+    step = step + 1
+    if progress then progress(step, steps) end
+  end
   for _, edition in ipairs(editions) do
     -- each edition prints its own text, so what is DM-only never runs for
     -- the player edition
@@ -1010,6 +1025,7 @@ function gmbook.compile(editions)
         if #parts > 0 then parts[#parts + 1] = section and "\n\n" or sep end
         parts[#parts + 1] = body
       end
+      tick()
     end
     local live = {}
     for _, p in ipairs(pages) do
@@ -1026,10 +1042,14 @@ function gmbook.compile(editions)
       -- push the loss. The edition on the page is older but whole, so keep
       -- it, and name the pages to fix.
       report.kept[#report.kept + 1] = { edition = edition, page = out, pages = live }
+      tick()
+      tick()
     else
       local book, sheets = table.concat(parts), nil
+      tick()
       if gmbook.config.paginate then book, sheets = gmbook.paginate(book) end
       space.writePage(out, book)
+      tick()
       report.written[#report.written + 1] = { edition = edition, page = out, sheets = sheets }
     end
   end
@@ -1043,7 +1063,13 @@ function gmbook.compile(editions)
 end
 
 function gmbook.build(editions)
-  local report = gmbook.compile(editions)
+  -- The ring is the only progress SilverBullet draws, and every syscall the
+  -- build makes yields to the browser, so it moves while the build runs.
+  local ring = config.get("gmBook.progress", gmbook.config.progress)
+  local report = gmbook.compile(editions, ring and function(done, total)
+    editor.showProgress(ring, math.floor(done / total * 100))
+  end or nil)
+  if ring then editor.showProgress(ring) end
   if report.pages == 0 then
     editor.flashNotification("No pages have a book_order, so there is nothing to build", "warning")
     return report
@@ -1081,7 +1107,10 @@ function gmbook.build(editions)
       " transclusions name pages or sections that can't be found, so they print nothing: ") ..
       table.concat(report.missing, ", ") .. "."
   end
-  editor.flashNotification(message, kind, { timeout = 12000, actions = actions })
+  -- A warning names pages to go and fix, and is several lines on a phone:
+  -- it needs longer on the screen than "built it, here it is".
+  editor.flashNotification(message, kind,
+    { timeout = kind == "warning" and 30000 or 12000, actions = actions })
   return report
 end
 
@@ -1953,6 +1982,26 @@ event.listen {
 ```
 
 ```space-style
+/* A build's notification carries two buttons, and on a narrow screen those
+   alone are wider than the space the notification is given. The row is a flex
+   that doesn't wrap and whose buttons don't shrink, and the column is aligned
+   to its right edge, so the row grows off the LEFT edge of the screen and the
+   message is cut off mid-word. Let the row wrap and the message shrink, and
+   the buttons drop to a line of their own instead. */
+.sb-notifications > div {
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.sb-notifications > div > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sb-notifications .sb-notification-actions {
+  flex-wrap: wrap;
+}
+
 .gmbook-bar {
   display: flex;
   flex-wrap: wrap;

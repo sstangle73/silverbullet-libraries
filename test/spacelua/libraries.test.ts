@@ -124,6 +124,7 @@ end
 async function setup(root: string) {
   const pages = loadTree(root);
   const notes: { message: string; kind: string; options: any }[] = [];
+  const progress: { kind: string; percentage?: number }[] = [];
   const printed: string[] = [];
   const store: Record<string, any> = {};
   const picks: string[] = [];
@@ -165,6 +166,11 @@ async function setup(root: string) {
     getCurrentPage: () => state.current,
     flashNotification: (message: string, kind: string, options: any) => {
       notes.push({ message, kind: kind ?? "info", options });
+    },
+    // SilverBullet's one progress ring; no percentage clears it.
+    showProgress: (kind: string, percentage?: number) => {
+      progress.push({ kind, percentage });
+      return null;
     },
     filterBox: (_label: string, options: any[]) => {
       const want = picks.shift();

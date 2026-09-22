@@ -13,7 +13,7 @@ end
 local function fresh()
   return {
     pages = {}, current = nil, writes = {}, deleted = {}, navigations = {},
-    notifications = {}, prompts = {}, promptsAsked = {}, confirms = {}, confirmsAsked = {},
+    notifications = {}, progress = {}, prompts = {}, promptsAsked = {}, confirms = {}, confirmsAsked = {},
     picks = {}, filterBoxes = {}, clipboard = nil, clipboardFails = false, opened = {},
     reloads = 0, saves = 0, refreshes = 0, commands = {}, listeners = {}, printed = {},
     views = {}, viewOrder = {}, prefix = "/dm/", files = {}, modified = {},
@@ -197,6 +197,12 @@ function editor.save() H.saves = H.saves + 1 end
 function editor.flashNotification(message, kind, options)
   assert(type(message) == "string", "notification message must be a string")
   H.notifications[#H.notifications + 1] = { message = message, kind = kind or "info", options = options }
+end
+-- SilverBullet's one progress indicator, shared by syncing and indexing. A
+-- call with no percentage clears it.
+function editor.showProgress(kind, percentage)
+  assert(kind == "sync" or kind == "index", "progress kind must be sync or index")
+  H.progress[#H.progress + 1] = { kind = kind, percentage = percentage }
 end
 function editor.prompt(message, default)
   H.promptsAsked[#H.promptsAsked + 1] = message

@@ -120,6 +120,43 @@ test("book: matches the committed build apart from pages changed since", "advent
   REPORT[#REPORT + 1] = "chapters that differ from the committed Book DM: " .. (#changed > 0 and list(changed) or "none")
 end)
 
+-- A build takes tens of seconds, and before 1.12 nothing on the screen moved
+-- while it ran. Every syscall the build makes yields to the browser, so the
+-- ring drawn from these calls actually animates.
+test("book: a build drives the progress ring and clears it at the end", "adventure", function()
+  H.current = "index"
+  gmbook.build({ "dm", "player" })
+  local p = H.progress
+  ok(#p >= 4, "progress reported: " .. #p)
+  eq(p[1].kind, "sync", "the ring it borrows")
+  local prev = -1
+  for i = 1, #p - 1 do
+    eq(p[i].kind, "sync", "every call names the same ring")
+    ok(p[i].percentage ~= nil, "call " .. i .. " carries a percentage")
+    ok(p[i].percentage >= prev, "the percentage never goes backwards")
+    ok(p[i].percentage <= 100, "the percentage never passes 100")
+    prev = p[i].percentage
+  end
+  eq(p[#p - 1].percentage, 100, "it reaches 100")
+  eq(p[#p].percentage, nil, "the last call clears the ring")
+end)
+
+test("book: an edition kept back still leaves the ring cleared", "adventure", function()
+  H.pages["Campaign/Live"] = "---\nbook_order: 11\n---\n\n# Live\n\n${query[[from p = index.pages()]]}\n"
+  H.current = "index"
+  gmbook.build({ "dm", "player" })
+  local p = H.progress
+  eq(p[#p - 1].percentage, 100, "it still reaches 100")
+  eq(p[#p].percentage, nil, "and the ring is cleared")
+end)
+
+test("book: gmBook.progress false leaves the ring alone", "adventure", function()
+  config.set("gmBook.progress", false)
+  H.current = "index"
+  gmbook.build({ "dm", "player" })
+  eq(#H.progress, 0, "no progress calls")
+end)
+
 test("book: keeps back an edition holding an expression with nothing to print", "adventure", function()
   local before = H.pages["Build/Book DM"]
   H.pages["Campaign/Live"] = "---\nbook_order: 11\n---\n\n# Live\n\n${query[[from p = index.pages()]]}\n"
