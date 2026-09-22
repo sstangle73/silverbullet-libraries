@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.10.0"
+version: "1.11.0"
 ---
 
 # GM Book
@@ -77,7 +77,9 @@ GM Party does this: on the page its numbers show your party's count, and in prin
 
 While a page is being printed, `gmbook.printing` is that page's name, so an expression that reads the page it sits on prints from the right one. It is nil outside a build.
 
-A query's table, a button or anything else with no Markdown to give can't print. The builder names the pages that hold one, and prints the expression as code. Bake those first with `Baked Sections: Update`.
+A query's table, a button or anything else with no Markdown to give can't print. **An edition holding one is kept back**: the builder names the pages, writes nothing, and leaves the edition already on the page as it is. Writing it would take what the expression draws out of the book with nothing in the text to say so, and a wiki that commits the book would push the loss; an edition a build old is the smaller harm.
+
+Two things cause it. The expression may be one that never prints, such as a query or a button — bake those with `Baked Sections: Update`. Or the library that gives the expression its meaning may be missing from the client: Space Lua is read when a client boots and not again, so a library installed while the tab was open is on disk and in the index but not in its Lua, and every expression that calls it fails. `System: Reload` reads them afresh.
 
 ## One page shown in another
 
@@ -970,7 +972,7 @@ end
 function gmbook.compile(editions)
   local root = gmbook.root()
   local pages = gmbook.pages(root)
-  local report = { pages = #pages, live = {}, written = {}, missing = {} }
+  local report = { pages = #pages, live = {}, written = {}, kept = {}, missing = {} }
   if #pages == 0 then return report end
   local texts, cache = {}, {}
   local ctx = {
@@ -987,10 +989,14 @@ function gmbook.compile(editions)
     texts[i] = space.readPage(p.name)
   end
   local sep = "\n\n" .. gmbook.config.pageBreak .. "\n\n"
+  local liveAll = {}
   for _, edition in ipairs(editions) do
     -- each edition prints its own text, so what is DM-only never runs for
     -- the player edition
     local player, parts = edition == "player", {}
+    -- an expression that gives nothing is the edition's own problem: a page
+    -- can print in the DM edition and not in the player's
+    ctx.live = {}
     for i, raw in ipairs(texts) do
       local from = pages[i].name:sub(#root + 1)
       local text, left = gmbook.print(gmbook.forEdition(raw, player), pages[i].name)
@@ -1005,15 +1011,31 @@ function gmbook.compile(editions)
         parts[#parts + 1] = body
       end
     end
+    local live = {}
+    for _, p in ipairs(pages) do
+      local name = p.name:sub(#root + 1)
+      if ctx.live[name] then
+        live[#live + 1] = name
+        liveAll[name] = true
+      end
+    end
     local out = gmbook.output(edition, root)
-    local book, sheets = table.concat(parts), nil
-    if gmbook.config.paginate then book, sheets = gmbook.paginate(book) end
-    space.writePage(out, book)
-    report.written[#report.written + 1] = { edition = edition, page = out, sheets = sheets }
+    if #live > 0 then
+      -- What the expression should have drawn would go out of the edition
+      -- with nothing in it to say so, and a wiki that commits the book would
+      -- push the loss. The edition on the page is older but whole, so keep
+      -- it, and name the pages to fix.
+      report.kept[#report.kept + 1] = { edition = edition, page = out, pages = live }
+    else
+      local book, sheets = table.concat(parts), nil
+      if gmbook.config.paginate then book, sheets = gmbook.paginate(book) end
+      space.writePage(out, book)
+      report.written[#report.written + 1] = { edition = edition, page = out, sheets = sheets }
+    end
   end
   for _, p in ipairs(pages) do
     local name = p.name:sub(#root + 1)
-    if ctx.live[name] then report.live[#report.live + 1] = name end
+    if liveAll[name] then report.live[#report.live + 1] = name end
   end
   for what in pairs(ctx.missing) do report.missing[#report.missing + 1] = what end
   table.sort(report.missing)
@@ -1037,16 +1059,20 @@ function gmbook.build(editions)
     }
     if editor.getCurrentPage() == w.page then editor.reloadPage() end
   end
-  local message = "Built " .. table.concat(names, " and ") ..
-                  " from " .. report.pages .. " pages."
+  local message = #report.written > 0
+    and ("Built " .. table.concat(names, " and ") .. " from " .. report.pages .. " pages.")
+    or ("Built nothing from " .. report.pages .. " pages.")
   local kind = "info"
-  if #report.live > 0 then
+  if #report.kept > 0 then
     kind = "warning"
-    message = message .. " " .. #report.live ..
-      (#report.live == 1 and " page holds" or " pages hold") ..
-      " expressions with nothing to print, so they print as code: " ..
+    local kept = {}
+    for _, k in ipairs(report.kept) do kept[#kept + 1] = "the " .. gmbook.editions[k.edition].label end
+    message = message .. " Kept back " .. table.concat(kept, " and ") .. ", unchanged: " ..
+      #report.live .. (#report.live == 1 and " page holds" or " pages hold") ..
+      " expressions with nothing to print, and writing that would take what they draw out of the book: " ..
       table.concat(report.live, ", ") ..
-      ". Run Baked Sections: Update on them and build again."
+      ". A client that loaded the libraries before one of them existed is the usual cause, so run " ..
+      "System: Reload; otherwise run Baked Sections: Update on them. Then build again."
   end
   if #report.missing > 0 then
     kind = "warning"

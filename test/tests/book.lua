@@ -120,14 +120,45 @@ test("book: matches the committed build apart from pages changed since", "advent
   REPORT[#REPORT + 1] = "chapters that differ from the committed Book DM: " .. (#changed > 0 and list(changed) or "none")
 end)
 
-test("book: names pages holding expressions with nothing to print", "adventure", function()
+test("book: keeps back an edition holding an expression with nothing to print", "adventure", function()
+  local before = H.pages["Build/Book DM"]
   H.pages["Campaign/Live"] = "---\nbook_order: 11\n---\n\n# Live\n\n${query[[from p = index.pages()]]}\n"
   H.current = "index"
-  gmbook.build({ "dm", "player" })
+  local report = gmbook.build({ "dm", "player" })
   local n = lastNotification()
   eq(n.kind, "warning")
-  has(n.message, "1 page holds expressions with nothing to print, so they print as code: Campaign/Live.")
-  has(H.pages["Build/Book DM"], "${query", "the query is left in")
+  has(n.message, "Kept back the DM edition and the player edition, unchanged")
+  has(n.message, "Campaign/Live")
+  eq(#report.written, 0, "nothing written")
+  eq(#report.kept, 2, "both editions kept back")
+  eq(H.pages["Build/Book DM"], before, "the edition on the page is left as it was")
+  hasnt(H.pages["Build/Book DM"], "${query", "the query never reached the book")
+end)
+
+-- The 2026-09-22 loss: a library installed while a client was running is on
+-- disk and in its index but not in its Lua, so every expression that calls it
+-- fails and GM Book leaves it in as code. Writing that edition would take what
+-- the library draws out of the book, and a wiki that commits the book would
+-- push the loss. Standing in for the missing library: its printer is gone.
+test("book: a library missing from the client keeps its edition back", "adventure", function()
+  local before = { dm = H.pages["Build/Book DM"], player = H.pages["Build/Book Player"] }
+  H.pages["Campaign/Drawn"] = "---\nbook_order: 12\n---\n\n# Drawn\n\n${mylib.draw()}\n"
+  gmbook.printers.mylib = { draw = function() return "DRAWN" end }
+  H.current = "index"
+  local ok1 = gmbook.compile({ "dm", "player" })
+  eq(#ok1.written, 2, "with the library, both editions are written")
+  has(H.pages["Build/Book DM"], "DRAWN", "what the library draws is in the book")
+
+  gmbook.printers.mylib = nil          -- the client never loaded it
+  local report = gmbook.compile({ "dm", "player" })
+  eq(#report.written, 0, "without it, nothing is written")
+  eq(#report.kept, 2, "both editions kept back")
+  eq(list(report.live), "Campaign/Drawn", "the page that lost its expression")
+  has(H.pages["Build/Book DM"], "DRAWN", "the edition on the page still has it")
+  hasnt(H.pages["Build/Book DM"], "${mylib.draw()}", "the raw expression never reached the book")
+
+  H.pages["Build/Book DM"], H.pages["Build/Book Player"] = before.dm, before.player
+  H.pages["Campaign/Drawn"] = nil
 end)
 
 test("book: nothing to build", "adventure", function()
