@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.6.0"
+version: "3.7.0"
 ---
 
 # GM Kit
@@ -124,6 +124,8 @@ A ladder in a table reads like this:
 
 Rungs count up, so a 15 gets what any roll gets, what 10 gets and what 15 gets. A check with none of these, *don't call for Wisdom (Survival) here*, is only mentioned, and isn't offered. Nor is anything in fenced code or an HTML comment.
 
+**A DC that rises with the party.** A rung or a DC can be written through GM Party 1.3 or later, `**${party.dc(15)}**` or `DC ${party.dc(12)}`, so the page shows the party's DC. A check reads it as the number it is written as, and shows the party's DC wherever it gives one: at level 9 the bands are *Under 12*, *12 to 16*, *17 to 21* and *22 or more*. The play state keeps the rung as written, so a roll logged at one level still counts at the next.
+
 **Logging one.** *Log a roll* in the header, `Ctrl-Alt-k`, or *Log a roll…* on the page's bar lists the checks on the page you are on, and off an adventure page those of the scene the session is on. Pick the check, then how high they rolled. The rungs make bands, *Under 10*, *10 to 14*, *15 to 19* and *20 or more*, and each band shows what it adds. A DC asks *Passed* or *Failed*, and a table of finds asks which thing first. Once there are character pages it asks who rolled, with *The party* first for the best roll at the table. A group check is everybody's, so it doesn't ask.
 
 **What the log gets.** The session's log gets a line under `## Rolls`, which comes in ahead of `## Decisions`, with the words of every rung reached:
@@ -220,6 +222,10 @@ A private page that is on the revealed list from before, or that the players alr
 ## Live values in players' copies
 
 The Player space runs only its own code, so a copy can't lean on the DM's libraries. Publishing puts in the Markdown face of any `${...}` that gives a widget with one: GM Party's numbers go in as your party's, "seven arrows" rather than the rule. Everything else stays live, and the Player space evaluates it against what it can see: a query there lists only what has been published.
+
+## Changes in 3.7
+
+**DCs that rise with the party.** A rung or DC written through GM Party's `party.dc` is read as the number it is written as, and the bands, the DC, what is owed and the bar show the party's. See *Rolls*.
 
 ## Changes in 3.6
 
@@ -2067,6 +2073,39 @@ function gm.flat(s)
   return (s:gsub("%*", ""))
 end
 
+-- A DC written through GM Party, ${party.dc(15)}, which the page shows as
+-- the party's DC. A check reads the number it is written as, 15, and adds
+-- how far the party's DCs rise wherever it shows one.
+local DC_FORM = "%$%{%s*party%.dc%s*[%(%{]%s*(%d+)%s*[%)%}]%s*%}"
+
+-- Text with each such DC put back as the number it is written as, and
+-- whether it had one.
+local function undc(s)
+  local found = false
+  s = (s:gsub(DC_FORM, function(n)
+    found = true
+    return n
+  end))
+  return s, found
+end
+
+-- A paragraph that opens a rung written that way, "At **${party.dc(15)}**,
+-- ...": the rung put back as its number, and whether it was. The words
+-- after it keep their own expressions, which print as they read.
+local function leadingDc(text)
+  local pre, n, post = text:match("^(%*?%*?At %*?%*?)" .. DC_FORM .. "(.*)$")
+  if pre then return pre .. n .. post, true end
+  return text, false
+end
+
+-- How far the party's DCs rise over the ones written, from GM Party.
+local function dcRise()
+  if not (party and party.dcRise) then return 0 end
+  local ok, rise = pcall(party.dcRise)
+  if ok and type(rise) == "number" then return rise end
+  return 0
+end
+
 -- A line for a picker: flat, on one line, and cut at a word near n
 -- characters.
 local function shortText(s, n)
@@ -2085,9 +2124,9 @@ end
 
 -- A rung as a scene writes one: "Any roll" and "No roll" are the floor, 0;
 -- "15", "15+", "15 or better", and a column's "10 or better also gets",
--- are that number. nil for anything else.
+-- are that number, and so is ${party.dc(15)}. nil for anything else.
 local function rungAt(cell)
-  local s = (gm.flat(cell):lower():match("^%s*(.-)[%s%.:]*$"))
+  local s = (gm.flat((undc(cell))):lower():match("^%s*(.-)[%s%.:]*$"))
   if s:find("^any roll") or s:find("^no roll") then return 0 end
   local n = s:match("^(%d+)%+?$") or s:match("^(%d+)%+? or %a") or s:match("^(%d+)%+? and up")
     or s:match("^(%d+) to %d+$") or s:match("^dc (%d+)$")
@@ -2204,16 +2243,20 @@ local function sentenceOf(plain, from, to)
 end
 
 -- A paragraph that opens a rung, "At **15**, ..." or "**At 15**, ...": its
--- threshold, and the rest of the paragraph with a capital to start it.
+-- threshold, the rest of the paragraph with a capital to start it, and
+-- whether the rung is written through party.dc.
 local function proseRung(text)
+  local scaled
+  text, scaled = leadingDc(text)
   local n, rest = text:match("^%*%*At (%d+)%+?[^%*]*%*%*[%s,:;%.]*(.*)$")
   if not n then n, rest = text:match("^At %*%*(%d+)%+?[^%*]*%*%*[%s,:;%.]*(.*)$") end
   if not n then return nil end
-  return num(n), (rest:gsub("^%l", function(c) return c:upper() end))
+  return num(n), (rest:gsub("^%l", function(c) return c:upper() end)), scaled
 end
 
 -- What a table under a check gives: its rungs, when its rows start with
--- them, or else the things to find, when its columns do.
+-- them, or else the things to find, when its columns do; and whether a
+-- rung is written through party.dc.
 local function readTable(rows)
   local head, body = rows[1] or {}, {}
   for i = 2, #rows do
@@ -2222,10 +2265,11 @@ local function readTable(rows)
   local candidates = {}
   if head[1] and rungAt(head[1]) then candidates[1] = head end
   for _, r in ipairs(body) do candidates[#candidates + 1] = r end
-  local rungs = {}
+  local rungs, scaled = {}, false
   for _, r in ipairs(candidates) do
     local at = r[1] and rungAt(r[1])
     if at then
+      if r[1]:find(DC_FORM) then scaled = true end
       local words = {}
       for j = 2, #r do
         if r[j] ~= "" then words[#words + 1] = r[j] end
@@ -2233,11 +2277,14 @@ local function readTable(rows)
       rungs[#rungs + 1] = { at = at, text = table.concat(words, " ") }
     end
   end
-  if #rungs > 0 then return rungs, nil end
+  if #rungs > 0 then return rungs, nil, scaled end
   local cols = {}
   for j = 2, #head do
     local at = rungAt(head[j])
-    if at then cols[#cols + 1] = { j = j, at = at } end
+    if at then
+      if head[j]:find(DC_FORM) then scaled = true end
+      cols[#cols + 1] = { j = j, at = at }
+    end
   end
   if #cols == 0 then return nil, nil end
   local found = {}
@@ -2250,7 +2297,7 @@ local function readTable(rows)
     if name ~= "" and #given > 0 then found[#found + 1] = { name = name, rungs = given } end
   end
   if #found == 0 then return nil, nil end
-  return nil, found
+  return nil, found, scaled
 end
 
 -- Rungs lowest first, keeping the page's order among equals.
@@ -2332,6 +2379,8 @@ function gm.checks(page, text)
         return
       end
     end
+    -- how far a check written through party.dc rises for the party
+    c.rise = c.scaled and dcRise() or 0
     out[#out + 1] = c
   end
   for _, b in ipairs(rollBlocks(text)) do
@@ -2340,12 +2389,15 @@ function gm.checks(page, text)
       section = b.text
     elseif b.kind == "table" then
       if current and not current.table and not current.rows then
-        current.table, current.rows = readTable(b.rows)
+        local scaled
+        current.table, current.rows, scaled = readTable(b.rows)
+        if scaled then current.scaled = true end
       end
     else
-      local at, rest
-      if current then at, rest = proseRung(b.text) end
+      local at, rest, scaled
+      if current then at, rest, scaled = proseRung(b.text) end
       if at then
+        if scaled then current.scaled = true end
         current.prose[#current.prose + 1] = { at = at, text = rest }
       elseif current and isLate(b.text) then
         -- a missed top rung comes back later, and this says when
@@ -2356,10 +2408,11 @@ function gm.checks(page, text)
         if from then
           finish()
           local sentence = sentenceOf(plain, from, to)
-          local dc = sentence:match("DC (%d+)")
+          local dc = (undc(sentence)):match("DC (%d+)")
           current = {
             label = plain:sub(from, to), sentence = sentence, section = section,
             own = b.text, pending = {}, prose = {}, dc = num(dc),
+            scaled = sentence:find("DC " .. DC_FORM) ~= nil,
             group = (" " .. sentence:lower() .. " "):find("[^%a]group[^%a]") ~= nil,
           }
         elseif current and #current.prose == 0 and not current.table and not current.rows
@@ -2381,7 +2434,7 @@ function gm.checks(page, text)
     used[c.id] = true
     c.short = (c.label:gsub("%a+ %(([^%)]*)%)", function(skill) return skill end))
     c.name = c.label .. (c.group and ", group" or "") ..
-             ((c.kind == "dc") and (", DC " .. int(c.dc)) or "")
+             ((c.kind == "dc") and (", DC " .. int(c.dc + c.rise)) or "")
     count[c.name] = (count[c.name] or 0) + 1
     local keys = {}
     for _, r in ipairs(c.rows or {}) do
@@ -2408,8 +2461,11 @@ function gm.checks(page, text)
 end
 
 -- The bands a check's rungs make, lowest first, "Under 10", "10 to 14",
--- "15 to 19", "20 or more", each with the rungs it adds.
-function gm.bands(rungs)
+-- "15 to 19", "20 or more", each with the rungs it adds. `rise` is how far
+-- a check written through party.dc rises for the party: the labels show
+-- the party's DCs, and each band's floor stays the rung as written.
+function gm.bands(rungs, rise)
+  rise = rise or 0
   local ats, seen = { 0 }, { [0] = true }
   for _, r in ipairs(rungs) do
     if not seen[r.at] then
@@ -2422,13 +2478,13 @@ function gm.bands(rungs)
   for i, at in ipairs(ats) do
     local up, label = ats[i + 1], nil
     if not up then
-      label = at == 0 and "Any roll" or (int(at) .. " or more")
+      label = at == 0 and "Any roll" or (int(at + rise) .. " or more")
     elseif at == 0 then
-      label = "Under " .. int(up)
+      label = "Under " .. int(up + rise)
     elseif up == at + 1 then
-      label = int(at)
+      label = int(at + rise)
     else
-      label = int(at) .. " to " .. int(up - 1)
+      label = int(at + rise) .. " to " .. int(up - 1 + rise)
     end
     local adds = {}
     for _, r in ipairs(rungs) do
@@ -2439,11 +2495,11 @@ function gm.bands(rungs)
   return out
 end
 
-local function bandLabel(rungs, floor)
-  for _, b in ipairs(gm.bands(rungs)) do
+local function bandLabel(rungs, floor, rise)
+  for _, b in ipairs(gm.bands(rungs, rise)) do
     if b.floor == floor then return b.label end
   end
-  return int(floor) .. " or more"
+  return int(floor + (rise or 0)) .. " or more"
 end
 
 local function rollKey(check, row)
@@ -2574,15 +2630,16 @@ function gm.rollStanding(check, state, hint)
   local v, s = state[key], state[key .. "_session"]
   if not v then return hint and "" or ("○ " .. check.short) end
   local words = v
-  if check.kind ~= "dc" and num(v) then words = bandLabel(check.rungs, num(v)) end
+  local rise = check.rise or 0
+  if check.kind ~= "dc" and num(v) then words = bandLabel(check.rungs, num(v), rise) end
   local glyph = (check.kind == "dc" and v == "failed") and "✗ " or "✓ "
   local owed = owedAt(check, state)
   if hint then
     return glyph .. words .. (s and (", session " .. s) or "") ..
-           (owed and (", " .. int(owed) .. " owed") or "")
+           (owed and (", " .. int(owed + rise) .. " owed") or "")
   end
   if s then words = "[[" .. gm.config.sessionsFolder .. "Session " .. s .. "|" .. words .. "]]" end
-  return glyph .. check.short .. ": " .. words .. (owed and (" · " .. int(owed) .. " owed") or "")
+  return glyph .. check.short .. ": " .. words .. (owed and (" · " .. int(owed + rise) .. " owed") or "")
 end
 
 -- A roll's line for its session's log, worked out before anything is
@@ -2662,9 +2719,10 @@ function gm.recordRoll(page, check, pick)
       fields[key], fields[key .. "_session"] = int(floor), s
       outcome = #lines > 0 and things(#lines, best ~= nil) or "nothing from this check"
       if check.late and floor < topAt(rungs) then
-        owed = "Owed: the " .. int(topAt(rungs)) .. ", late, not lost." ..
+        local top = int(topAt(rungs) + (check.rise or 0))
+        owed = "Owed: the " .. top .. ", late, not lost." ..
                (check.late ~= "" and (" " .. gm.rollText(page, check.late)) or "")
-        outcome = outcome .. ", the " .. int(topAt(rungs)) .. " owed"
+        outcome = outcome .. ", the " .. top .. " owed"
       end
     end
   end
@@ -2703,12 +2761,13 @@ end
 function gm.logCheck(page, check)
   local state = gm.readState(page, true)
   local pick = {}
+  local rise = check.rise or 0
   if check.kind == "dc" then
     local options = {
       { name = "Passed", orderId = 1, description = check.group and "Half of them or more made it"
-          or ("They met or beat DC " .. int(check.dc)) },
+          or ("They met or beat DC " .. int(check.dc + rise)) },
       { name = "Failed", orderId = 2, description = check.group and "Fewer than half of them made it"
-          or ("They rolled under DC " .. int(check.dc)) },
+          or ("They rolled under DC " .. int(check.dc + rise)) },
     }
     local choice = editor.filterBox(check.name, options, "Did they make it?", "Type to filter")
     if not choice then return false end
@@ -2720,7 +2779,7 @@ function gm.logCheck(page, check)
       for i, r in ipairs(check.rows) do
         local v = num(state[rollKey(check, r)])
         options[i] = { name = r.name, orderId = i, description = shortText(gm.print(r.rungs[1].text, page), 120),
-                       hint = v and ("✓ " .. bandLabel(r.rungs, v)) or nil }
+                       hint = v and ("✓ " .. bandLabel(r.rungs, v, rise)) or nil }
       end
       local choice = editor.filterBox(check.name, options, "What did they find?", "Type to filter")
       if not choice then return false end
@@ -2732,7 +2791,7 @@ function gm.logCheck(page, check)
     end
     local best = num(state[rollKey(check, pick.row)])
     local owed = owedAt(check, state, pick.row)
-    local bands, options = gm.bands(rungs), {}
+    local bands, options = gm.bands(rungs, rise), {}
     for i, b in ipairs(bands) do
       local words = {}
       for _, r in ipairs(b.adds) do words[#words + 1] = r.text end
@@ -2886,7 +2945,7 @@ function gm.pickUnlog(page)
   for i, x in ipairs(rolled) do
     local v = state[rollKey(x.check, x.row)]
     local rungs = x.row and x.row.rungs or x.check.rungs
-    local words = (rungs and num(v)) and bandLabel(rungs, num(v)) or v
+    local words = (rungs and num(v)) and bandLabel(rungs, num(v), x.check.rise) or v
     local at = state[rollKey(x.check, x.row) .. "_session"]
     options[i] = { name = x.check.name .. (x.row and (", " .. x.row.name) or ""), orderId = i,
                    description = words .. (at and (", session " .. at) or "") }
@@ -2959,7 +3018,7 @@ function gm.owed()
   local lines = {}
   for _, o in ipairs(gm.owedRungs()) do
     local line = "- " .. rollPlace(o.page, o.check) .. " · " .. o.check.name ..
-                 (o.row and (", " .. o.row.name) or "") .. ": the " .. int(o.at) ..
+                 (o.row and (", " .. o.row.name) or "") .. ": the " .. int(o.at + (o.check.rise or 0)) ..
                  (o.since and (", owed since " .. gm.sessionLink(o.since)) or "")
     if o.when and o.when ~= "" then line = line .. ". " .. gm.rollText(o.page, o.when) end
     lines[#lines + 1] = line

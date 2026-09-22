@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Bestiary"
 description: "Creature pages that point at official stat blocks: the reference links to a compendium on the page, and cites the book and its entry in print. Wires those pages to GM Party's fights."
 author: "Steven Storie"
-version: "1.0.1"
+version: "1.1.0"
 ---
 
 # GM Bestiary
@@ -34,7 +34,7 @@ A page with `type: monster` describes one creature. What it is and how it behave
 | `statblock` | The published stat block to run it with. Leave it out for a creature with no official match |
 | `entry` | The entry in the book that holds that stat block, where the book files it under another name: a vine blight is under *Blights*, a raven under *Animals* |
 | `source` | The book it is in. The settings give the one to assume |
-| `cr` | Its Challenge Rating, which a fight that uses it is checked against |
+| `cr` | Its Challenge Rating, which a fight that uses it is checked against. A creature with a stat block for each of several levels lists them all: `cr: ["3", "5"]` |
 | `ddb` | A link to it, for running from a screen |
 
 Then, wherever the reference belongs on the page:
@@ -62,6 +62,12 @@ The fight then carries a line of its own: links on the page, citations in print.
 
 The stat block's name comes after the citation when the fight calls the creature something else, which is the usual case for a creature the adventure has renamed. A fight whose `cr` disagrees with the one on the creature's page is flagged on the page, and so is a creature whose page isn't there.
 
+**A creature at several levels.** GM Party 1.3 or later writes a fight in versions for the party's level, and a creature can be in more than one of them, stronger in each, like a lieutenant the party might meet early or late. Its page carries a stat block for each level, and its `cr` lists every CR it runs at:
+
+    cr: ["3", "5"]
+
+A fight that gives it any of those is fine. One that gives it another is flagged: "The barrow lord is CR 4 here, and CR 3 or 5 on Barrow Lord."
+
 ## Settings
 
     config.set("gmBestiary", {
@@ -76,6 +82,10 @@ The stat block's name comes after the citation when the fight calls the creature
 ## How it prints
 
 The reference on the page is a widget: HTML with the compendium link, and a Markdown face with the same link, so a table, Copy, Baked Sections and GM Kit's publishing all keep it. GM Book 1.6.3 or later evaluates each expression with `bestiary` standing for `bestiary.printed`, which gives the citation without the URL. This library puts `bestiary.printed` in `gmbook.printers`, where GM Book looks for it, and sets `party.creatureRef`, where GM Party looks.
+
+## Changes in 1.1
+
+A creature page's `cr` can list several CRs, for a creature with a stat block for each of several levels, and a fight is checked against all of them.
 
 ## Implementation
 
@@ -269,13 +279,25 @@ gmbook.printers.bestiary = bestiary.printed
 
 -- A CR a fight gives a creature that its page disagrees with. A fight
 -- writes the CR it spends XP on, and the page writes the stat block's, so
--- the two drifting apart is worth catching.
+-- the two drifting apart is worth catching. A page with a stat block for
+-- each of several levels lists every CR it runs at.
 local function crWarning(c, called, cr)
   if cr == nil or c.cr == nil then return nil end
   local function norm(v) return (tostring(v):gsub("%s", "")) end
-  if norm(cr) == norm(c.cr) then return nil end
+  local listed = type(c.cr) == "table" and c.cr or { c.cr }
+  local named = {}
+  for _, v in ipairs(listed) do
+    if norm(v) == norm(cr) then return nil end
+    named[#named + 1] = tostring(v)
+  end
+  local list = ""
+  for i, v in ipairs(named) do
+    if i == 1 then list = v
+    elseif i == #named then list = list .. " or " .. v
+    else list = list .. ", " .. v end
+  end
   return "The " .. called .. " is CR " .. tostring(cr) .. " here, and CR " ..
-    tostring(c.cr) .. " on " .. c.title .. "."
+    list .. " on " .. c.title .. "."
 end
 
 -- What GM Party shows and prints for a creature that names a page: the page

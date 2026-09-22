@@ -49,7 +49,7 @@ Before each test, `reset()` gives it the space's pages, loads every `space-lua` 
 
 ## SilverBullet's own Lua
 
-Plain Lua is not Space Lua: `s:gsub(...):sub(2)` works here and fails there. `spacelua/libraries.test.ts` runs the GM libraries in SilverBullet's own interpreter, with its standard library, its `widget.new` and its Markdown parser, over the same campaign. It drives the bar, marks, uses and Undo, a query on the Session Table, a book build, DM-only text, whose cases it reads from `tests/dmonly.lua` so the two can't drift apart, and rolls, over the scene `tests/rolls.lua` writes for its own.
+Plain Lua is not Space Lua: `s:gsub(...):sub(2)` works here and fails there. `spacelua/libraries.test.ts` runs the GM libraries in SilverBullet's own interpreter, with its standard library, its `widget.new` and its Markdown parser, over the same campaign. It drives the bar, marks, uses and Undo, a query on the Session Table, a book build, DM-only text, whose cases it reads from `tests/dmonly.lua` so the two can't drift apart, rolls, over the scene `tests/rolls.lua` writes for its own, and the party's level: a fight in versions, DCs that rise and a check that reads them, from `tests/levels.lua`.
 
 It needs a SilverBullet checkout at 2.11:
 

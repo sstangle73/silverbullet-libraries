@@ -1,21 +1,23 @@
 ---
 tags: meta/library
 name: "Library/Storie/GM Party"
-description: "Numbers, hand-outs and fights that follow the party's size: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
+description: "Numbers, hand-outs, fights and DCs that follow the party's size and level: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.2.2"
+version: "1.3.0"
 ---
 
 # GM Party
 
 Write an adventure once, for the party size you design it for, and let its numbers follow the table that plays it. In SilverBullet a number that scales shows your party's value. In print it shows the rule, so the book works for any table.
 
-| On the page, for a party of six | In print |
+| On the page, for a party of six at level 9 | In print |
 |---|---|
 | It holds seven arrows | It holds one more arrow than the party has members, six for a party of five |
 | A camp with room for six | A camp with room for five |
 | Six here: all five finds, with one find shared by two | Nothing: the text itself says how finds are shared |
 | The fight for this party: its creatures, XP and difficulty | The fight for five, and an *Adjusting the Encounter* note with a table for three to seven characters |
+| A fight in versions: the one written for the level nearest theirs, and how the others would go | Every version, each for five characters at its own level, with its own *Adjusting the Encounter* |
+| DC 17 | DC 15, as written for levels 1 to 4 |
 
 The page side needs nothing else. For print, GM Book 1.5 or later prints each of these in its general form, and GM Kit 2.2 or later puts your party's numbers into the copies it publishes to players.
 
@@ -36,6 +38,8 @@ A party page's frontmatter:
     ---
 
 Counts and story numbers follow everyone in the party. Fights and one-each hand-outs follow the characters here tonight.
+
+**The party's level** is the average level of the characters here tonight, rounded to the nearest. It picks a fight's version and sets a DC. Before the character pages exist, it is the party page's `level`: change that when everyone levels up. In an adventure space on its own there is no level, so a fight shows every version as written, and a DC shows as written. `party.level()` gives it, or nil.
 
 On a DM page, `${party.summary()}` shows the party, who is here, and what a fight for them can spend.
 
@@ -129,6 +133,75 @@ For the whole fight, `difficulty` is what it is meant to be: low, moderate or hi
 
 Put a fight on a line of its own, since it prints as paragraphs and a table.
 
+## Fights by level
+
+A fight the party might reach at more than one level, as in an adventure whose parts can be played in any order, can come in versions, one for each level it might be met at. More of the same creatures only goes so far: past a point, a crowd of weak creatures only gives the party more targets. So each version names the creatures that belong at its level.
+
+    ${party.fight { "The barrow", difficulty = "moderate",
+      { level = 3,
+        {1, "wight", cr = 3},
+        {1, "warhorse skeleton", cr = "1/2"},
+        {6, "skeleton", cr = "1/4", step = 4},
+      },
+      { level = 6,
+        {1, "wraith", cr = 5},
+        {2, "wight", cr = 3, step = 1, min = 1},
+        {4, "skeleton", cr = "1/4"},
+      },
+    }}
+
+Each version is `{ level = ..., creatures }`, with its creatures written as in any fight, counts for the adventure's party and all. The fight's name and settings are every version's, and a version can give its own `difficulty` and `note`. The creatures go inside the versions: a fight has versions or creatures of its own, not both.
+
+**A creature in more than one version** can be stronger in each, like a lieutenant the party might meet at any of several levels. Give it the CR it has in that version. Its page then carries a stat block for each level, and lists every CR it runs at: GM Bestiary 1.1 or later reads `cr: ["3", "5"]` and flags only a CR that isn't there.
+
+**On the page** it runs the version written for the level nearest the party's, the lower of two as near, and shows it as it shows any fight, for the characters here tonight. The others follow, each with its creatures, its XP and its difficulty for your party, so you can see what running another would do. With no party level, as in an adventure space on its own, it shows every version as written.
+
+**In print** the general rule comes first, then each version as any fight prints: its creatures, difficulty and XP for the adventure's party at its level, then its own *Adjusting the Encounter* and table.
+
+    **The barrow.** Two versions, for level 3 and level 6 characters: run the one nearest your party's level.
+
+    **Level 3.** A wight, a warhorse skeleton and six skeletons: a moderate-difficulty encounter for five level 3 characters (1,100 XP).
+
+    **Adjusting the Encounter.** For each character fewer than five, remove four skeletons; for each one more, add four.
+
+    | Characters | Skeletons | XP | Difficulty |
+    |---|---|---|---|
+    | 3 | 0 | 800 | High |
+    | 4 | 2 | 900 | Moderate |
+    | 5 | 6 | 1,100 | Moderate |
+    | 6 | 10 | 1,300 | Moderate |
+    | 7 | 14 | 1,500 | Moderate |
+
+    **Level 6.** A wraith, two wights and four skeletons: a moderate-difficulty encounter for five level 6 characters (3,400 XP).
+
+    **Adjusting the Encounter.** For each character fewer than five, remove a wight; for each one more, add one. Keep at least one wight.
+
+    | Characters | Wights | XP | Difficulty |
+    |---|---|---|---|
+    | 3 | 1 | 2,700 | Moderate |
+    | 4 | 1 | 2,700 | Moderate |
+    | 5 | 2 | 3,400 | Moderate |
+    | 6 | 3 | 4,100 | Moderate |
+    | 7 | 4 | 4,800 | Moderate |
+
+The line of creatures with pages of their own comes after the rule, once for every version. A fight with one version is a fight at that level.
+
+## DCs by level
+
+A check the party can meet at any level can keep its odds as they grow. `party.dc(15)` is a DC written for characters of levels 1 to 4. It rises by one at levels 5, 9, 13 and 17, where the proficiency bonus does, so a character proficient in the check has the same chance of it at any level.
+
+    **Wisdom (Perception)**, DC ${party.dc(15)}, to see the tripwire before someone finds it.
+
+| Level | 1–4 | 5–8 | 9–12 | 13–16 | 17–20 |
+|---|---|---|---|---|---|
+| `party.dc(10)` | 10 | 11 | 12 | 13 | 14 |
+| `party.dc(15)` | 15 | 16 | 17 | 18 | 19 |
+| `party.dc(20)` | 20 | 21 | 22 | 23 | 24 |
+
+On the page it shows your party's DC, 17 at level 9, and in print the DC as written, 15. A book that uses it says once, with its rules, that its DCs rise with the proficiency bonus. With no party level, as in an adventure space on its own, it shows the DC as written. Hover over it to see both.
+
+A rung of a check can be written the same way, `**${party.dc(15)}**`, and GM Kit 3.7 or later reads it as the 15 rung and shows the party's DC when it asks how high they rolled. `party.dcRise()` is how far this party's DCs rise, and `party.dcRise(9)` how far they rise at level 9.
+
 ## The rules it uses
 
 The 2024 encounter rules: choose a difficulty, look up the XP budget per character for each character's level, add them up, and spend that on creatures at their XP. There are no multipliers. Where the characters' levels differ, each is looked up at its own level, which is the rule as written when they are all the same.
@@ -139,7 +212,7 @@ The 2024 encounter rules: choose a difficulty, look up the XP budget per charact
 
 On the page each of these is a widget: HTML with its tooltip, and the same text as its Markdown face. SilverBullet draws a table from the Markdown faces of the expressions in it, and its Copy button and Baked Sections use them too, so all of those get your party's numbers. GM Kit 2.2 puts the Markdown face into the copies it publishes, so players see their own party's numbers. A hint from `party.each` has an empty Markdown face, so it never reaches them. A fight's Markdown face is the fight as printed.
 
-GM Book 1.5 evaluates each expression with `party` standing for `party.printed`, which gives the rule, the adventure's number, nothing for a hint, and the fight for the adventure's party. This library puts `party.printed` in `gmbook.printers`, where GM Book looks for it.
+GM Book 1.5 evaluates each expression with `party` standing for `party.printed`, which gives the rule, the adventure's number, nothing for a hint, the fight for the adventure's party, every version of a fight in versions, and a DC as written. This library puts `party.printed` in `gmbook.printers`, where GM Book looks for it.
 
 Baked Sections alone couldn't do this: they bake whole blocks, never a number in the middle of a sentence.
 
@@ -154,6 +227,10 @@ Baked Sections alone couldn't do this: they bake whole blocks, never a number in
 The XP Budget per Character and Experience Points by Challenge Rating tables below come from the SRD 5.2.1. A book that prints them carries the same statement:
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## Changes in 1.3
+
+**The party's level.** A fight can come in versions, each with its own creatures for one level: the page runs the version nearest the party's level and shows how the others would go, and print gives every version with the rule for choosing one. `party.dc` gives a DC that rises with the party's level, as the proficiency bonus does. `party.level()` is the party's level, and The Party's summary says how far its DCs rise.
 
 ## Changes in 1.2.2
 
@@ -337,10 +414,33 @@ function party.refresh()
   party.cached = nil
 end
 
+-- The party's level: the average level of the characters here tonight, or
+-- of everyone when nobody is, rounded to the nearest. Nil when nobody has
+-- a level, as in an adventure space on its own.
+function party.level(p)
+  p = p or party.get()
+  local function average(members)
+    local sum, n = 0, 0
+    for _, m in ipairs(members) do
+      if m.level then sum, n = sum + m.level, n + 1 end
+    end
+    if n == 0 then return nil end
+    return math.floor(sum / n + 0.5)
+  end
+  return average(p.here) or average(p.members)
+end
+
 local function whence(p)
   if p.source == "characters" then return "counted from the character pages" end
   if p.source == "party" then return "from " .. p.page end
   return "the party the adventure is written for"
+end
+
+-- Where the party's level comes from, for a note.
+local function levelWhence(p)
+  if p.source == "characters" then return "from the character pages" end
+  if p.source == "party" then return "from " .. p.page end
+  return "as written"
 end
 
 -- A value on the page: the HTML with its tooltip, and the same text as the
@@ -510,6 +610,43 @@ function party.each(count, one, many)
   end
   return face(text, "One " .. one .. " for each character here tonight, from the top of the list. " ..
     "Party of " .. party.word(p.size) .. ", " .. whence(p) .. ". Prints nothing.", "gmparty-each", "")
+end
+
+------------------------------------------------------------------ DCs
+
+-- How far a DC written for levels 1 to 4 rises at a level: one for each
+-- step the proficiency bonus takes, at levels 5, 9, 13 and 17. With no
+-- level given, the party's; with no party level, none.
+function party.dcRise(level)
+  if level == nil then level = party.level() end
+  if type(level) ~= "number" then return 0 end
+  level = math.max(1, math.min(20, math.floor(level)))
+  return math.floor((level - 1) / 4)
+end
+
+-- A DC that follows the party's level. Returns this party's DC, the DC as
+-- written, which is what prints, and a note.
+local function dcForms(spec)
+  local written = spec
+  if type(spec) == "table" then written = spec[1] end
+  if type(written) ~= "number" or written ~= math.floor(written) then
+    error("party.dc takes the DC as written for levels 1 to 4: party.dc(15)")
+  end
+  local p = party.get()
+  local level = party.level(p)
+  local printed = string.format("%d", written)
+  local live = string.format("%d", written + party.dcRise(level))
+  local note = "DC " .. printed .. " as written, for levels 1 to 4, one more at levels 5, 9, 13 and 17"
+  if level then
+    note = note .. ": " .. live .. " for this party at level " .. string.format("%d", level) ..
+      ", " .. levelWhence(p)
+  end
+  return live, printed, note .. ". Prints as “" .. printed .. "”."
+end
+
+function party.dc(spec)
+  local live, _, note = dcForms(spec)
+  return face(live, note)
 end
 
 ------------------------------------------------------------------ the rules
@@ -838,8 +975,73 @@ local function creaturesLive(spec)
   return dom.div(parts)
 end
 
--- The fight as printed: for the adventure's party, then how to adjust it.
-function party.fightPrint(spec)
+------------------------------------------------------------------ versions by level
+
+-- Whether an entry in a fight's list is a version, { level = 6, ... }, and
+-- not a creature, {count, name, ...}.
+local function isVersion(v)
+  return type(v) == "table" and v.level ~= nil and type(v[1]) ~= "number"
+end
+
+-- A fight's versions, lowest level first, each a fight of its own at one
+-- level: the fight's name and settings, with the version's level and
+-- creatures, and its own difficulty and note where it gives them. A fight
+-- written without versions is its own only version, and the second value
+-- says whether it has versions.
+function party.versions(spec)
+  local out = {}
+  for _, v in ipairs(spec) do
+    if isVersion(v) then
+      local one = {
+        title = titleOf(spec), level = v.level,
+        difficulty = v.difficulty or spec.difficulty, note = v.note or spec.note,
+        table = spec.table, size = spec.size, creatures = spec.creatures,
+      }
+      for _, c in ipairs(v) do one[#one + 1] = c end
+      out[#out + 1] = one
+    end
+  end
+  if #out == 0 then return { spec }, false end
+  table.sort(out, function(a, b) return a.level < b.level end)
+  return out, true
+end
+
+-- The version written for the level nearest this one: the lower of two as
+-- near, since the versions come lowest first.
+local function nearest(versions, level)
+  local best
+  for _, v in ipairs(versions) do
+    if not best or math.abs(v.level - level) < math.abs(best.level - level) then best = v end
+  end
+  return best
+end
+
+-- "level 3 and level 6"
+local function levelList(versions)
+  local items = {}
+  for i, v in ipairs(versions) do items[i] = "level " .. string.format("%d", v.level) end
+  return andList(items)
+end
+
+-- The creatures of every version that name a page, each page once, for the
+-- one line of creatures a fight in versions prints.
+local function everyCreature(spec, versions)
+  local all, seen = { creatures = spec.creatures }, {}
+  for _, v in ipairs(versions) do
+    for _, c in ipairs(v) do
+      if type(c) == "table" and c.page and not seen[c.page] then
+        seen[c.page] = true
+        all[#all + 1] = c
+      end
+    end
+  end
+  return all
+end
+
+-- One fight at one level as printed, for the adventure's party, as lines:
+-- `head` is the name it opens with, and `withCreatures` whether the line of
+-- creatures with pages of their own comes next.
+local function printOne(spec, head, withCreatures)
   local written, level = writtenFor(spec), spec.level
   local roster = party.roster(spec, written)
   local xp = totalXP(roster)
@@ -847,14 +1049,16 @@ function party.fightPrint(spec)
   local what = rated == "above" and "an encounter beyond high difficulty" or
     ("a " .. rated .. "-difficulty encounter")
   local lines = {
-    "**" .. (titleOf(spec) or "Creatures") .. ".** " .. capital(rosterText(roster, true)) ..
+    "**" .. head .. ".** " .. capital(rosterText(roster, true)) ..
       ": " .. what .. " for " .. party.word(written) .. " level " .. string.format("%d", level) ..
       " characters (" .. party.digits(xp) .. " XP).",
   }
-  local creatures = creaturesPrint(spec)
-  if creatures then
-    lines[#lines + 1] = ""
-    lines[#lines + 1] = creatures
+  if withCreatures then
+    local creatures = creaturesPrint(spec)
+    if creatures then
+      lines[#lines + 1] = ""
+      lines[#lines + 1] = creatures
+    end
   end
   lines[#lines + 1] = ""
   lines[#lines + 1] = "**Adjusting the Encounter.** " .. party.adjustments(spec)
@@ -874,6 +1078,33 @@ function party.fightPrint(spec)
       cells[#cells + 1] = party.digits(r.xp)
       cells[#cells + 1] = LABEL[r.rated]
       lines[#lines + 1] = "| " .. table.concat(cells, " | ") .. " |"
+    end
+  end
+  return lines
+end
+
+-- The fight as printed: for the adventure's party, then how to adjust it.
+-- A fight in versions gives the rule for choosing one, the creatures with
+-- pages of their own, then each version in turn.
+function party.fightPrint(spec)
+  local versions, many = party.versions(spec)
+  local title = titleOf(spec) or "Creatures"
+  if not many or #versions == 1 then
+    return table.concat(printOne(versions[1], title, true), "\n")
+  end
+  local lines = {
+    "**" .. title .. ".** " .. capital(party.word(#versions)) .. " versions, for " ..
+      levelList(versions) .. " characters: run the one nearest your party's level.",
+  }
+  local creatures = creaturesPrint(everyCreature(spec, versions))
+  if creatures then
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = creatures
+  end
+  for _, v in ipairs(versions) do
+    lines[#lines + 1] = ""
+    for _, line in ipairs(printOne(v, "Level " .. string.format("%d", v.level), false)) do
+      lines[#lines + 1] = line
     end
   end
   return table.concat(lines, "\n")
@@ -923,26 +1154,21 @@ local function chip(rated)
   return dom.span { class = "gmparty-diff gmparty-diff-" .. rated, __rawText = PIPS[rated] .. " " .. LABEL[rated] }
 end
 
--- The fight as the page shows it: for the characters here tonight.
-function party.fightLive(spec)
-  local p = party.get()
-  local written = writtenFor(spec)
-  local levels = {}
-  for i, m in ipairs(p.here) do levels[i] = m.level or spec.level end
-  local n = #levels
-  local parts = { class = "gmparty-fight" }
-  local function add(node) parts[#parts + 1] = node end
-  add(dom.div {
+-- The head of a fight's box: its name, then a note.
+local function liveHead(spec, note)
+  return dom.div {
     class = "gmparty-fight-head",
     dom.strong { __rawText = titleOf(spec) or "Encounter" },
-    text(" · " .. (spec.difficulty and ("a " .. spec.difficulty .. " fight ") or "") .. "for " ..
-      party.word(written) .. " level " .. string.format("%d", spec.level) .. " characters, as written",
-      "gmparty-note"),
-  })
-  if n == 0 then
-    add(dom.div { text("Nobody here tonight.") })
-    return widget.new { html = dom.div(parts).outerHTML, markdown = party.fightPrint(spec), display = "block" }
-  end
+    text(note, "gmparty-note"),
+  }
+end
+
+-- What a fight at one level shows for characters at these levels, added
+-- with add: who and the creatures, with their XP; the difficulty against
+-- the budgets; the creatures' pages; what to watch for; and a table of
+-- other party sizes.
+local function liveBody(spec, p, levels, add)
+  local n = #levels
   local roster = party.roster(spec, n)
   local xp = totalXP(roster)
   local rated = party.rate(xp, levels)
@@ -982,6 +1208,87 @@ function party.fightLive(spec)
     body[#body + 1] = dom.tr(cells)
   end
   add(dom.table { dom.thead { dom.tr(headCells) }, dom.tbody(body) })
+end
+
+-- A fight at one level on the page, for the characters here tonight, as
+-- the parts of its box.
+local function liveOne(spec, p)
+  local written = writtenFor(spec)
+  local levels = {}
+  for i, m in ipairs(p.here) do levels[i] = m.level or spec.level end
+  local parts = { class = "gmparty-fight" }
+  local function add(node) parts[#parts + 1] = node end
+  add(liveHead(spec, " · " .. (spec.difficulty and ("a " .. spec.difficulty .. " fight ") or "") .. "for " ..
+    party.word(written) .. " level " .. string.format("%d", spec.level) .. " characters, as written"))
+  if #levels == 0 then
+    add(dom.div { text("Nobody here tonight.") })
+  else
+    liveBody(spec, p, levels, add)
+  end
+  return parts
+end
+
+-- A fight in versions on the page: the version for the level nearest the
+-- party's, for the characters here tonight, then how each of the others
+-- would go for them. With no party level, every version as written.
+local function liveVersions(spec, versions, p)
+  local parts = { class = "gmparty-fight" }
+  local function add(node) parts[#parts + 1] = node end
+  add(liveHead(spec, " · " .. (spec.difficulty and ("a " .. spec.difficulty .. " fight, ") or "") ..
+    "in versions for " .. levelList(versions) .. " characters"))
+  if #p.here == 0 then
+    add(dom.div { text("Nobody here tonight.") })
+    return parts
+  end
+  local level = party.level(p)
+  if not level then
+    if p.source ~= "book" then
+      add(dom.div { text("Give the party a level to see the version for it. Each as written:", "gmparty-note") })
+    end
+    for _, v in ipairs(versions) do
+      add(dom.div { class = "gmparty-version", dom.strong { __rawText = "Level " .. string.format("%d", v.level) } })
+      liveBody(v, p, levelsFor(#p.here, v.level), add)
+    end
+    return parts
+  end
+  local chosen = nearest(versions, level)
+  local levels = {}
+  for i, m in ipairs(p.here) do levels[i] = m.level or level end
+  add(dom.div {
+    class = "gmparty-version",
+    dom.strong { __rawText = "▶ Level " .. string.format("%d", chosen.level) },
+    text(chosen.level == level and ", your party's level" or
+      (", the nearest to your party's level " .. string.format("%d", level)), "gmparty-note"),
+  })
+  liveBody(chosen, p, levels, add)
+  local others = { class = "gmparty-others" }
+  for _, v in ipairs(versions) do
+    if v ~= chosen then
+      local roster = party.roster(v, #levels)
+      local xp = totalXP(roster)
+      others[#others + 1] = dom.li {
+        dom.strong { __rawText = "Level " .. string.format("%d", v.level) },
+        text(": " .. rosterText(roster, true) .. ", " .. party.digits(xp) .. " XP, "),
+        chip(party.rate(xp, levels)),
+        text(" for your party", "gmparty-note"),
+      }
+    end
+  end
+  add(dom.div { class = "gmparty-version", text("The other versions", "gmparty-note") })
+  add(dom.ul(others))
+  return parts
+end
+
+-- The fight as the page shows it: for the characters here tonight.
+function party.fightLive(spec)
+  local p = party.get()
+  local versions, many = party.versions(spec)
+  local parts
+  if not many or #versions == 1 then
+    parts = liveOne(versions[1], p)
+  else
+    parts = liveVersions(spec, versions, p)
+  end
   -- As text, like face(): identical fights on a page share one result.
   return widget.new { html = dom.div(parts).outerHTML, markdown = party.fightPrint(spec), display = "block" }
 end
@@ -990,13 +1297,47 @@ local function checkFight(spec)
   if type(spec) ~= "table" then
     error('party.fight takes a table: { level = 3, {6, "skeleton", cr = "1/4"} }')
   end
-  if type(spec.level) ~= "number" then
-    error("party.fight: give the level the fight is written for, like level = 3")
+  local given = 0
+  for _, v in ipairs(spec) do
+    if isVersion(v) then given = given + 1 end
   end
-  if spec.difficulty and not COLUMN[spec.difficulty] then
-    error("party.fight: the difficulty is low, moderate or high")
+  if given == 0 then
+    if type(spec.level) ~= "number" then
+      error("party.fight: give the level the fight is written for, like level = 3")
+    end
+    if spec.difficulty and not COLUMN[spec.difficulty] then
+      error("party.fight: the difficulty is low, moderate or high")
+    end
+    party.creatures(spec)
+    return
   end
-  party.creatures(spec)
+  if spec.level ~= nil then
+    error("party.fight: a fight in versions gives each version its own level, not the fight: { level = 6, ... }")
+  end
+  local seen = {}
+  for _, v in ipairs(spec) do
+    if type(v) == "table" then
+      if not isVersion(v) then
+        error('party.fight: in a fight with versions, every creature goes inside a version: ' ..
+          '{ level = 6, {1, "wight", cr = 3} }')
+      end
+      if type(v.level) ~= "number" or v.level ~= math.floor(v.level) then
+        error("party.fight: give each version the level it is written for, like level = 6")
+      end
+      local key = string.format("%d", v.level)
+      if seen[key] then error("party.fight: two versions for level " .. key) end
+      seen[key] = true
+      local difficulty = v.difficulty or spec.difficulty
+      if difficulty and not COLUMN[difficulty] then
+        error("party.fight: the difficulty is low, moderate or high")
+      end
+    end
+  end
+  for _, v in ipairs(party.versions(spec)) do
+    if #party.creatures(v) == 0 then
+      error("party.fight: the level " .. string.format("%d", v.level) .. " version has no creatures")
+    end
+  end
 end
 
 -- A fight, written for the adventure's party. See "Fights" above. Its
@@ -1028,6 +1369,8 @@ party.printed = setmetatable({
     checkFight(spec)
     return party.fightPrint(spec)
   end,
+  -- a DC as written, for levels 1 to 4: the book says once how they rise
+  dc = function(spec) return (select(2, dcForms(spec))) end,
 }, { __index = party })
 
 gmbook = gmbook or {}
@@ -1073,6 +1416,11 @@ function party.summary()
       party.digits(party.budget(levels, "high")) .. " at High."
   elseif not known then
     lines[#lines + 1] = "Give every character a level to see what a fight for them can spend."
+  end
+  local rise = party.dcRise(party.level(p))
+  if rise > 0 then
+    lines[#lines + 1] = "At level " .. string.format("%d", party.level(p)) .. ", a DC from `party.dc` is " ..
+      party.word(rise) .. " more than written."
   end
   return widget.new { markdown = table.concat(lines, "\n\n"), display = "block" }
 end
@@ -1126,6 +1474,18 @@ end
 
 .gmparty-warn li::marker {
   content: "⚠ ";
+}
+
+/* A fight in versions: a rule above each version's part of the box. */
+.gmparty-fight > .gmparty-version {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--subtle-background-color);
+}
+
+.gmparty-others {
+  margin: 4px 0;
+  padding-left: 1.4em;
 }
 
 .gmparty-fight table {

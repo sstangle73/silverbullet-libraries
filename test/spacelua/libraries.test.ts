@@ -54,6 +54,9 @@ function loadTree(root: string): Map<string, string> {
 
 function scalar(v: string): unknown {
   if (v === "") return null;
+  // YAML flow lists, as a creature's CRs are: ["3", "5"]
+  const list = v.match(/^\[(.*)\]$/);
+  if (list) return list[1].split(",").map((s) => s.trim()).filter((s) => s !== "").map(scalar);
   if (v === "true") return true;
   if (v === "false") return false;
   if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
@@ -578,3 +581,73 @@ test("a rung the page calls late, not lost is owed until a roll reaches it", asy
   expect(env.get("__o")).toBe("Nothing is owed.");
   expect(printed).toEqual([]);
 }, 60000);
+
+// The party's level, in SilverBullet's own Lua: a fight in versions, a DC
+// that rises with it, a creature page that lists every CR it runs at, and a
+// check whose rungs are written through party.dc. The fight, what it
+// prints and the scene are tests/levels.lua's, read from that file so the
+// two can't drift apart.
+test("a fight in versions, DCs by level, and a check that reads them", async () => {
+  const { env, run, pages, printed, picks, notes, state } = await setup(ROOT);
+  const src = readFileSync(join(ROOT, "test", "tests", "levels.lua"), "utf-8");
+  const lua = (name: string, end: string) => {
+    const from = src.indexOf("local " + name + " = ");
+    return src.slice(from + "local ".length, src.indexOf(end, from) + end.length);
+  };
+  const at = src.indexOf("local VAULT_TEXT = [==[");
+  const vault = src.slice(src.indexOf("[==[", at) + 4, src.indexOf("]==]", at));
+  const VAULT = "Adventure/Campaign/Act I/Scene 6";
+  pages.set(VAULT, vault);
+  const level = (n: number) =>
+    pages.set("The Party", pages.get("The Party")!.replace(/\nlevel: \d+\n/, `\nlevel: ${n}\n`));
+  await run(lua("BARROW_LEVELS", "\n}\n") + lua("BARROW_LEVELS_PRINTED", '}, "\\n")\n'));
+
+  level(5);
+  await run(`party.refresh()
+__print = party.fightPrint(BARROW_LEVELS)
+__live = party.fight(BARROW_LEVELS).html
+__dc = party.dc(15).markdown
+__written = party.printed.dc(15)`);
+  expect(env.get("__print")).toBe(env.get("BARROW_LEVELS_PRINTED"));
+  expect(env.get("__live")).toContain("▶ Level 6");
+  expect(env.get("__live")).toContain(", the nearest to your party's level 5");
+  expect(env.get("__live")).toContain("Five here at level 5: a wraith, two wights and four skeletons, 3,400 XP.");
+  expect(env.get("__live")).toContain("Level 3");
+  expect(env.get("__dc")).toBe("16");
+  expect(env.get("__written")).toBe("15");
+
+  level(9);
+  await run(`party.refresh()
+local checks = gm.checks("${VAULT}")
+__names = {}
+for i, c in ipairs(checks) do __names[i] = c.name end
+__names = table.concat(__names, " | ")
+__bands = {}
+for i, b in ipairs(gm.bands(checks[1].rungs, checks[1].rise)) do __bands[i] = b.label end
+__bands = table.concat(__bands, " | ")
+__late = checks[3].late
+__insight = gm.bands(checks[4].rungs, checks[4].rise)[2].label`);
+  expect(env.get("__names")).toBe(
+    "Wisdom (Perception) | Strength (Athletics), DC 17 | Intelligence (Arcana) | Wisdom (Insight) | " +
+      "Dexterity (Stealth), group, DC 14 | Intelligence (Investigation) | Wisdom (Survival), DC 15",
+  );
+  expect(env.get("__bands")).toBe("Under 12 | 12 to 16 | 17 or more");
+  expect(env.get("__late")).toBe("The next time they see the caster, they know.");
+  expect(env.get("__insight")).toBe("22 or more");
+
+  state.current = VAULT;
+  picks.push("Wisdom (Perception)", "17 or more");
+  await run(`gm.logRoll()`);
+  expect(notes.filter((n) => n.message.startsWith("GM Kit:"))).toEqual([]);
+  expect(notes.at(-1)!.message).toBe("Wisdom (Perception), 17 or more: three things they know, logged to session 1.");
+  expect(pages.get("Sessions/Session 1")).toContain("  - A second keyhole, under the plate: DC 22 to pick\n");
+  expect(pages.get("State/Scenes/Act I/Scene 6")).toContain("roll_wisdom_perception: 15\n");
+
+  pages.set("Adventure/World/Monsters/Barrow Lord", '---\ntype: monster\ncr: ["3", "5"]\n---\n\n# Barrow Lord\n');
+  await run(`bestiary.refresh()
+__five = tostring(party.creatureRef("World/Monsters/Barrow Lord", "barrow lord", 5).warn)
+__four = party.creatureRef("World/Monsters/Barrow Lord", "barrow lord", 4).warn`);
+  expect(env.get("__five")).toBe("nil");
+  expect(env.get("__four")).toBe("The barrow lord is CR 4 here, and CR 3 or 5 on Barrow Lord.");
+  expect(printed).toEqual([]);
+}, 120000);
