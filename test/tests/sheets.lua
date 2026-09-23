@@ -538,35 +538,66 @@ test("sheets: text from the page never reaches the browser as HTML", "dm", funct
   page(name, text)
   local w = sheets.draw(name)
   ok(svgOf(w.html), "drawn")
+  -- nothing is read as a tag: the drawing sets it all as XML-escaped text,
+  -- and in the text after it every < is escaped with a backslash, which
+  -- SilverBullet renders as the character (it shows &lt; as written)
+  local function bare(s)
+    for slashes in s:gmatch("(\\*)<") do
+      if #slashes % 2 == 0 then return true end
+    end
+    return false
+  end
+  local function after(face)
+    return face:match('<div class="md">(.-)</div>') or face:match("</svg>\n</div>(.*)$")
+  end
   local faces = { html = w.html, markdown = w.markdown, printed = sheets.printed.draw(name) }
   for which, face in pairs(faces) do
     for _, tag in ipairs({ "<form", "<input", "<img", "<meta", "<b>" }) do
-      hasnt(face, tag, which)
+      hasnt(svgOf(face), tag, which .. "'s drawing")
     end
+    local text = after(face)
+    ok(text and text:find("Class Features", 1, true), which .. ": the text after the drawing")
+    ok(not bare(text), which .. ": a < left unescaped")
   end
   -- what the page says is all there, as text
   local md = w.markdown
-  has(md, "## Class Features\n\n### &lt;form action=x&gt;&lt;input name=pw&gt;&lt;/form&gt;\n")
-  has(md, "### &amp;lt;b&amp;gt;\n", "an entity shows as itself")
-  has(md, "**Level 1 (2 slots).** &lt;form action=x&gt;")
-  has(md, "&lt;img src=x&gt; (&amp;lt;b&amp;gt;, &lt;form")
-  has(md, "**Cantrips.** &lt;img src=x&gt;.")
-  has(md, "## Equipment\n\n&lt;img src=x&gt;; &amp;lt;b&amp;gt;.")
-  has(md, "**Attuned.** &lt;form action=x&gt;")
-  has(md, "**&lt;img src=x&gt;.** &lt;meta http-equiv=")
-  has(md, "## Attacks\n\n***&lt;img src=x&gt;.*** &lt;form action=x&gt;")
-  has(md, "## Resources\n\n***&lt;img src=x&gt;.*** 2; back after &lt;meta")
-  has(md, "**Languages.** &lt;meta http-equiv=")
-  -- and the library's own Markdown still works round it
-  has(md, "***Hidden.*** &lt;img src=x&gt; and &amp;lt;b&amp;gt;.\n\n&lt;meta")
-  has(md, "\n- a list item &lt;b&gt;bold&lt;/b&gt;\n")
+  has(md, "## Class Features\n\n### \\<form action=x\\>\\<input name=pw\\>\\</form\\>\n")
+  has(md, "### \\&lt;b\\&gt;\n", "an entity in a name shows as itself")
+  has(md, "**Level 1 (2 slots).** \\<form action=x\\>")
+  has(md, "\\<img src=x\\> (\\&lt;b\\&gt;, \\<form")
+  has(md, "**Cantrips.** \\<img src=x\\>.")
+  has(md, "## Equipment\n\n\\<img src=x\\>; \\&lt;b\\&gt;.")
+  has(md, "**Attuned.** \\<form action=x\\>")
+  has(md, "**\\<img src=x\\>.** \\<meta http-equiv=")
+  has(md, "## Attacks\n\n***\\<img src=x\\>.*** \\<form action=x\\>")
+  has(md, "## Resources\n\n***\\<img src=x\\>.*** 2; back after \\<meta")
+  has(md, "**Languages.** \\<meta http-equiv=")
+  -- a feature's text is Markdown, its bold and lists kept, and only a < that
+  -- would open a tag escaped
+  has(md, "***Hidden.*** \\<img src=x> and &lt;b&gt;.\n\n\\<meta")
+  has(md, "\n- a list item \\<b>bold\\</b>\n")
   -- the drawing sets it all as text too, the name included
   local t = texts(svgOf(w.html))
   has(t, "&lt;img src=x&gt; Reed")
   has(t, "&lt;form action=x&gt;")
   has(svgOf(w.html), 'aria-label="Character sheet: &lt;img src=x&gt; Reed"')
   -- a message that names a page is text as well
-  hasnt(sheets.draw("Party/" .. IMG).markdown, "<img")
+  ok(not bare(sheets.draw("Party/" .. IMG).markdown), "the message's page name")
+end)
+
+test("sheets: rules text GM Beyond escaped already is left as it is, and a lone & stays", "dm", function()
+  -- GM Beyond writes a feature's rules text as Markdown with its < escaped;
+  -- the sheet must not escape it again, or the page would show backslashes
+  page("Party/Pip", table.concat({
+    "---", "type: pc", "level: 1", "class: Wizard", "species: Human",
+    "str: 8", "dex: 14", "con: 12", "int: 16", "wis: 10", "cha: 10",
+    "features:", "  - name: Salt & Pepper",
+    "    text: 'Deals 1d4 \\<fire\\> damage, **twice**.'",
+    "---", "", "# Pip", "" }, "\n"))
+  local md = sheets.draw("Party/Pip").markdown
+  has(md, "### Salt & Pepper\n", "a lone & is no entity and stays as it is")
+  has(md, "Deals 1d4 \\<fire\\> damage, **twice**.", "escaped once, bold kept")
+  hasnt(md, "\\\\<", "never escaped twice")
 end)
 
 test("sheets: a value on lines of its own is drawn on one, and the drawing stays one block", "dm", function()

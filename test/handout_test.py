@@ -6,10 +6,12 @@ usage: python test/handout_test.py
 The handout works the sheet's numbers out in Python, so they are held here
 against GM Sheets' own Lua, on the same pages: the made-up ranger in
 tests/sheets.lua, with and without numbers written over the sums, and the
-two made-up D&D Beyond characters as GM Beyond imports them. Filling is
-tested on a blank stand-in with the sheet's size, so no test needs WotC's
-PDF; if it has been fetched into the cache, it is filled too.
+made-up D&D Beyond characters as GM Beyond imports them. Filling is tested
+on a blank stand-in with the sheet's size, so no test needs WotC's PDF; if
+it has been fetched into the cache, it is filled too. Everything the script
+writes goes to a temporary folder.
 """
+import contextlib
 import io
 import pathlib
 import sys
@@ -41,19 +43,24 @@ def ranger():
     return src[src.index("[==[", at) + 4:src.index("]==]", at)]
 
 
+IMPORTED = {"1001": "Bram Holloway", "1002": "Ilse Marrow", "1003": "Cass Ironwood",
+            "1004": "Wren Ashdown", "1005": "Sorrel Fenwick"}
+
+
 def imported(L):
-    """Bram's and Ilse's pages as GM Beyond writes them."""
+    """The made-up D&D Beyond characters' pages as GM Beyond writes them."""
     L.execute('reset("dm")')
     L.execute('''
-for _, name in ipairs({ "bram", "ilse" }) do
-  local body = DDB[name]
+__imported = {}
+for name, body in pairs(DDB) do
   H.responses[gmb.endpoint .. tostring(body.data.id)] = { ok = true, status = 200, body = body }
 end
-__bram = H.pages[gmb.import("1001")]
-__ilse = H.pages[gmb.import("1002")]
+for _, id in ipairs({ "1001", "1002", "1003", "1004", "1005" }) do
+  __imported[id] = H.pages[gmb.import(id)]
+end
 ''')
-    g = L.globals()
-    return {"Bram Holloway": g.__bram, "Ilse Marrow": g.__ilse}
+    pages = L.globals().__imported
+    return {name: pages[id] for id, name in IMPORTED.items()}
 
 
 def lua_values(L, text):
@@ -156,7 +163,97 @@ def main():
         except SystemExit:
             pass
         made = sorted(p.name for p in out.glob("*.pdf"))
-        check("one handout per pc page", made, ["Bram Holloway.pdf", "Ilse Marrow.pdf", "Tamsin Reed.pdf", "Tamsin Written.pdf"])
+        check("one handout per pc page", made, sorted(f"{name}.pdf" for name in pages))
+
+        # a key present but left blank prints nothing, never "None"
+        d = handout.read_page(space, "Party/Tamsin Reed")
+        for k in ("subclass", "background", "species", "class", "ac", "hp", "hit_dice", "creature_size", "speed"):
+            d[k] = None
+        d["attacks"] = [{"name": None, "hit": None, "damage": None, "notes": None}, None]
+        d["resources"] = [{"name": "Luck", "uses": None, "reset": None}]
+        d["features"] = [{"name": None, "text": None}]
+        d["want"] = None
+        filled = PdfReader(io.BytesIO(handout.fill(template, d, "Tamsin Reed", [("want", "Want")])))
+        text = "".join(p.extract_text() for p in filled.pages)
+        check("a blank key prints nothing", "None" in text, False)
+        check("a resource with blank uses keeps its name", "Luck:" in text, True)
+
+        # a letter the sheet's font can't show, as the nearest it can, and said
+        d = handout.read_page(space, "Party/Tamsin Reed")
+        d["species"] = "Wood Elf of Łódź"
+        d["weapons"] = ["Simple", "Dragon 🐉 Bow"]
+        d["features"] = [{"name": "Đurađ's Gift", "text": "Ħope, **twice**."}]
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            filled = PdfReader(io.BytesIO(handout.fill(template, d, "Łucja Dvořák", [])))
+        front = filled.pages[0].extract_text()
+        check("a letter the font lacks, as the nearest it has", "Lucja Dvorák" in front, True)
+        check("the species' too", "Wood Elf of Lódz" in front, True)
+        check("a ? only for what has no near letter", "Dragon ? Bow" in front, True)
+        check("the rules text's too", "Durad's Gift. Hope, twice." in filled.pages[2].extract_text(), True)
+        said = err.getvalue()
+        check("the script says so", 'warning: Łucja Dvořák: the sheet\'s font can\'t show every letter of '
+              '"Łucja Dvořák", so it is printed "Lucja Dvorák"\n' in said, True)
+        check("and says so once", said.count('printed "Lucja Dvorák"'), 1)
+        check("and where it printed a ?", 'printed "Simple, Dragon ? Bow", a ? for what has no near letter' in said, True)
+
+        # Backstory & Personality that outgrows its box: the rest after the sheet, and said
+        d = handout.read_page(space, "Party/Tamsin Reed")
+        extras = [(f"k{i}", f"Key {i}") for i in range(30)]
+        for i in range(30):
+            d[f"k{i}"] = f"value {i}"
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            filled = PdfReader(io.BytesIO(handout.fill(template, d, "Tamsin Reed", extras)))
+        check("the backstory the box had no room for", "Key 29: value 29" in
+              "".join(p.extract_text() for p in filled.pages[2:]), True)
+        check("and a warning", "warning: Tamsin Reed: Backstory & Personality holds more than its box" in
+              err.getvalue(), True)
+
+        # each page's writing given to it through pypdf's public API
+        from pypdf import PageObject
+        given, real = [], PageObject.replace_contents
+
+        def recording(page, content):
+            given.append(content)
+            return real(page, content)
+
+        PageObject.replace_contents = recording
+        try:
+            handout.fill(template, handout.read_page(space, "Party/Tamsin Reed"), "Tamsin Reed", [])
+        finally:
+            PageObject.replace_contents = real
+        # pypdf's merge_page gives pages contents this way too: only the layers' writing counts
+        ours = [c for c in given if hasattr(c, "get_data") and c.get_data().startswith(handout.INK)]
+        check("the sheet's two pages and the extra one, through PageObject.replace_contents", len(ours), 3)
+
+        # saves and skills as GM Sheets may take them, names separated by commas
+        (space / "Party" / "Tamsin Commas.md").write_text(ranger().replace("saves: [str, dex]", "saves: str, dex").replace(
+            "skills: [athletics, nature, perception, stealth, survival]",
+            "skills: athletics, nature, perception, stealth, survival"), encoding="utf-8", newline="\n")
+        py = py_values(space, "Party/Tamsin Commas")
+        check("comma-separated saves and skills read as lists", py, py_values(space, "Party/Tamsin Reed"))
+        commas = (space / "Party" / "Tamsin Commas.md").read_text(encoding="utf-8")
+        lua = lua_values(L, commas)
+        if lua == lua_values(L, ranger()):
+            for k in lua:
+                check(f"Tamsin Commas: {k}", py[k], lua[k])
+        else:
+            print("note: GM Sheets doesn't read comma-separated saves and skills yet, so they weren't held against it")
+
+        # spell slots as a list, a string of numbers, or a map by level
+        check("slots from a list", handout.slot_counts([4, 3, 0, 2]), {1: 4, 2: 3, 4: 2})
+        check("slots from a string", handout.slot_counts("4, 3"), {1: 4, 2: 3})
+        check("slots by level", handout.slot_counts({1: 4, "2": 3, "x": 1}), {1: 4, 2: 3})
+        check("no slots", handout.slot_counts(None), {})
+        layer = handout.Layer()
+        handout.fill_back(layer, {"slots": {1: 4, "2": 3}}, handout.values({}), [], [])
+        check("a map's slots drawn by level", (b"680.80 Td (4) Tj" in layer.data(), b"666.80 Td (3) Tj" in layer.data()),
+              (True, True))
+
+        # the rules text GM Beyond escapes, printed as the words it shows
+        check("an escaped character as itself", handout.plain(
+            r"\<b\> **2 \* 3** \$\{x\} \[\[Secret\]\] a\_b \\ *c*"), r"<b> 2 * 3 ${x} [[Secret]] a_b \ c")
 
     # the real sheet, if it has been fetched
     cached = pathlib.Path("~/.cache/gm-sheets/DnD_2024_Character-Sheet.pdf").expanduser()

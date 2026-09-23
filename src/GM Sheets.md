@@ -429,16 +429,34 @@ local function str(v)
   return tostring(v)
 end
 
--- Text from the page, as the Markdown after the drawn page carries it: an
--- &, < or > in it shows as itself and is never read as HTML. A character
--- imported from D&D Beyond is a player's own text, and SilverBullet keeps
--- a form or a meta tag in what it renders. The library's own Markdown, its
--- bold, headings and lists, goes round this, so it still works.
+-- The characters Markdown, and SilverBullet's own syntax, read as markup: a
+-- tag or a comment, a link, an image or a transclusion, an expression ${...},
+-- a hashtag, emphasis, code, a table's cell, and the backslash that escapes
+-- the rest. The same set as GM Beyond's.
+local MARKUP = "[\\`*_{}%[%]<>#|$]"
+
+-- A name or a value from the page, as the Markdown after the drawn page
+-- carries it: on one line, and every character that would be read as markup
+-- escaped with a backslash, an & that would start an entity too, so a tag, a
+-- link, an image or an expression in it stays words. A character imported
+-- from D&D Beyond is its player's own text, and SilverBullet keeps a form or
+-- a meta tag in what it renders. It renders a backslash escape as the
+-- character but shows an entity such as &lt; as written, so entities won't do.
+-- The library's own Markdown, its bold, headings and lists, goes round this.
 local function safe(v)
-  local s = str(v)
-  s = (s:gsub("&", "&amp;"))
-  s = (s:gsub("<", "&lt;"))
-  return (s:gsub(">", "&gt;"))
+  local s = (str(v):gsub("%c", " "))
+  s = (s:gsub(MARKUP, "\\%0"))
+  return (s:gsub("&(#?%w+;)", "\\&%1"))
+end
+
+-- A paragraph from the page, which is Markdown by design, its bold and its
+-- lists kept: only a < that would open a tag is escaped, and one escaped
+-- already, as GM Beyond writes rules text, is left as it is.
+local function prose(v)
+  return (str(v):gsub("(\\*)<", function(slashes)
+    if #slashes % 2 == 1 then return slashes .. "<" end
+    return slashes .. "\\<"
+  end))
 end
 
 -- An entry of a list that may be a name or a table with one.
@@ -1308,7 +1326,7 @@ function sheets.text(d, v, cut)
       add("### " .. safe(name))
       add("")
       local ps = paragraphs(text)
-      for i, p in ipairs(ps) do ps[i] = lead(safe(p)) end
+      for i, p in ipairs(ps) do ps[i] = lead(prose(p)) end
       if #ps > 0 then block(ps) end
     end
   end

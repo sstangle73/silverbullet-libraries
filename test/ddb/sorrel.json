@@ -1,0 +1,947 @@
+{
+ "id": 0,
+ "success": true,
+ "message": "Character successfully received.",
+ "data": {
+  "id": 1005,
+  "name": "Sorrel Fenwick",
+  "stats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": 15
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": 12
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": 13
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": 10
+   }
+  ],
+  "bonusStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "overrideStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "baseHitPoints": 21,
+  "bonusHitPoints": null,
+  "overrideHitPoints": null,
+  "race": {
+   "fullName": "Wood Elf",
+   "sizeId": 4,
+   "weightSpeeds": {
+    "normal": {
+     "walk": 35,
+     "fly": 0,
+     "burrow": 0,
+     "swim": 0,
+     "climb": 0
+    }
+   },
+   "racialTraits": [
+    {
+     "definition": {
+      "name": "Darkvision",
+      "hideInSheet": false,
+      "description": "<p>Darkvision, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "name": "Elven Lineage",
+      "hideInSheet": false,
+      "description": "<p>Elven Lineage, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "name": "Fey Ancestry",
+      "hideInSheet": false,
+      "description": "<p>Fey Ancestry, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "name": "Keen Senses",
+      "hideInSheet": false,
+      "description": "<p>Keen Senses, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "name": "Trance",
+      "hideInSheet": false,
+      "description": "<p>Trance, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "name": "Languages",
+      "hideInSheet": true,
+      "description": "<p>Languages, for the tests.</p>"
+     }
+    }
+   ]
+  },
+  "background": {
+   "definition": {
+    "name": "Wayfarer",
+    "grantedFeats": []
+   }
+  },
+  "classes": [
+   {
+    "id": 7201,
+    "level": 3,
+    "isStartingClass": true,
+    "definition": {
+     "id": 9,
+     "name": "Rogue",
+     "hitDice": 8,
+     "canCastSpells": false,
+     "spellCastingAbilityId": null,
+     "spellRules": {
+      "multiClassSpellSlotDivisor": 1,
+      "multiClassSpellSlotRounding": 1,
+      "levelSpellSlots": [
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ]
+      ]
+     }
+    },
+    "subclassDefinition": {
+     "id": 23,
+     "name": "Thief",
+     "canCastSpells": false,
+     "spellCastingAbilityId": null
+    },
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 951,
+       "name": "Expertise",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Expertise: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 952,
+       "name": "Sneak Attack",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Sneak Attack: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 953,
+       "name": "Thieves' Cant",
+       "requiredLevel": 1,
+       "displayOrder": 3,
+       "hideInSheet": false,
+       "description": "<p>Thieves' Cant: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 954,
+       "name": "Weapon Mastery",
+       "requiredLevel": 1,
+       "displayOrder": 4,
+       "hideInSheet": false,
+       "description": "<p>Weapon Mastery: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 955,
+       "name": "Cunning Action",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Cunning Action: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 956,
+       "name": "Rogue Subclass",
+       "requiredLevel": 3,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Rogue Subclass: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 957,
+       "name": "Steady Aim",
+       "requiredLevel": 3,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Steady Aim: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 958,
+       "name": "Proficiencies",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Proficiencies: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 959,
+       "name": "Hit Points",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Hit Points: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   }
+  ],
+  "feats": [
+   {
+    "definition": {
+     "name": "Lucky",
+     "description": "<p>Luckier, for the tests.</p>"
+    }
+   }
+  ],
+  "modifiers": {
+   "race": [
+    {
+     "type": "set-base",
+     "subType": "darkvision",
+     "value": 60,
+     "fixedValue": 60,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Darkvision",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "perception",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Perception",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 9601,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "dexterity-score",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1472902489,
+     "restriction": "",
+     "friendlySubtypeName": "Dexterity Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "wisdom-score",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1472902489,
+     "restriction": "",
+     "friendlySubtypeName": "Wisdom Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "language",
+     "subType": "common",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Common",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "language",
+     "subType": "elvish",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Elvish",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 0,
+     "componentTypeId": 12168134
+    }
+   ],
+   "class": [
+    {
+     "type": "proficiency",
+     "subType": "dexterity-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Dexterity Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 958,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "intelligence-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Intelligence Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 958,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "light-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Light Armor",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 958,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "simple-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Simple Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 958,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "stealth",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Stealth",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 958,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "sleight-of-hand",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Sleight of Hand",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 958,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "expertise",
+     "subType": "stealth",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 1958004211,
+     "restriction": "",
+     "friendlySubtypeName": "Stealth",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 951,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "thieves-tools",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 2103445194,
+     "restriction": "",
+     "friendlySubtypeName": "Thieves' Tools",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 958,
+     "componentTypeId": 12168134
+    }
+   ],
+   "background": [],
+   "feat": [],
+   "item": [],
+   "condition": []
+  },
+  "inventory": [
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Leather Armor",
+     "filterType": "Armor",
+     "type": "Armor",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "armorTypeId": 1,
+     "armorClass": 11
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Shortbow",
+     "filterType": "Weapon",
+     "type": "Shortbow",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 1,
+     "attackType": 2,
+     "damage": {
+      "diceString": "1d6"
+     },
+     "damageType": "Piercing",
+     "properties": [
+      {
+       "name": "Ammunition"
+      },
+      {
+       "name": "Two-Handed"
+      }
+     ],
+     "range": 80,
+     "longRange": 320
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Dagger",
+     "filterType": "Weapon",
+     "type": "Dagger",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 1,
+     "attackType": 1,
+     "damage": {
+      "diceString": "1d4"
+     },
+     "damageType": "Piercing",
+     "properties": [
+      {
+       "name": "Finesse"
+      },
+      {
+       "name": "Light"
+      },
+      {
+       "name": "Thrown"
+      }
+     ],
+     "range": 20,
+     "longRange": 60
+    }
+   }
+  ],
+  "customItems": [],
+  "currencies": {
+   "cp": 12,
+   "sp": 0,
+   "gp": 9,
+   "ep": 0,
+   "pp": 0
+  },
+  "actions": {
+   "class": [],
+   "race": [],
+   "feat": []
+  },
+  "classSpells": [],
+  "spells": {
+   "race": [
+    {
+     "prepared": false,
+     "alwaysPrepared": false,
+     "countsAsKnownSpell": false,
+     "usesSpellSlot": false,
+     "spellCastingAbilityId": 5,
+     "componentId": 9601,
+     "componentTypeId": 12168134,
+     "limitedUse": null,
+     "definition": {
+      "name": "Druidcraft",
+      "level": 0,
+      "activation": {
+       "activationTime": 1,
+       "activationType": 1
+      },
+      "range": {
+       "origin": "Ranged",
+       "rangeValue": 30,
+       "aoeType": null,
+       "aoeValue": null
+      },
+      "components": [
+       1,
+       2
+      ],
+      "componentsDescription": "",
+      "ritual": false,
+      "concentration": false,
+      "requiresAttackRoll": false,
+      "requiresSavingThrow": false,
+      "saveDcAbilityId": null,
+      "modifiers": []
+     }
+    },
+    {
+     "prepared": false,
+     "alwaysPrepared": true,
+     "countsAsKnownSpell": false,
+     "usesSpellSlot": false,
+     "spellCastingAbilityId": 5,
+     "componentId": 9601,
+     "componentTypeId": 12168134,
+     "limitedUse": {
+      "maxUses": 1,
+      "resetType": 2
+     },
+     "definition": {
+      "name": "Longstrider",
+      "level": 1,
+      "activation": {
+       "activationTime": 1,
+       "activationType": 1
+      },
+      "range": {
+       "origin": "Touch",
+       "rangeValue": null,
+       "aoeType": null,
+       "aoeValue": null
+      },
+      "components": [
+       1,
+       2,
+       3
+      ],
+      "componentsDescription": "a pinch of dirt",
+      "ritual": false,
+      "concentration": false,
+      "requiresAttackRoll": false,
+      "requiresSavingThrow": false,
+      "saveDcAbilityId": null,
+      "modifiers": []
+     }
+    }
+   ],
+   "class": [],
+   "background": null,
+   "feat": [],
+   "item": []
+  },
+  "characterValues": [],
+  "preferences": {
+   "showUnarmedStrike": true
+  }
+ }
+}

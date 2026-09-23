@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Beyond"
 description: "D&D Beyond characters in SilverBullet: a live roster from public character data, and an import that turns a character's link into a full character page, with every number on the sheet worked out from D&D Beyond's raw data, ready for GM Sheets to draw."
 author: "Steven Storie"
-version: "2.0.1"
+version: "2.1.0"
 ---
 
 # GM Beyond
@@ -22,19 +22,25 @@ Bring D&D Beyond characters into SilverBullet: a live roster of the party, and a
 
 ## How it works
 
-`net.proxyFetch` runs server-side, so there's no CORS wall between your space and D&D Beyond's character service — the same unofficial endpoint Beyond20, Avrae and ddb-importer all use. Characters must have privacy set to **public**. It's undocumented and does break occasionally; failures degrade to an italic placeholder or a notification rather than erroring the page.
+`net.proxyFetch` runs server-side, so there's no CORS wall between your space and D&D Beyond's character service — the same unofficial endpoint Beyond20, Avrae and ddb-importer all use. Characters must have privacy set to **public**. It's undocumented and does break occasionally; failures degrade to an italic placeholder or a notification rather than erroring the page, and the notification says which failure it was: the character is private or deleted (D&D Beyond's 403 or 404), D&D Beyond is taking too many requests just now (429, so try again shortly), something is wrong at D&D Beyond (a 5xx), the server couldn't reach D&D Beyond at all, or what came back wasn't a character.
 
 ## Importing a character
 
-`GM: Import Character` asks for the character's D&D Beyond link, or just its number, and writes a page for it: `Characters/Tamsin Reed`, with the sheet in its frontmatter, then the name, the sheet drawn with `${sheets.draw()}`, and a plain link back to D&D Beyond. The notification opens the page, and has *Undo*.
+`GM: Import Character` asks for the character's D&D Beyond link, or just its number, and writes a page for it: `Characters/Tamsin Reed`, with the sheet in its frontmatter, then the name, the sheet drawn with `${sheets.draw()}`, and a plain link back to D&D Beyond. The notification opens the page, and has *Undo*, which takes the page away again as long as it holds only what the import wrote. The page's name leaves out what SilverBullet's links can't carry, `@ # $ | < > [ ] ^ / \`, and an ending it would take for a file's extension: `Zed <the Bold>` is `Characters/Zed the Bold`, and `Dr.Who` is `Characters/Dr Who`. A character D&D Beyond sends without a class isn't written at all, since it would come out as a level 1 character with every score 10.
 
 To put a button for it on a page of your own, such as the party's:
 
     ${widgets.commandButton("Import a character", "GM: Import Character")}
 
-**Refreshing.** An imported page has a bar across its top with *Refresh from D&D Beyond*, or run `GM: Refresh Character` on it. A refresh fetches the character again and rewrites every key the import writes, and nothing else: the page's text, and any key the import doesn't write, such as `player`, `away` or a campaign's own, stay as they are. Its notification has *Undo* too. Importing a character whose page already exists refreshes that page.
+**Refreshing.** An imported page has a bar across its top with *Refresh from D&D Beyond*, or run `GM: Refresh Character` on it. A refresh fetches the character again and rewrites every key the import writes, and nothing else: the page's text, and any key the import doesn't write, such as `player`, `away`, `kit`, `pb` or a campaign's own, stay as they are, and so does any other line of the frontmatter, a comment or a key with a space or quotes in its name. If the page is open, what has been typed into it is saved first. A refresh that would lower the character's level asks before it writes. Its notification has *Undo* too, which puts the page back as it was while it still holds what the refresh wrote; anything changed since is kept.
+
+Importing a character whose page already exists refreshes that page, found by the character's number in its `ddb` among the pages in the folder, so a character renamed on D&D Beyond keeps its page: the notification says the name has changed, and the page keeps its own. Failing that, a page of the character's name is refreshed if it is that character's. If SilverBullet can't tell whether that page exists, or can't read it, nothing is written.
 
 **What the page holds.** The keys are [GM Sheets](<GM Sheets>)', and the import writes a number only where it isn't the SRD's sum, the way you would by hand: a Stone of Good Luck's bonus to every check, Jack of All Trades on the skills without proficiency, a magic item's bonus to spell attacks. Features, traits and feats carry their rules in full, from D&D Beyond's own text, so **keep the pages private**: that text is licensed to the account that owns the books, not yours to publish. A wizard's spellbook comes in as `spellbook`, the spells in it not prepared. Every spell, cantrips included, comes with how it is cast: its casting time and range, and whether it needs concentration, a ritual or a material.
+
+**Every spell, whatever the class.** A class that casts nothing itself can still have spells: an Eldritch Knight's or an Arcane Trickster's come through the subclass, with its spellcasting ability and its slots, a third caster's own table or its share of the multiclass one. The spells a species, a feat such as Magic Initiate (which the 2024 Acolyte, Guide and Sage backgrounds grant), a background, a class feature or an item gives come in too, cantrips as cantrips and the rest as always prepared; an item's while it is equipped, and attuned where it must be, with the item's name in its notes. Each spell is cast with its own ability, the one D&D Beyond gives it or its class's: `spellcasting` is the first class's own, or else a subclass's, or else the one those spells use, and a spell cast with another says so in its notes, with its save DC and attack bonus. A damaging cantrip's attack is rolled with its own ability too.
+
+**What a player writes stays words.** Everything on a D&D Beyond character is written by its player, homebrew rules text and every name included, so none of it reaches your page as markup. Each name is one line, however it was written. Rules text comes in as Markdown with any tag, link, image, hashtag or `${...}` written in it escaped, so it shows as written: `&lt;form&gt;` in D&D Beyond's text is the words `<form>` on the page, never a form. In the frontmatter a name's `<` and `>` are written as YAML's `\x3C` and `\x3E`, which every YAML reader turns back into the characters, and the page's heading and the live roster escape each name as they show it.
 
 ## Settings
 
@@ -66,13 +72,23 @@ Or across a roster:
       select gmb.summary(p.ddb)
     ]]}
 
-Always keep a plain link too, so the page stays useful when the fetch doesn't:
+A summary is Markdown with each name in it escaped, since the character's player wrote them, and a character that can't be fetched shows as *(private or unreachable)*, whatever D&D Beyond answered. Always keep a plain link too, so the page stays useful when the fetch doesn't:
 
     [Sheet](https://www.dndbeyond.com/characters/147258369)
 
 ## Licensing note
 
 Link to monsters and rules content in anything you publish; don't mirror it. SRD material is open, the rest isn't. The import copies a character's rules text into your own space for your own table, which is why its pages belong in a space only you can read.
+
+## Changes in 2.1
+
+**What a player writes stays words.** Every name is one line and escaped for Markdown, rules text comes in with any tag, link or `${...}` in it escaped, and a frontmatter value never holds a line break or a raw `<` or `>`. See *Importing a character*.
+
+**Every spell, whatever the class.** A subclass that casts, such as an Eldritch Knight or an Arcane Trickster, gets its slots and spells, and spells from a species, a background, a feat or an item are written whatever the class, each with its own spellcasting ability.
+
+**A refresh keeps what the GM added.** `kit` and `pb` are yours now, and so is any other line of the frontmatter the import doesn't write. A character renamed on D&D Beyond refreshes the page it already has, found by its `ddb` number. An error reading the page stops the import rather than writing over it, *Undo* takes back only what the import wrote, the page open in the editor is saved first, a character with no classes is refused, and a refresh that would lower the level asks first.
+
+**Each refusal says why**: a private or deleted character, D&D Beyond asking you to wait, trouble at D&D Beyond, or the server not reaching it. Unarmored Defense counts a negative Dexterity against you, and a character's name is cleaned of what SilverBullet's links can't carry before it names a page.
 
 ## Implementation
 
@@ -93,34 +109,122 @@ function gmb.setting(key)
   return value
 end
 
+------------------------------------------------------------------ text
+
+-- A JavaScript array or a Lua list as a Lua list; nothing as an empty one.
+local function list(v)
+  local out = {}
+  if v == nil then return out end
+  for _, x in ipairs(v) do out[#out + 1] = x end
+  return out
+end
+
+local function num(v)
+  if type(v) == "number" then return v end
+  if type(v) == "string" then return tonumber(v) end
+  return nil
+end
+
+local function whole(v)
+  local n = num(v)
+  if n == nil then return nil end
+  return math.floor(n)
+end
+
+-- A value from D&D Beyond as one line of text: control characters, a
+-- newline among them, and Unicode's line and paragraph separators as
+-- spaces, and a run of spaces as one. Everything a player can name on D&D
+-- Beyond passes through here before it reaches a page, so no name can end
+-- the frontmatter or start a line of the page's own.
+function gmb.line(v)
+  if v == nil then return nil end
+  local s = tostring(v)
+  s = (s:gsub("%c", " "))
+  s = (s:gsub("\u{85}", " "))
+  s = (s:gsub("\u{2028}", " "))
+  s = (s:gsub("\u{2029}", " "))
+  s = (s:gsub("%s+", " "))
+  s = (s:gsub("^ ", ""))
+  return (s:gsub(" $", ""))
+end
+
+-- The characters Markdown, and SilverBullet's own syntax, read as markup: a
+-- tag or a comment, a link, an image or a transclusion, an expression ${...},
+-- a hashtag, emphasis, code, a table's cell, and the backslash that escapes
+-- the rest.
+local MARKUP = "[\\`*_{}%[%]<>#|$]"
+
+-- Text as Markdown that shows it as it is, on one line: each character that
+-- would be read as markup escaped with a backslash, and an & that would
+-- start an entity too, so a tag, a link or an expression in a name stays
+-- words. SilverBullet renders a backslash escape as the character, where it
+-- shows an entity such as &lt; as written.
+function gmb.inline(v)
+  local s = gmb.line(v) or ""
+  s = (s:gsub(MARKUP, "\\%0"))
+  return (s:gsub("&(#?%w+;)", "\\&%1"))
+end
+
 ------------------------------------------------------------------ fetching
+
+-- Why D&D Beyond's answer holds no character, for a notification: the
+-- status D&D Beyond gave, or the server's own failure to reach it. The
+-- server's proxy answers 200 with D&D Beyond's status whenever D&D Beyond
+-- answered at all, so `ok` false with a status of its own is the server's.
+function gmb.refusal(res)
+  local status = whole(res and res.status)
+  if status == 401 or status == 403 or status == 404 then
+    return "D&D Beyond answered " .. tostring(status) ..
+      ": the character is private, or has been deleted. Its privacy must be Public"
+  elseif status == 429 then
+    return "D&D Beyond answered 429: too many requests just now, so try again shortly"
+  elseif res and res.ok == false then
+    local said = type(res.body) == "string" and gmb.line(res.body) or ""
+    if #said > 120 then said = said:sub(1, 120) .. "…" end
+    return "the server couldn't reach D&D Beyond (it answered " .. tostring(status or "nothing") ..
+      (said ~= "" and (": " .. said) or "") .. ")"
+  elseif status and status >= 500 then
+    return "D&D Beyond answered " .. tostring(status) .. ": something is wrong at D&D Beyond, so try again later"
+  elseif status == 200 then
+    return "D&D Beyond's answer wasn't a character's data"
+  end
+  return "D&D Beyond answered " .. tostring(status or "nothing")
+end
 
 --- Fetch a public DDB character. Returns nil and a reason when private or unreachable.
 function gmb.fetch(id)
-  local ok, res = pcall(net.proxyFetch, gmb.endpoint .. tostring(id))
-  if not ok then return nil, "the fetch failed: " .. tostring(res) end
-  if not res or res.status ~= 200 then
-    return nil, "D&D Beyond answered " .. tostring(res and res.status or "nothing") ..
-      ", so the character may be private"
+  local url = gmb.endpoint .. tostring(id)
+  -- Asked for as JSON, which net.proxyFetch then parses whatever the
+  -- answer's Content-Type says. An answer that isn't JSON, such as an error
+  -- page, makes it throw, so that is asked for again as it comes, for its
+  -- status; a second throw is the server failing to fetch at all.
+  local ok, res = pcall(net.proxyFetch, url, { responseEncoding = "application/json" })
+  if not ok then
+    local again, plain = pcall(net.proxyFetch, url)
+    if not again then return nil, "couldn't reach D&D Beyond through the server: " .. gmb.line(plain) end
+    res = plain
   end
+  if type(res) ~= "table" then return nil, "couldn't reach D&D Beyond through the server" end
+  if whole(res.status) ~= 200 then return nil, gmb.refusal(res) end
   local body = res.body
-  if type(body) == "string" then body = js.parse(body) end
-  local data = body and body.data or nil
-  if not data then return nil, "D&D Beyond sent no character" end
+  local data = type(body) == "table" and body.data or nil
+  if type(data) ~= "table" then return nil, gmb.refusal(res) end
   return data
 end
 
---- "Brin — Half-Elf Rogue 4 / Warlock 2"
+--- "Brin — Half-Elf Rogue 4 / Warlock 2", as Markdown: every name escaped,
+--- since a player writes them.
 function gmb.summary(id)
-  local c = gmb.fetch(id)
-  if not c then return "_(private or unreachable)_" end
+  local ok, c = pcall(gmb.fetch, id)
+  if not ok or type(c) ~= "table" then return "_(private or unreachable)_" end
   local classes = {}
-  for _, cl in ipairs(c.classes or {}) do
-    classes[#classes + 1] =
-      (cl.definition and cl.definition.name or "?") .. " " .. (cl.level or "?")
+  for _, cl in ipairs(list(c.classes)) do
+    local level = whole(cl.level)
+    classes[#classes + 1] = gmb.inline(cl.definition and cl.definition.name or "?") .. " " ..
+      (level and tostring(level) or "?")
   end
   local race = c.race and c.race.fullName or ""
-  return (c.name or "?") .. " — " .. race .. " " .. table.concat(classes, " / ")
+  return gmb.inline(c.name or "?") .. " — " .. gmb.inline(race) .. " " .. table.concat(classes, " / ")
 end
 
 --- Total level across all classes.
@@ -128,7 +232,7 @@ function gmb.level(id)
   local c = gmb.fetch(id)
   if not c then return nil end
   local total = 0
-  for _, cl in ipairs(c.classes or {}) do total = total + (cl.level or 0) end
+  for _, cl in ipairs(list(c.classes)) do total = total + (whole(cl.level) or 0) end
   return total
 end
 
@@ -172,26 +276,6 @@ local BOILERPLATE = { ["Hit Points"] = true, ["Proficiencies"] = true, ["Equipme
 
 -- D&D Beyond's kinds of thing a proficiency is for.
 local TOOL, WEAPON = 2103445194, 1782728300
-
--- A JavaScript array or a Lua list as a Lua list; nothing as an empty one.
-local function list(v)
-  local out = {}
-  if v == nil then return out end
-  for _, x in ipairs(v) do out[#out + 1] = x end
-  return out
-end
-
-local function num(v)
-  if type(v) == "number" then return v end
-  if type(v) == "string" then return tonumber(v) end
-  return nil
-end
-
-local function whole(v)
-  local n = num(v)
-  if n == nil then return nil end
-  return math.floor(n)
-end
 
 local function mod(score) return math.floor(((score or 10) - 10) / 2) end
 
@@ -437,8 +521,12 @@ function gmb.armorClass(c, mods, m)
       if (x.value or 20) < maxDex then maxDex = x.value end
     end
     best = 10 + dex + bonus
+    -- a negative Dexterity counts against an unarmored defense as it does
+    -- against no armor at all; only a maximum of 0 leaves Dexterity out
+    local dexPart = math.min(dex, maxDex)
+    if maxDex == 0 then dexPart = math.max(0, dexPart) end
     for _, x in ipairs(find(mods, "set", "unarmored-armor-class", true)) do
-      local value = 10 + math.max(0, math.min(dex, maxDex)) + bonus
+      local value = 10 + dexPart + bonus
       if x.statId and ABILITY[x.statId] then value = value + m[ABILITY[x.statId]] end
       if x.value then value = value + x.value end
       if value > best then best = value end
@@ -484,12 +572,12 @@ end
 
 local function spellRange(def)
   local r = def.range or {}
-  local origin = r.origin
+  local origin = gmb.line(r.origin)
   local text
   if origin == "Ranged" then text = distance(r.rangeValue) or "Ranged"
-  elseif origin then text = tostring(origin) end
+  elseif origin and origin ~= "" then text = origin end
   if r.aoeType and num(r.aoeValue) then
-    local area = tostring(math.floor(num(r.aoeValue))) .. " ft. " .. tostring(r.aoeType)
+    local area = tostring(math.floor(num(r.aoeValue))) .. " ft. " .. gmb.line(r.aoeType)
     text = text and (text .. " (" .. area .. ")") or area
   end
   return text
@@ -498,16 +586,14 @@ end
 -- A spell as the sheet's key holds it: its name, with how it is cast.
 local function spellEntry(s, note)
   local def = s.definition or {}
-  local e = { name = def.name }
+  local e = { name = gmb.line(def.name) }
   e.time = castingTime(def)
   e.range = spellRange(def)
   if def.concentration == true then e.concentration = true end
   if def.ritual == true then e.ritual = true end
   for _, comp in ipairs(list(def.components)) do
     if num(comp) == 3 then
-      local words = tostring(def.componentsDescription or "")
-      words = (words:gsub("^%s+", ""))
-      words = (words:gsub("%s+$", ""))
+      local words = gmb.line(def.componentsDescription) or ""
       e.material = words ~= "" and words or true
     end
   end
@@ -536,6 +622,27 @@ local function withBonus(dice, bonus)
   return dice .. signed(bonus)
 end
 
+-- How a class casts: the ability, and the rules its spell slots follow.
+-- D&D Beyond gives both on the class's definition, or for a class that
+-- casts nothing itself, on its subclass's, as an Eldritch Knight's.
+local function castingOf(cl)
+  local def, sub = cl.definition or {}, cl.subclassDefinition or {}
+  local ability = num(def.spellCastingAbilityId)
+  if not (ability and ABILITY[ability]) then ability = num(sub.spellCastingAbilityId) end
+  if not (ability and ABILITY[ability]) then ability = nil end
+  local rules
+  if def.canCastSpells == true and def.spellRules and def.spellRules.levelSpellSlots then
+    rules = def.spellRules
+  elseif sub.canCastSpells == true and sub.spellRules and sub.spellRules.levelSpellSlots then
+    rules = sub.spellRules
+  end
+  return ability, rules
+end
+
+-- D&D Beyond's lists of the spells something other than a class's own
+-- spellcasting grants, in the order their ability is looked for.
+local GRANTED = { "race", "background", "feat", "class", "item" }
+
 -- The whole sheet, as the keys of a character's page, in the order they
 -- are written: a list of { key, value }.
 function gmb.sheet(c)
@@ -554,26 +661,30 @@ function gmb.sheet(c)
   local pb = 2 + math.floor((level - 1) / 4)
   local entries = {}
   local function put(key, value)
+    -- a key the import writes and gmb.owned doesn't list would be written
+    -- again beside itself by every refresh
+    if not gmb.owned[key] then error("GM Beyond: " .. tostring(key) .. " isn't in gmb.owned") end
     if value == nil then return end
     if type(value) == "table" and #value == 0 and next(value) == nil then return end
     entries[#entries + 1] = { key, value }
   end
 
-  put("ddb", num(c.id))
+  put("ddb", whole(c.id))
   put("level", level)
   local names, subs = {}, {}
   for _, cl in ipairs(classes) do
-    local name = cl.definition and cl.definition.name or "?"
-    names[#names + 1] = #classes > 1 and (name .. " " .. tostring(num(cl.level) or 0)) or name
-    if cl.subclassDefinition and cl.subclassDefinition.name then subs[#subs + 1] = cl.subclassDefinition.name end
+    local name = gmb.line(cl.definition and cl.definition.name) or "?"
+    names[#names + 1] = #classes > 1 and (name .. " " .. tostring(whole(cl.level) or 0)) or name
+    local sub = gmb.line(cl.subclassDefinition and cl.subclassDefinition.name)
+    if sub and sub ~= "" then subs[#subs + 1] = sub end
   end
   put("class", table.concat(names, " / "))
   if #subs > 0 then put("subclass", table.concat(subs, " / ")) end
   local race = c.race or {}
-  put("species", race.fullName)
+  put("species", gmb.line(race.fullName))
   local bg = c.background or {}
   local bgName = bg.definition and bg.definition.name or (bg.customBackground and bg.customBackground.name)
-  put("background", bgName)
+  put("background", gmb.line(bgName))
   put("creature_size", SIZES[num(race.sizeId) or 4])
   for i = 1, 6 do put(ABILITY[i], scores[ABILITY[i]]) end
 
@@ -655,17 +766,31 @@ function gmb.sheet(c)
     if passive ~= sum then put("passive_" .. which, passive) end
   end
 
-  -- spellcasting
-  local caster
+  -- spellcasting: the first class's own ability; where no class casts
+  -- itself, a subclass's, as an Eldritch Knight's or an Arcane Trickster's;
+  -- failing both, the one chosen for spells a species, background, feat,
+  -- class feature or item grants. Each spell is still cast with its own.
+  local castAbility
   for _, cl in ipairs(classes) do
-    if not caster and cl.definition and num(cl.definition.spellCastingAbilityId) then caster = cl end
+    local own = num((cl.definition or {}).spellCastingAbilityId)
+    if not castAbility and own and ABILITY[own] then castAbility = own end
   end
-  local castAbility = caster and num(caster.definition.spellCastingAbilityId)
+  for _, cl in ipairs(classes) do
+    if not castAbility then castAbility = (castingOf(cl)) end
+  end
+  for _, source in ipairs(GRANTED) do
+    for _, s in ipairs(list(c.spells and c.spells[source])) do
+      local own = num(s.spellCastingAbilityId)
+      if not castAbility and own and ABILITY[own] then castAbility = own end
+    end
+  end
+  local dcBonus = total(find(mods, "bonus", "spell-save-dc"))
+  local attackBonus = total(find(mods, "bonus", "spell-attacks"))
   local spellDC, spellAttack
   if castAbility then
     local cm = m[ABILITY[castAbility]]
-    spellDC = 8 + pb + cm + total(find(mods, "bonus", "spell-save-dc"))
-    spellAttack = pb + cm + total(find(mods, "bonus", "spell-attacks"))
+    spellDC = 8 + pb + cm + dcBonus
+    spellAttack = pb + cm + attackBonus
     if spellDC ~= 8 + pb + cm then put("spell_dc", spellDC) end
     if spellAttack ~= pb + cm then put("spell_attack", spellAttack) end
   end
@@ -713,7 +838,7 @@ function gmb.sheet(c)
     local seen, out = {}, {}
     for _, x in ipairs(mods) do
       if x.type == kind and test(x) then
-        local n = x.friendly or capital((tostring(x.subType):gsub("%-", " ")))
+        local n = gmb.line(x.friendly or capital((tostring(x.subType):gsub("%-", " "))))
         if not seen[n] then seen[n] = true; out[#out + 1] = n end
       end
     end
@@ -735,7 +860,7 @@ function gmb.sheet(c)
   local masteries = {}
   for _, x in ipairs(mods) do
     if x.type == "weapon-mastery" then
-      masteries[#masteries + 1] = x.friendly or capital((tostring(x.subType):gsub("%-", " ")))
+      masteries[#masteries + 1] = gmb.line(x.friendly or capital((tostring(x.subType):gsub("%-", " "))))
     end
   end
   put("masteries", masteries)
@@ -762,9 +887,9 @@ function gmb.sheet(c)
     if it.equipped == true and def.filterType == "Weapon" then
       local props, finesse, versatile = {}, false, nil
       for _, p in ipairs(list(def.properties)) do
-        props[#props + 1] = p.name
+        props[#props + 1] = gmb.line(p.name)
         if p.name == "Finesse" then finesse = true end
-        if p.name == "Versatile" and p.notes then versatile = p.notes end
+        if p.name == "Versatile" and p.notes then versatile = gmb.line(p.notes) end
       end
       local ranged = num(def.attackType) == 2
       local ability = ranged and m.dex or m.str
@@ -782,22 +907,27 @@ function gmb.sheet(c)
         if a and b and b > a then die = martialArts end
       end
       local damage = withBonus(die or (def.fixedDamage and tostring(def.fixedDamage)), ability + magic)
-      if def.damageType then damage = damage .. " " .. tostring(def.damageType) end
+      if def.damageType then damage = damage .. " " .. gmb.line(def.damageType) end
       local notes = table.concat(props, ", ")
-      if versatile then notes = (notes:gsub("Versatile", "Versatile (" .. tostring(versatile) .. ")")) end
+      if versatile then
+        -- a function, so a % in the notes is never read as a capture
+        notes = (notes:gsub("Versatile", function() return "Versatile (" .. versatile .. ")" end))
+      end
       local range = num(def.range)
       if range and (ranged or notes:find("Thrown", 1, true)) then
         local reach = tostring(math.floor(range))
         if num(def.longRange) then reach = reach .. "/" .. tostring(math.floor(num(def.longRange))) end
         notes = notes .. (notes ~= "" and "; " or "") .. reach .. " ft."
       end
-      local attack = { name = def.name, hit = hit, damage = damage }
+      local attack = { name = gmb.line(def.name), hit = hit, damage = damage }
       if notes ~= "" then attack.notes = notes end
       attacks[#attacks + 1] = attack
     end
   end
 
-  -- the spells, by class, then any a species, feat or class feature grants
+  -- the spells: each class's, then those a species, background, feat, class
+  -- feature or item grants, whatever the class, each with the ability it is
+  -- cast with: its own where D&D Beyond gives one, else its class's
   local cantrips, prepared, always, book = {}, {}, {}, {}
   local cantripSeen = {}
   local cantripDefs = {}
@@ -806,60 +936,96 @@ function gmb.sheet(c)
     for _, x in ipairs(map[level]) do if x.name == e.name then return end end
     table.insert(map[level], e)
   end
+  -- a spell cast with another ability than the sheet's says so, with the
+  -- save DC and attack bonus it has, and an item's names the item
+  local function entryOf(s, ability, from)
+    local notes = {}
+    if from then notes[#notes + 1] = from end
+    if ability and ability ~= castAbility then
+      local cm = m[ABILITY[ability]]
+      notes[#notes + 1] = SHORT[ability] .. ": DC " .. tostring(8 + pb + cm + dcBonus) .. ", " ..
+        signed(pb + cm + attackBonus) .. " to hit"
+    end
+    return spellEntry(s, #notes > 0 and table.concat(notes, "; ") or nil)
+  end
+  local function addCantrip(s, ability, from)
+    local def = s.definition or {}
+    local e = entryOf(s, ability, from)
+    if e.name and not cantripSeen[e.name] then
+      cantripSeen[e.name] = true
+      cantrips[#cantrips + 1] = e
+      cantripDefs[#cantripDefs + 1] = { def = def, name = e.name, ability = ability }
+    end
+  end
   local classById = {}
   for _, cl in ipairs(classes) do classById[tostring(cl.id)] = cl end
   for _, entry in ipairs(list(c.classSpells)) do
+    local cl = classById[tostring(entry.characterClassId)]
+    local classAbility = cl and (castingOf(cl)) or nil
     local spells = list(entry.spells)
     local prepares = false
     for _, s in ipairs(spells) do if s.prepared == true then prepares = true end end
     for _, s in ipairs(spells) do
       local def = s.definition or {}
-      local lvl = num(def.level) or 0
-      if lvl == 0 then
-        if not cantripSeen[def.name] then
-          cantripSeen[def.name] = true
-          cantrips[#cantrips + 1] = spellEntry(s)
-          cantripDefs[#cantripDefs + 1] = def
-        end
-      elseif s.alwaysPrepared == true then addTo(always, lvl, spellEntry(s))
-      elseif s.prepared == true or not prepares then addTo(prepared, lvl, spellEntry(s))
-      else addTo(book, lvl, spellEntry(s)) end
+      local lvl = whole(def.level) or 0
+      local own = num(s.spellCastingAbilityId)
+      local ability = (own and ABILITY[own]) and own or classAbility or castAbility
+      if lvl == 0 then addCantrip(s, ability)
+      elseif s.alwaysPrepared == true then addTo(always, lvl, entryOf(s, ability))
+      elseif s.prepared == true or not prepares then addTo(prepared, lvl, entryOf(s, ability))
+      else addTo(book, lvl, entryOf(s, ability)) end
     end
   end
-  for _, source in ipairs({ "race", "class", "feat" }) do
+  -- an item's spells while it is on, and attuned where it must be
+  local items = {}
+  for _, it in ipairs(list(c.inventory)) do
+    local def = it.definition or {}
+    if def.id ~= nil then items[tostring(def.id)] = it end
+    if it.id ~= nil then items[tostring(it.id)] = it end
+  end
+  for _, source in ipairs(GRANTED) do
     for _, s in ipairs(list(c.spells and c.spells[source])) do
       local def = s.definition or {}
-      local lvl = num(def.level) or 0
-      if lvl == 0 then
-        if not cantripSeen[def.name] then
-          cantripSeen[def.name] = true
-          cantrips[#cantrips + 1] = spellEntry(s)
-          cantripDefs[#cantripDefs + 1] = def
-        end
-      else
-        addTo(always, lvl, spellEntry(s))
+      local lvl = whole(def.level) or 0
+      local own = num(s.spellCastingAbilityId)
+      local ability = (own and ABILITY[own]) and own or nil
+      if not ability and source == "class" then
+        local cl = featureClass(c, tostring(s.componentId))
+        ability = cl and (castingOf(cl)) or nil
+      end
+      ability = ability or castAbility
+      local it = source == "item" and items[tostring(s.componentId)] or nil
+      local from = it and gmb.line(it.definition and it.definition.name) or nil
+      if from == "" then from = nil end
+      if from then from = "from " .. from end
+      if not (it and not active(it)) then
+        if lvl == 0 then addCantrip(s, ability, from)
+        else addTo(always, lvl, entryOf(s, ability, from)) end
       end
     end
   end
 
-  -- damaging cantrips are attacks too, by their name
-  table.sort(cantripDefs, function(a, b) return tostring(a.name) < tostring(b.name) end)
-  for _, def in ipairs(cantripDefs) do
+  -- damaging cantrips are attacks too, by their name, each rolled with the
+  -- ability it is cast with
+  table.sort(cantripDefs, function(a, b) return a.name < b.name end)
+  for _, cd in ipairs(cantripDefs) do
+    local def = cd.def
     local damage
     for _, x in ipairs(list(def.modifiers)) do
       if not damage and x.type == "damage" then
         local d = cantripDice(x, level)
-        if d then damage = d .. " " .. (x.friendlySubtypeName or capital(x.subType)) end
+        if d then damage = d .. " " .. gmb.line(x.friendlySubtypeName or capital(x.subType)) end
       end
     end
-    if damage and castAbility then
+    if damage and cd.ability then
+      local cm = m[ABILITY[cd.ability]]
       local hit
-      if def.requiresAttackRoll == true then hit = spellAttack
+      if def.requiresAttackRoll == true then hit = pb + cm + attackBonus
       elseif def.requiresSavingThrow == true and SHORT[num(def.saveDcAbilityId) or 0] then
-        hit = "DC " .. tostring(spellDC) .. " " .. SHORT[num(def.saveDcAbilityId)]
+        hit = "DC " .. tostring(8 + pb + cm + dcBonus) .. " " .. SHORT[num(def.saveDcAbilityId)]
       end
       if hit then
-        local attack = { name = def.name, hit = hit, damage = damage }
+        local attack = { name = cd.name, hit = hit, damage = damage }
         local range = spellRange(def)
         if range then attack.notes = range end
         attacks[#attacks + 1] = attack
@@ -879,7 +1045,8 @@ function gmb.sheet(c)
   for _, source in ipairs({ "class", "race", "feat" }) do
     for _, a in ipairs(list(actions[source])) do
       local lu = a.limitedUse
-      if lu and a.name and not seenResource[a.name] then
+      local name = gmb.line(a.name)
+      if lu and name and name ~= "" and not seenResource[name] then
         local uses = num(lu.maxUses) or 0
         local by = num(lu.statModifierUsesId)
         if by and ABILITY[by] then uses = uses + math.max(1, m[ABILITY[by]]) end
@@ -887,8 +1054,8 @@ function gmb.sheet(c)
           if num(lu.proficiencyBonusOperator) == 2 and uses > 0 then uses = uses * pb else uses = uses + pb end
         end
         if uses > 0 then
-          seenResource[a.name] = true
-          local r = { name = a.name, uses = math.floor(uses) }
+          seenResource[name] = true
+          local r = { name = name, uses = math.floor(uses) }
           r.reset = RESETS[num(lu.resetType) or 0]
           resources[#resources + 1] = r
         end
@@ -897,54 +1064,56 @@ function gmb.sheet(c)
   end
   put("resources", resources)
 
-  -- spell slots: a class's own table, the multiclass table for more than
-  -- one, and Pact Magic apart
-  if castAbility then
-    put("spellcasting", ABILITY[castAbility])
-    local casting, casterLevel, pact = {}, 0, nil
-    for _, cl in ipairs(classes) do
-      local def = cl.definition or {}
-      local rules = def.spellRules
-      if def.canCastSpells == true and rules and rules.levelSpellSlots then
-        local row = rules.levelSpellSlots[(num(cl.level) or 0) + 1]
-        if def.name == "Warlock" then
-          for i, n in ipairs(list(row)) do
-            if (num(n) or 0) > 0 then pact = { slots = num(n), level = i } end
-          end
-        else
-          casting[#casting + 1] = { row = list(row), level = num(cl.level) or 0, rules = rules }
-          local divisor = num(rules.multiClassSpellSlotDivisor) or 1
-          local share = (num(cl.level) or 0) / divisor
-          if num(rules.multiClassSpellSlotRounding) == 2 then share = math.ceil(share) else share = math.floor(share) end
-          casterLevel = casterLevel + share
+  -- spell slots: a class's own table, or its subclass's for a class that
+  -- casts through its subclass, the multiclass table for more than one,
+  -- and Pact Magic apart
+  if castAbility then put("spellcasting", ABILITY[castAbility]) end
+  local casting, casterLevel, pact = {}, 0, nil
+  for _, cl in ipairs(classes) do
+    local _, rules = castingOf(cl)
+    if rules then
+      local classLevel = whole(cl.level) or 0
+      local row = list(rules.levelSpellSlots[classLevel + 1])
+      if (cl.definition or {}).name == "Warlock" then
+        for i, n in ipairs(row) do
+          if (whole(n) or 0) > 0 then pact = { slots = whole(n), level = i } end
         end
+      else
+        casting[#casting + 1] = { row = row }
+        local divisor = num(rules.multiClassSpellSlotDivisor) or 1
+        if divisor < 1 then divisor = 1 end
+        local share = classLevel / divisor
+        if num(rules.multiClassSpellSlotRounding) == 2 then share = math.ceil(share) else share = math.floor(share) end
+        casterLevel = casterLevel + share
       end
     end
-    local slots = {}
-    if #casting == 1 then
-      for _, n in ipairs(casting[1].row) do slots[#slots + 1] = num(n) or 0 end
-    elseif #casting > 1 and casterLevel > 0 then
-      for _, n in ipairs(SLOTS[math.min(20, casterLevel)]) do slots[#slots + 1] = n end
-    end
-    while #slots > 0 and slots[#slots] == 0 do slots[#slots] = nil end
-    put("slots", slots)
-    if pact then
-      put("pact_slots", pact.slots)
-      put("pact_level", pact.level)
-    end
-    put("cantrips", cantrips)
-    local function byLevel(map)
-      local out = {}
-      for lvl, l in pairs(map) do
-        table.sort(l, function(a, b) return tostring(a.name) < tostring(b.name) end)
-        out[lvl] = l
-      end
-      return out
-    end
-    if next(prepared) then put("spells", byLevel(prepared)) end
-    if next(always) then put("always_prepared", byLevel(always)) end
-    if next(book) then put("spellbook", byLevel(book)) end
   end
+  local slots = {}
+  if #casting == 1 then
+    for _, n in ipairs(casting[1].row) do slots[#slots + 1] = whole(n) or 0 end
+  elseif #casting > 1 and casterLevel > 0 then
+    for _, n in ipairs(SLOTS[math.min(20, casterLevel)]) do slots[#slots + 1] = n end
+  end
+  while #slots > 0 and slots[#slots] == 0 do slots[#slots] = nil end
+  put("slots", slots)
+  if pact then
+    put("pact_slots", pact.slots)
+    put("pact_level", pact.level)
+  end
+  -- the spells, whatever the class: a fighter's Magic Initiate, say, or a
+  -- rogue's elven cantrip
+  put("cantrips", cantrips)
+  local function byLevel(map)
+    local out = {}
+    for lvl, l in pairs(map) do
+      table.sort(l, function(a, b) return tostring(a.name) < tostring(b.name) end)
+      out[lvl] = l
+    end
+    return out
+  end
+  if next(prepared) then put("spells", byLevel(prepared)) end
+  if next(always) then put("always_prepared", byLevel(always)) end
+  if next(book) then put("spellbook", byLevel(book)) end
 
   -- features, traits and feats, with their rules
   local features, seenFeature = {}, {}
@@ -965,28 +1134,30 @@ function gmb.sheet(c)
       return tostring(a.name) < tostring(b.name)
     end)
     for _, def in ipairs(fs) do
-      if not seenFeature[def.name] then
-        seenFeature[def.name] = true
-        features[#features + 1] = { name = def.name, text = gmb.markdown(def.description) }
+      local name = gmb.line(def.name) or ""
+      if not seenFeature[name] then
+        seenFeature[name] = true
+        features[#features + 1] = { name = name, text = gmb.markdown(def.description) }
       end
     end
   end
-  if bg.definition and bg.definition.featureName and bg.definition.featureName ~= "" then
-    features[#features + 1] = { name = bg.definition.featureName, text = gmb.markdown(bg.definition.featureDescription) }
+  local featureName = gmb.line(bg.definition and bg.definition.featureName)
+  if featureName and featureName ~= "" then
+    features[#features + 1] = { name = featureName, text = gmb.markdown(bg.definition.featureDescription) }
   end
   put("features", features)
   local traits = {}
   for _, t in ipairs(list(race.racialTraits)) do
     local def = t.definition
     if def and def.hideInSheet ~= true then
-      traits[#traits + 1] = { name = def.name, text = gmb.markdown(def.description) }
+      traits[#traits + 1] = { name = gmb.line(def.name) or "", text = gmb.markdown(def.description) }
     end
   end
   put("traits", traits)
   local feats = {}
   for _, f in ipairs(list(c.feats)) do
     local def = f.definition
-    if def and def.name then feats[#feats + 1] = { name = def.name, text = gmb.markdown(def.description) } end
+    if def and def.name then feats[#feats + 1] = { name = gmb.line(def.name), text = gmb.markdown(def.description) } end
   end
   put("feats", feats)
 
@@ -995,15 +1166,17 @@ function gmb.sheet(c)
   for _, it in ipairs(list(c.inventory)) do
     local def = it.definition or {}
     local qty = num(it.quantity) or 1
-    if def.name then
-      equipment[#equipment + 1] = qty > 1 and (def.name .. " (" .. tostring(math.floor(qty)) .. ")") or def.name
-      if it.isAttuned == true then attuned[#attuned + 1] = def.name end
+    local name = gmb.line(def.name)
+    if name then
+      equipment[#equipment + 1] = qty > 1 and (name .. " (" .. tostring(math.floor(qty)) .. ")") or name
+      if it.isAttuned == true then attuned[#attuned + 1] = name end
     end
   end
   for _, it in ipairs(list(c.customItems)) do
     local qty = num(it.quantity) or 1
-    if it.name then
-      equipment[#equipment + 1] = qty > 1 and (it.name .. " (" .. tostring(math.floor(qty)) .. ")") or it.name
+    local name = gmb.line(it.name)
+    if name then
+      equipment[#equipment + 1] = qty > 1 and (name .. " (" .. tostring(math.floor(qty)) .. ")") or name
     end
   end
   put("equipment", equipment)
@@ -1031,9 +1204,9 @@ local NUMERIC = {
 }
 
 local function entity(e)
-  local n = e:match("^#(%d+)$")
-  if n then
-    local k = tonumber(n)
+  local n, h = e:match("^#(%d+)$"), e:match("^#[xX](%x+)$")
+  local k = n and tonumber(n) or (h and tonumber(h, 16)) or nil
+  if k then
     if NUMERIC[k] then return NUMERIC[k] end
     if k >= 32 and k < 127 then return string.char(k) end
     return "&" .. e .. ";"
@@ -1041,16 +1214,47 @@ local function entity(e)
   return ENTITIES[e] or ("&" .. e .. ";")
 end
 
+-- The marks a < and a > in the words stand as until the tags are gone.
+local SENTINEL = { ["<"] = "\x01", [">"] = "\x02" }
+
+-- Words from between the tags as Markdown text: entities decoded, and each
+-- character Markdown would read as markup escaped, so that what D&D Beyond
+-- shows as words, &lt;b&gt; or ${...} say, stays words.
+local function words(text)
+  text = (text:gsub("&(#?%w+);", entity))
+  text = (text:gsub(MARKUP, function(ch) return SENTINEL[ch] or ("\\" .. ch) end))
+  return (text:gsub("&(#?%w+;)", "\\&%1"))
+end
+
 -- D&D Beyond's rules text, which is HTML, as Markdown: a paragraph to a
--- line, lists as lists, a table as a table, and bold and italic kept.
+-- line, lists as lists, a table as a table, and bold and italic kept. Only
+-- D&D Beyond's own tags become markup: the words between them are escaped
+-- first, so text written on D&D Beyond never becomes a tag, a link or an
+-- expression on the page.
 function gmb.markdown(html)
   if html == nil then return "" end
   local s = tostring(html)
   s = (s:gsub("\r", ""))
   s = (s:gsub("\n", " "))
+  s = (s:gsub("%c", " "))
   -- a hard space would end up inside bold's markers, where it breaks them
   s = (s:gsub("&nbsp;", " "))
   s = (s:gsub("&#160;", " "))
+  -- what a browser never shows: comments, scripts and styles
+  s = (s:gsub("<!%-%-.-%-%->", ""))
+  s = (s:gsub("<[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>.-</[Ss][Cc][Rr][Ii][Pp][Tt]%s*>", ""))
+  s = (s:gsub("<[Ss][Tt][Yy][Ll][Ee][^>]*>.-</[Ss][Tt][Yy][Ll][Ee]%s*>", ""))
+  -- the words between the tags, escaped: a tag opens with a letter, a / or
+  -- a !, as a browser reads one, so a < b stays words
+  local parts, at = {}, 1
+  while at <= #s do
+    local a, b = s:find("<[%a/!?][^<>]*>", at)
+    parts[#parts + 1] = words(s:sub(at, (a or (#s + 1)) - 1))
+    if not a then break end
+    parts[#parts + 1] = s:sub(a, b)
+    at = b + 1
+  end
+  s = table.concat(parts)
   -- a table's rows as Markdown rows, with the rule after the first
   s = (s:gsub("<table[^>]*>(.-)</table>", function(inner)
     local rows = {}
@@ -1058,7 +1262,8 @@ function gmb.markdown(html)
       local cells = {}
       for cell in row:gmatch("<t[hd][^>]*>(.-)</t[hd]>") do
         local text = (cell:gsub("<[^>]+>", ""))
-        text = (text:gsub("|", "/"))
+        -- a | would end the cell
+        text = (text:gsub("\\?|", "/"))
         text = (text:gsub("%s+", " "))
         text = (text:gsub("^%s+", ""))
         cells[#cells + 1] = (text:gsub("%s+$", ""))
@@ -1096,8 +1301,11 @@ function gmb.markdown(html)
     s = (s:gsub("<" .. tag[1] .. ">(.-)</" .. tag[1] .. ">", wrap))
     s = (s:gsub("<" .. tag[1] .. "%s[^>]*>(.-)</" .. tag[1] .. ">", wrap))
   end
-  s = (s:gsub("<[^>]+>", ""))
-  s = (s:gsub("&(#?%w+);", entity))
+  -- every tag left goes, and then the words' own < and > come back escaped
+  s = (s:gsub("<[^>]*>", ""))
+  s = (s:gsub("<", ""))
+  s = (s:gsub("\x01", "\\<"))
+  s = (s:gsub("\x02", "\\>"))
   local out = {}
   for line in (s .. "\n"):gmatch("([^\n]*)\n") do
     local l = (line:gsub("%s+", " "))
@@ -1116,13 +1324,17 @@ local RESERVED = { ["true"] = true, ["false"] = true, yes = true, no = true, on 
   null = true, y = true, n = true }
 
 -- A scalar as YAML: plain where that can't be misread, quoted otherwise.
+-- Always one line, so no value can end the frontmatter; and in quotes, a <
+-- or a > as YAML's escape for it, which every reader turns back into the
+-- character, so no name puts a tag, a comment or a baked section's marker
+-- into the page's text.
 local function scalar(v, flow)
   if type(v) == "number" then
     if v == math.floor(v) then return tostring(math.floor(v)) end
     return tostring(v)
   end
   if type(v) == "boolean" then return v and "true" or "false" end
-  local s = tostring(v)
+  local s = gmb.line(v) or ""
   local plain = s:match("^[%w][%w _%.'%-%(%)/+&]*$") and not s:match("%s$") and not RESERVED[s:lower()]
   -- nothing YAML would read as a number or a date: 16d6 is text, 1_000 isn't
   if plain and s:match("^%d") and (tonumber(s) or s:find("_", 1, true) or s:match("^%d+%-%d")) then
@@ -1132,7 +1344,8 @@ local function scalar(v, flow)
   if plain then return s end
   s = (s:gsub("\\", "\\\\"))
   s = (s:gsub('"', '\\"'))
-  s = (s:gsub("\t", " "))
+  s = (s:gsub("<", "\\x3C"))
+  s = (s:gsub(">", "\\x3E"))
   return '"' .. s .. '"'
 end
 
@@ -1206,14 +1419,14 @@ local function yamlEntry(key, value)
 end
 
 -- The keys the import writes, and so a refresh replaces: everything but
--- what a person adds by hand.
+-- what a person adds by hand. gmb.sheet refuses to write a key not here.
 gmb.owned = {}
 for _, k in ipairs({ "ddb", "level", "class", "subclass", "species", "background", "creature_size",
     "str", "dex", "con", "int", "wis", "cha", "saves", "skills", "expertise", "advantage",
-    "pb", "initiative", "str_save", "dex_save", "con_save", "int_save", "wis_save", "cha_save",
+    "initiative", "str_save", "dex_save", "con_save", "int_save", "wis_save", "cha_save",
     "passive_perception", "passive_insight", "passive_investigation", "spell_dc", "spell_attack",
     "ac", "hp", "hit_dice", "speed", "senses", "languages", "tools", "armor_training", "weapons",
-    "masteries", "attacks", "kit", "resources", "spellcasting", "slots", "pact_slots", "pact_level",
+    "masteries", "attacks", "resources", "spellcasting", "slots", "pact_slots", "pact_level",
     "cantrips", "spells", "always_prepared", "spellbook", "features", "traits", "feats",
     "equipment", "attuned", "coins" }) do
   gmb.owned[k] = true
@@ -1227,21 +1440,55 @@ function gmb.yaml(entries)
   return table.concat(out, "\n")
 end
 
--- A page's frontmatter split into its top-level keys, each with its lines,
--- and the text after it.
+-- A page's frontmatter and the text after it, as SilverBullet reads them:
+-- the lines between a first line of --- and the next line that is --- and
+-- nothing else. Nil and the whole text for a page without.
+local function frontmatter(text)
+  if type(text) ~= "string" then return nil, text end
+  local head, body = text:match("^%-%-%-\n(.-)\n%-%-%-\n(.*)$")
+  if head then return head, body end
+  head = text:match("^%-%-%-\n(.-)\n%-%-%-$")
+  if head then return head, "" end
+  return nil, text
+end
+
+-- The key a line at the frontmatter's left edge gives: ddb for `ddb: 1`,
+-- real name for `real name: Bram`, shadow hook for `"shadow hook": ...`.
+local function keyOf(line)
+  return line:match('^"([^"]*)"[ \t]*:') or line:match("^'([^']*)'[ \t]*:") or
+    line:match("^([^%s#:][^:]-)[ \t]*:[ \t]") or line:match("^([^%s#:][^:]-)[ \t]*:$")
+end
+
+-- A line that goes on with the entry above it: indented, one of a list's
+-- items at the left edge, or blank.
+local function continues(line)
+  return line:match("^[ \t]") ~= nil or line:match("^%-[ \t]") ~= nil or line == "-" or not line:match("%S")
+end
+
+-- A page's frontmatter split into its entries, each with its lines, and the
+-- text after it. An entry starts at every line at the left edge that doesn't
+-- go on with the one above: a key, or anything else, such as a comment or a
+-- key YAML reads with quotes or with spaces in it, which is kept as it is. A
+-- comment belongs to the entry around it when the lines after it go on with
+-- that entry.
 local function entriesOf(text)
-  local head, body = text:match("^%-%-%-\n(.-)\n%-%-%-\n?(.*)$")
+  local head, body = frontmatter(text)
   if not head then return nil, text end
+  local lines = {}
+  for line in (head .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
   local entries, current = {}, nil
-  for line in (head .. "\n"):gmatch("([^\n]*)\n") do
-    local key = line:match("^([%w_%-]+):")
-    if key then
-      current = { key = key, lines = { line } }
-      entries[#entries + 1] = current
-    elseif current then
+  for i, line in ipairs(lines) do
+    local under = current ~= nil and continues(line)
+    if current ~= nil and line:match("^#") then
+      local j = i + 1
+      while lines[j] and (lines[j]:match("^#") or not lines[j]:match("%S")) do j = j + 1 end
+      under = lines[j] ~= nil and continues(lines[j])
+    end
+    if under then
       table.insert(current.lines, line)
     else
-      entries[#entries + 1] = { key = nil, lines = { line } }
+      current = { key = (not line:match("^#")) and keyOf(line) or nil, lines = { line } }
+      entries[#entries + 1] = current
     end
   end
   return entries, body
@@ -1261,7 +1508,8 @@ function gmb.merge(text, entries)
   return "---\n" .. fresh .. "\n---\n" .. (body or "")
 end
 
--- A new character's page.
+-- A new character's page, under a heading of the character's name that
+-- shows it as words, whatever it holds.
 function gmb.page(c, entries)
   local extras = {}
   local ok, list2 = pcall(config.get, "gmSheets.extras", nil)
@@ -1269,16 +1517,24 @@ function gmb.page(c, entries)
     if e.key then extras[#extras + 1] = tostring(e.key) .. ":" end
   end
   local head = "type: pc\n" .. (#extras > 0 and (table.concat(extras, "\n") .. "\n") or "") .. gmb.yaml(entries)
-  return "---\n" .. head .. "\n---\n\n# " .. tostring(c.name) .. "\n\n${sheets.draw()}\n\n" ..
-    "[The character on D&D Beyond](" .. gmb.sheetLink .. tostring(c.id) .. ")\n"
+  local title = gmb.inline(c.name)
+  if title == "" then title = "Unnamed" end
+  return "---\n" .. head .. "\n---\n\n# " .. title .. "\n\n${sheets.draw()}\n\n" ..
+    "[The character on D&D Beyond](" .. gmb.sheetLink .. tostring(whole(c.id) or "") .. ")\n"
 end
 
 ------------------------------------------------------------------ import and refresh
 
--- A page name from a character's name: SilverBullet keeps some characters.
+-- A page name from a character's name, as one SilverBullet 2.11 can open
+-- and link to: without the characters its link grammar reads as something
+-- else (a position after @, a header after #, an anchor after $, an alias
+-- after |, a tag's < and >, a link's brackets, a folder's /, a \ and a ^),
+-- and without an ending it would take for a file's extension: Dr.Who is
+-- Dr Who.
 local function pageName(name)
-  local s = tostring(name or "Unnamed")
-  s = (s:gsub("[%[%]#|%^/\\]", " "))
+  local s = gmb.line(name) or ""
+  s = (s:gsub("[%[%]#|%^/\\@$<>]", " "))
+  s = (s:gsub("%.(%w+)$", " %1"))
   s = (s:gsub("%s+", " "))
   s = (s:gsub("^[%s%.]+", ""))
   s = (s:gsub("%s+$", ""))
@@ -1292,25 +1548,139 @@ local function readPage(name)
   return nil
 end
 
+-- Whether a page exists: true or false, or nil and why when that can't be
+-- told, as when the server can't be reached. Only "Not found" is no page.
 local function exists(name)
-  local ok = pcall(space.getPageMeta, name)
-  return ok
+  local ok, err = pcall(space.getPageMeta, name)
+  if ok then return true end
+  local why = tostring(err)
+  if why:find("Not found", 1, true) or why:find("not found", 1, true) then return false end
+  return nil, why
 end
 
 local function ddbOf(text)
-  local head = text and text:match("^%-%-%-\n(.-)\n%-%-%-")
-  return head and tonumber(head:match("\nddb:%s*(%d+)") or head:match("^ddb:%s*(%d+)")) or nil
+  local head = frontmatter(text)
+  return head and tonumber(("\n" .. head):match("\nddb:[ \t]*(%d+)")) or nil
 end
 
--- Undo for a write: the page as it was, or gone again if there was none.
-local function undoTo(name, before)
+local function levelIn(text)
+  local head = frontmatter(text)
+  return head and tonumber(("\n" .. head):match("\nlevel:[ \t]*(%d+)")) or nil
+end
+
+-- The page in the folder that is character id's, by the ddb number in its
+-- frontmatter, which the index gives and the page itself confirms: the one
+-- named for the character if there are two. Nil if there is none.
+local function pageFor(id, name)
+  local folder = tostring(gmb.setting("folder") or "")
+  local ok, rows = pcall(function()
+    return query[[
+      from p = index.pages()
+      where p.ddb ~= nil and p.name:startsWith(folder)
+      select { name = p.name, ddb = p.ddb }
+    ]]
+  end)
+  if not ok or type(rows) ~= "table" then return nil end
+  local found = {}
+  for _, r in ipairs(rows) do
+    if num(r.ddb) == id and type(r.name) == "string" and ddbOf(readPage(r.name)) == id then
+      found[#found + 1] = r.name
+    end
+  end
+  table.sort(found)
+  for _, n in ipairs(found) do
+    if n == name then return n end
+  end
+  return found[1]
+end
+
+-- What is typed into a page open in the editor, saved before the page is
+-- read for a write: SilverBullet 2.11's editor.reloadPage drops an autosave
+-- still to come, and a write from here would lose an edit not yet saved.
+-- True, or false and why when it couldn't be saved.
+local function flush(page)
+  if editor.getCurrentPage() ~= page or not editor.save then return true end
+  local ok, err = pcall(editor.save)
+  if ok then return true end
+  return false, tostring(err)
+end
+
+local function reload(page)
+  if editor.getCurrentPage() == page and editor.reloadPage then pcall(editor.reloadPage) end
+end
+
+-- Undo for a write: the page as it was, or gone again if the import made
+-- it, while it still holds what was written. Anything changed since stays.
+local function undoTo(name, before, written)
   return function()
-    if before then space.writePage(name, before) else pcall(space.deletePage, name) end
+    flush(name)
+    if readPage(name) ~= written then
+      editor.flashNotification("GM Beyond: " .. name .. " has changed since, so Undo left it as it is.", "error")
+      return
+    end
+    if before then
+      space.writePage(name, before)
+      reload(name)
+    else
+      pcall(space.deletePage, name)
+    end
     editor.flashNotification("Undone: " .. name .. " is as it was.", "info")
   end
 end
 
--- Import a character from a link to it, or refresh its page if it has one.
+function gmb.levelOf(entries)
+  for _, e in ipairs(entries) do if e[1] == "level" then return e[2] end end
+  return nil
+end
+
+-- A character's page brought up to date with what D&D Beyond sent, once
+-- what is typed into it is saved and, if the level would drop, the GM has
+-- said to. Returns the page, or nil when nothing was written.
+local function update(page, id, c, entries, opts)
+  local saved, err = flush(page)
+  if not saved then
+    editor.flashNotification("GM Beyond: couldn't save what is typed into " .. page .. " first (" ..
+      tostring(err) .. "), so it wasn't refreshed.", "error")
+    return nil
+  end
+  local text = readPage(page)
+  if not text then
+    editor.flashNotification("GM Beyond: couldn't read " .. page .. ", so it wasn't refreshed.", "error")
+    return nil
+  end
+  if ddbOf(text) ~= id then
+    editor.flashNotification("GM Beyond: " .. page .. " isn't character " .. tostring(id) ..
+      "'s page any more, so it wasn't refreshed.", "error")
+    return nil
+  end
+  local name = gmb.line(c.name) or "?"
+  local was, now = levelIn(text), gmb.levelOf(entries)
+  if was and now and now < was and not editor.confirm("D&D Beyond has " .. name .. " at level " ..
+      tostring(now) .. ", and " .. page .. " says level " .. tostring(was) .. ". Refresh the page to level " ..
+      tostring(now) .. "?") then
+    editor.flashNotification(page .. " is left at level " .. tostring(was) .. ".", "info")
+    return nil
+  end
+  local open = opts.open and { name = "Open", run = function() editor.navigate(page) end } or nil
+  local after = gmb.merge(text, entries)
+  if after == text then
+    editor.flashNotification(page .. " is already up to date with D&D Beyond." .. (opts.note or ""), "info",
+      open and { actions = { open } } or nil)
+    return page
+  end
+  space.writePage(page, after)
+  reload(page)
+  local actions = {}
+  if open then actions[#actions + 1] = open end
+  actions[#actions + 1] = { name = "Undo", run = undoTo(page, text, after) }
+  editor.flashNotification("Refreshed " .. page .. " from D&D Beyond: " .. name .. ", level " ..
+    tostring(now) .. "." .. (opts.note or ""), "info", { actions = actions })
+  return page
+end
+
+-- Import a character from a link to it, or refresh its page if it has one:
+-- the page with its number in the folder, whatever it is called now, or
+-- else the one named for it.
 function gmb.import(link)
   if link == nil then
     link = editor.prompt("D&D Beyond character link, or its number", "")
@@ -1326,39 +1696,58 @@ function gmb.import(link)
     editor.flashNotification("GM Beyond: couldn't import character " .. tostring(id) .. ": " .. tostring(why) .. ".", "error")
     return
   end
-  local name = pageName(c.name)
-  local before = exists(name) and readPage(name) or nil
-  if before and ddbOf(before) ~= id then
-    editor.flashNotification("GM Beyond: " .. name .. " is another character's page. Rename it, or the import, first.", "error")
+  if #list(c.classes) == 0 then
+    editor.flashNotification("GM Beyond: D&D Beyond sent character " .. tostring(id) ..
+      " with no class, so nothing was written.", "error")
     return
   end
+  local name = pageName(c.name)
   local entries = gmb.sheet(c)
-  local text = before and gmb.merge(before, entries) or gmb.page(c, entries)
-  if before == text then
-    editor.flashNotification(name .. " is already up to date with D&D Beyond.", "info",
-      { actions = { { name = "Open", run = function() editor.navigate(name) end } } })
-    return name
+  local page = pageFor(id, name)
+  if not page then
+    local there, err = exists(name)
+    if there == nil then
+      editor.flashNotification("GM Beyond: couldn't tell whether " .. name .. " exists (" .. tostring(err) ..
+        "), so nothing was written.", "error")
+      return
+    end
+    if there then
+      local text = readPage(name)
+      if not text then
+        editor.flashNotification("GM Beyond: couldn't read " .. name .. ", so nothing was written.", "error")
+        return
+      end
+      if ddbOf(text) ~= id then
+        editor.flashNotification("GM Beyond: " .. name .. " is another character's page. Rename it, or the import, first.", "error")
+        return
+      end
+      page = name
+    end
   end
+  if page then
+    local note = page ~= name and " The name has changed on D&D Beyond; the page keeps its own." or nil
+    return update(page, id, c, entries, { open = true, note = note })
+  end
+  local text = gmb.page(c, entries)
   space.writePage(name, text)
-  editor.flashNotification((before and "Refreshed " or "Imported ") .. name .. " from D&D Beyond: " ..
-    tostring(c.name) .. ", level " .. tostring(gmb.levelOf(entries)) .. ".", "info", {
+  editor.flashNotification("Imported " .. name .. " from D&D Beyond: " .. (gmb.line(c.name) or "?") ..
+    ", level " .. tostring(gmb.levelOf(entries)) .. ".", "info", {
       actions = {
         { name = "Open", run = function() editor.navigate(name) end },
-        { name = "Undo", run = undoTo(name, before) },
+        { name = "Undo", run = undoTo(name, nil, text) },
       },
     })
   return name
-end
-
-function gmb.levelOf(entries)
-  for _, e in ipairs(entries) do if e[1] == "level" then return e[2] end end
-  return nil
 end
 
 -- Fetch an imported character again and rewrite its sheet's keys.
 function gmb.refresh(page)
   page = page or editor.getCurrentPage()
   local text = readPage(page)
+  if not text then
+    editor.flashNotification("GM Beyond: couldn't read " .. tostring(page) .. " to refresh it.", "error")
+    return
+  end
   local id = ddbOf(text)
   if not id then
     editor.flashNotification("GM Beyond: " .. tostring(page) .. " has no ddb number to refresh from.", "error")
@@ -1369,17 +1758,12 @@ function gmb.refresh(page)
     editor.flashNotification("GM Beyond: couldn't refresh " .. tostring(page) .. ": " .. tostring(why) .. ".", "error")
     return
   end
-  local entries = gmb.sheet(c)
-  local after = gmb.merge(text, entries)
-  if after == text then
-    editor.flashNotification(page .. " is already up to date with D&D Beyond.", "info")
-    return page
+  if #list(c.classes) == 0 then
+    editor.flashNotification("GM Beyond: D&D Beyond sent " .. tostring(page) ..
+      "'s character with no class, so the page is left as it is.", "error")
+    return
   end
-  space.writePage(page, after)
-  editor.flashNotification("Refreshed " .. page .. " from D&D Beyond: level " ..
-    tostring(gmb.levelOf(entries)) .. ".", "info", { actions = { { name = "Undo", run = undoTo(page, text) } } })
-  if editor.getCurrentPage() == page and editor.reloadPage then pcall(editor.reloadPage) end
-  return page
+  return update(page, id, c, gmb.sheet(c), {})
 end
 
 ------------------------------------------------------------------ the bar

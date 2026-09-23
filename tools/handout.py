@@ -13,7 +13,12 @@ with their rules and whatever outgrew its box.
 
 The numbers are GM Sheets' own: a number the page writes, or else the SRD's
 sum for it. --extras names a campaign's own keys to put in the sheet's
-Backstory & Personality box, "want:Want" for a key `want` shown as "Want".
+Backstory & Personality box, "want:Want" for a key `want` shown as "Want";
+what doesn't fit there goes on the pages after the sheet.
+
+The sheet's font shows the letters of Windows' Western alphabet (cp1252). A
+letter it can't show is printed as the nearest it can, Łucja Dvořák as Lucja
+Dvorák, and the script says so; a key left blank prints nothing.
 
 The sheet is Wizards of the Coast's, and its only terms are that you may
 print and photocopy it for personal use. So nothing here carries it: the
@@ -31,6 +36,7 @@ import math
 import pathlib
 import re
 import sys
+import unicodedata
 import urllib.request
 
 TEMPLATE_URL = "https://media.dndbeyond.com/compendium-images/phb/downloads/DnD_2024_Character-Sheet.pdf"
@@ -99,6 +105,52 @@ HELV_BOLD = [
 EXTRA_WIDTHS = {"’": (222, 278), "‘": (222, 278), "“": (333, 500), "”": (333, 500),
                 "–": (556, 556), "—": (1000, 1000), "…": (1000, 1000), "é": (556, 556),
                 "×": (584, 584), "½": (834, 834), "•": (350, 350), "°": (400, 400)}
+
+
+# Letters Unicode can't take apart into a Western one and a mark, as the
+# nearest the sheet's font shows.
+TRANSLITERATED = {"Ł": "L", "ł": "l", "Đ": "D", "đ": "d", "Ħ": "H", "ħ": "h", "ı": "i", "Ŧ": "T",
+                  "ŧ": "t", "Ŋ": "N", "ŋ": "n", "ĸ": "k", "ſ": "s", "Ə": "E", "ə": "e",
+                  "‐": "-", "‑": "-", "−": "-", "′": "'", "″": '"', "→": "->", "←": "<-",
+                  "≤": "<=", "≥": ">=", "≠": "!="}
+
+# What filling the sheet had to warn about, said once each when it is done.
+WARNINGS = []
+
+
+def warn(message):
+    if message not in WARNINGS:
+        WARNINGS.append(message)
+
+
+def shown(s):
+    """Text as the sheet's font can show it: each letter it has kept, one it
+    hasn't as the nearest it has (Ł as L, ř as r), and a warning that says
+    so. Only what has no near letter at all becomes a ?."""
+    s = str(s)
+    out, lost = [], False
+    for ch in s:
+        try:
+            ch.encode("cp1252")
+            out.append(ch)
+            continue
+        except UnicodeEncodeError:
+            pass
+        near = TRANSLITERATED.get(ch)
+        if near is None:
+            near = "".join(c for c in unicodedata.normalize("NFKD", ch) if not unicodedata.combining(c))
+            try:
+                near.encode("cp1252")
+            except UnicodeEncodeError:
+                near = ""
+        if not near:
+            near, lost = "?", True
+        out.append(near)
+    printed = "".join(out)
+    if printed != s:
+        warn(f'the sheet\'s font can\'t show every letter of "{s}", so it is printed "{printed}"'
+             + (", a ? for what has no near letter" if lost else ""))
+    return printed
 
 
 def text_width(s, size, bold=False):
@@ -180,6 +232,44 @@ def items(v):
     return list(v) if isinstance(v, list) else [v]
 
 
+def text_of(v):
+    """A value from the page as the sheet prints it: nothing for a key left
+    blank, a whole number without a .0, true and false as YAML spells them."""
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    return str(v)
+
+
+def names_in(v):
+    """A list of names from a page: a list, one name, or a string of names
+    separated by commas, `athletics, perception`."""
+    if isinstance(v, str):
+        return [p.strip() for p in v.split(",") if p.strip()]
+    return [e for e in items(v) if e is not None]
+
+
+def slot_counts(v):
+    """Spell slots by level from a page: a list, [4, 3], its numbers in a
+    string, "4, 3", or a map by level, whose keys YAML may read as numbers or
+    as text, {1: 4, "2": 3}."""
+    out = {}
+    if isinstance(v, dict):
+        for k, n in v.items():
+            level, n = whole(k), whole(n)
+            if level and n:
+                out[level] = n
+        return out
+    for i, n in enumerate(names_in(v), 1):
+        n = whole(n)
+        if n:
+            out[i] = n
+    return out
+
+
 def key(v):
     return re.sub(r"[\s\-]+", "_", str(v).strip().lower())
 
@@ -196,7 +286,7 @@ def ability_key(v):
 
 def keyset(v):
     out = set()
-    for e in items(v):
+    for e in names_in(v):
         k = key(e)
         out.add(k)
         a = ability_key(re.sub(r"_saves?$", "", k))
@@ -249,18 +339,28 @@ def values(d):
 
 def name_of(e):
     if isinstance(e, dict):
-        return str(e.get("name", ""))
-    return "" if e is None else str(e)
+        return text_of(e.get("name"))
+    return text_of(e)
+
+
+# A Markdown backslash escape, \< or \*, which GM Beyond writes in rules text
+# so that nothing in it is read as markup: the character alone, once the
+# emphasis around it is gone.
+ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
 
 
 def plain(text):
-    """Markdown as plain words: emphasis gone, a list's dash kept."""
+    """Markdown as plain words: emphasis gone, a list's dash kept, and an
+    escaped character as itself."""
     s = str(text or "")
+    # an escaped character stands aside, in Unicode's private use area,
+    # while the emphasis goes, so an escaped * is never taken for one
+    s = ESCAPED.sub(lambda m: chr(0xE000 + ord(m.group(1))), s)
     s = re.sub(r"\*\*\*(.+?)\*\*\*", r"\1", s)
     s = re.sub(r"\*\*(.+?)\*\*", r"\1", s)
     s = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?!\w)", r"\1", s)
     s = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", s)
-    return s
+    return re.sub("[\ue000-\ue07f]", lambda m: chr(ord(m.group(0)) - 0xE000), s)
 
 
 def by_level(v):
@@ -277,6 +377,7 @@ def by_level(v):
 
 
 def pdf_string(s):
+    # shown() has made every letter one cp1252 has; "replace" is only a guard
     raw = s.encode("cp1252", "replace")
     raw = raw.replace(b"\\", b"\\\\").replace(b"(", b"\\(").replace(b")", b"\\)")
     return b"(" + raw + b")"
@@ -289,9 +390,9 @@ class Layer:
         self.ops = [INK + b" rg", INK + b" RG"]
 
     def text(self, x, y, s, size, bold=False, align="left"):
-        if s is None or s == "":
+        s = shown(text_of(s))
+        if s == "":
             return
-        s = str(s)
         if align == "center":
             x -= text_width(s, size, bold) / 2
         elif align == "right":
@@ -300,7 +401,7 @@ class Layer:
         self.ops.append(b"BT %s %.2f Tf %.2f %.2f Td %s Tj ET" % (font, size, x, y, pdf_string(s)))
 
     def fit(self, x, y, s, width, size, smallest=5.5, bold=False, align="left"):
-        s, at = fitted(str(s), width, size, smallest, bold)
+        s, at = fitted(shown(text_of(s)), width, size, smallest, bold)
         self.text(x, y, s, at, bold, align)
 
     def dot(self, x, y, r):
@@ -342,7 +443,7 @@ def lines_in(layer, x, top, bottom, leading, width, texts, size=7.8, bold_heads=
     rest = []
     for i, entry in enumerate(texts):
         head = isinstance(entry, tuple)
-        words = entry[1] if head else entry
+        words = shown(entry[1] if head else entry)
         pieces = wrapped(words, width, size, head and bold_heads) or [""]
         if y - leading * (len(pieces) - 1) < bottom:
             rest.extend(texts[i:])
@@ -361,16 +462,18 @@ def fill_front(layer, d, v, name, overflow):
     layer.fit(25, 701, d.get("species", ""), 115, 10)
     layer.fit(149, 701, d.get("subclass", ""), 102, 10)
     layer.text(276, 729, "" if whole(d.get("level")) is None else str(whole(d.get("level"))), 15, True, "center")
-    layer.text(340.5, 719, str(d.get("ac", "")), 20, True, "center")
-    layer.fit(438, 703, str(d.get("hp", "")), 46, 11, bold=True)
-    layer.fit(492, 703, str(d.get("hit_dice", "")), 42, 10)
+    layer.text(340.5, 719, text_of(d.get("ac")), 20, True, "center")
+    layer.fit(438, 703, text_of(d.get("hp")), 46, 11, bold=True)
+    layer.fit(492, 703, text_of(d.get("hit_dice")), 42, 10)
     layer.text(52.5, 616, signed(v["pb"]), 18, True, "center")
     speed = d.get("speed")
-    speed = f"{speed} ft." if isinstance(speed, (int, float)) else str(speed or "")
+    # a number is feet, as GM Sheets writes it; text is as it stands
+    number_ = isinstance(speed, (int, float)) and not isinstance(speed, bool)
+    speed = f"{text_of(speed)} ft." if number_ else text_of(speed)
     initiative = signed(v["initiative"]) + (" ADV" if "initiative" in v["adv"] else "")
     layer.fit(263.5, 627, initiative, 70, 15, bold=True, align="center")
     layer.fit(354, 627, speed, 70, 12, bold=True, align="center")
-    layer.fit(445.5, 627, str(d.get("creature_size", "")), 70, 11, align="center")
+    layer.fit(445.5, 627, text_of(d.get("creature_size")), 70, 11, align="center")
     passive = str(v["passive"]["perception"] if v["passive"]["perception"] is not None else "")
     layer.text(542, 627, passive, 15, True, "center")
 
@@ -418,8 +521,8 @@ def fill_front(layer, d, v, name, overflow):
             hit = signed(math.floor(hit)) if isinstance(hit, (int, float)) and not isinstance(hit, bool) else str(hit or "")
             layer.fit(228, row, a.get("name", ""), 104, 8.5, bold=True)
             layer.fit(358, row, hit, 42, 8.5, align="center")
-            layer.fit(384, row, str(a.get("damage", "")), 74, 8.5)
-            notes = str(a.get("notes") or "")
+            layer.fit(384, row, text_of(a.get("damage")), 74, 8.5)
+            notes = shown(text_of(a.get("notes")))
             if text_width(notes, 7) <= 122:
                 layer.text(462, row, notes, 7)
             else:
@@ -427,15 +530,15 @@ def fill_front(layer, d, v, name, overflow):
                 layer.text(462, row + 4, two[0], 6.3)
                 layer.fit(462, row - 3.4, " ".join(two[1:]), 122, 6.3)
         else:
-            layer.fit(228, row, str(a), 104, 8.5, bold=True)
+            layer.fit(228, row, text_of(a), 104, 8.5, bold=True)
     if len(attacks) > len(rows):
         overflow.append(("More attacks", [attack_line(a) for a in attacks[len(rows):]]))
 
     features = []
     for r in items(d.get("resources")):
         if isinstance(r, dict):
-            bits = [str(r["uses"]) if r.get("uses") is not None else "", str(r.get("reset") or "")]
-            features.append(f"{r.get('name', '')}: " + ", ".join(b for b in bits if b))
+            bits = [text_of(r.get("uses")), text_of(r.get("reset"))]
+            features.append(f"{text_of(r.get('name'))}: " + ", ".join(b for b in bits if b))
     pact = whole(d.get("pact_slots"))
     if pact:
         level = whole(d.get("pact_level")) or 1
@@ -455,13 +558,13 @@ def fill_front(layer, d, v, name, overflow):
 
 def attack_line(a):
     if not isinstance(a, dict):
-        return str(a)
+        return text_of(a)
     hit = a.get("hit")
-    hit = signed(math.floor(hit)) + " to hit" if isinstance(hit, (int, float)) and not isinstance(hit, bool) else str(hit or "")
-    parts = [p for p in (hit, str(a.get("damage") or "")) if p]
-    line = f"{a.get('name', '')}: " + ", ".join(parts)
+    hit = signed(math.floor(hit)) + " to hit" if isinstance(hit, (int, float)) and not isinstance(hit, bool) else text_of(hit)
+    parts = [p for p in (hit, text_of(a.get("damage"))) if p]
+    line = f"{text_of(a.get('name'))}: " + ", ".join(parts)
     if a.get("notes"):
-        line += f". {a['notes']}"
+        line += f". {text_of(a['notes'])}"
     return line
 
 
@@ -490,11 +593,10 @@ def fill_back(layer, d, v, extras, overflow):
         layer.text(31, 709, signed(v["mods"][v["casting"]]), 13, True, "center")
     layer.text(31, 684, "" if v["spell_dc"] is None else str(v["spell_dc"]), 13, True, "center")
     layer.text(31, 657, signed(v["spell_attack"]), 13, True, "center")
-    slots = items(d.get("slots"))
     xs, ys = [185, 271, 348], [680.8, 666.8, 652.8]
-    for i, n in enumerate(slots[:9]):
-        n = whole(n)
-        if n:
+    for level, n in slot_counts(d.get("slots")).items():
+        i = level - 1
+        if 0 <= i < 9:
             layer.text(xs[i // 3], ys[i % 3], str(n), 9, True, "center")
     pact = whole(d.get("pact_slots"))
     if pact:
@@ -511,11 +613,11 @@ def fill_back(layer, d, v, extras, overflow):
         layer.text(27, y, str(level), 8.5, True, "center")
         layer.fit(42, y, name, 108, 8.5)
         if isinstance(e, dict):
-            time = str(e.get("time") or "")
+            time = text_of(e.get("time"))
             time = SHORT_TIMES.get(time, time.replace(" minutes", " min").replace(" minute", " min")
                                    .replace(" hours", " hr").replace(" hour", " hr"))
             layer.fit(155, y, time, 31, 7.5)
-            rng = str(e.get("range") or "")
+            rng = text_of(e.get("range"))
             area = ""
             if " (" in rng:
                 rng, area = rng.split(" (", 1)
@@ -528,7 +630,7 @@ def fill_back(layer, d, v, extras, overflow):
             material = e.get("material")
             if material not in (None, False):
                 layer.diamond(286.7, y + 2.8, 2.6)
-            notes = [n for n in (area, str(material) if isinstance(material, str) else "", str(e.get("notes") or ""), note) if n]
+            notes = [n for n in (area, material if isinstance(material, str) else "", text_of(e.get("notes")), note) if n]
             if notes:
                 layer.fit(305, y, "; ".join(notes), 88, 6.5, smallest=5)
         elif note:
@@ -546,7 +648,7 @@ def fill_back(layer, d, v, extras, overflow):
     kit = d.get("kit") if isinstance(d.get("kit"), dict) else None
     texts = ["; ".join(gear)] if gear else []
     if kit and items(kit.get("equipment")):
-        label = str(kit.get("label") or "Another loadout")
+        label = text_of(kit.get("label")) or "Another loadout"
         texts.append(("k", f"{label}: " + "; ".join(name_of(x) for x in items(kit.get("equipment")))))
     rest += lines_in(layer, 413, 355, 188, 8.8, 175, texts, bold_heads=False)
     if rest:
@@ -560,9 +662,12 @@ def fill_back(layer, d, v, extras, overflow):
             layer.fit(x, 56, str(n), 28, 10, bold=True, align="center")
     texts = []
     for k, label in extras:
-        if d.get(k) not in (None, ""):
-            texts.append(f"{label}: {d.get(k)}")
-    lines_in(layer, 413, 628, 500, 10, 175, texts, size=9, bold_heads=False)
+        if text_of(d.get(k)) != "":
+            texts.append(f"{label}: {text_of(d.get(k))}")
+    rest = lines_in(layer, 413, 628, 500, 10, 175, texts, size=9, bold_heads=False)
+    if rest:
+        overflow.append(("Backstory & Personality", rest))
+        warn("Backstory & Personality holds more than its box, so the rest is on the pages after the sheet")
 
 
 def more_pages(d, v, name, overflow):
@@ -578,9 +683,9 @@ def more_pages(d, v, name, overflow):
 
     kit = d.get("kit") if isinstance(d.get("kit"), dict) else None
     if kit:
-        heading(str(kit.get("label") or "Another loadout"))
+        heading(text_of(kit.get("label")) or "Another loadout")
         if kit.get("ac") is not None:
-            para(f"Armor Class {kit['ac']}.")
+            para(f"Armor Class {text_of(kit['ac'])}.")
         for a in items(kit.get("attacks")):
             para(attack_line(a))
     for title, lines in overflow:
@@ -626,6 +731,7 @@ def more_pages(d, v, name, overflow):
             y -= 15
             continue
         _, t, lead = b
+        t, lead = shown(t), shown(lead) if lead else lead
         size, leading = 8.8, 11.2
         words = (lead + " " if lead else "") + t
         lines = wrapped(words, width, size) or [""]
@@ -660,20 +766,28 @@ def fonts_resource():
 
 def layer_page(writer, layer):
     """A page holding only a layer's writing."""
-    from pypdf.generic import DecodedStreamObject, NameObject
+    from pypdf.generic import ContentStream, NameObject
     page = writer.add_blank_page(PAGE_W, PAGE_H)
     page[NameObject("/Resources")] = fonts_resource()
-    stream = DecodedStreamObject()
+    stream = ContentStream(None, writer)
     stream.set_data(layer.data())
-    page[NameObject("/Contents")] = writer._add_object(stream)
+    if hasattr(page, "replace_contents"):
+        page.replace_contents(stream)
+    else:
+        # an older pypdf, without PageObject.replace_contents, has no public
+        # way to give a page its contents: its writer's own _add_object,
+        # private, and so used here and nowhere else
+        page[NameObject("/Contents")] = writer._add_object(stream)
     return page
 
 
 def fill(template, d, name, extras):
-    """The filled sheet, as PDF bytes."""
+    """The filled sheet, as PDF bytes. What it had to warn about goes to
+    stderr, as "warning: <name>: ..."."""
     import io
 
     from pypdf import PdfReader, PdfWriter
+    WARNINGS.clear()
     v = values(d)
     overflow = []
     front, back = Layer(), Layer()
@@ -690,6 +804,8 @@ def fill(template, d, name, extras):
     writer.add_metadata({"/Title": f"{name}: character sheet", "/Creator": "GM Sheets handout"})
     out = io.BytesIO()
     writer.write(out)
+    for message in WARNINGS:
+        print(f"warning: {name}: {message}", file=sys.stderr)
     return out.getvalue()
 
 

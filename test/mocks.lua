@@ -466,12 +466,14 @@ end
 
 -- net.proxyFetch answers from H.responses, by URL, and counts what it was
 -- asked for in H.fetched; anything else is a 404, as D&D Beyond gives for a
--- character that isn't public.
+-- character that isn't public. SilverBullet 2.11's server proxy answers ok
+-- whenever D&D Beyond answered at all, with D&D Beyond's own status, so ok
+-- false is only ever the server's own failure.
 net = {}
 function net.proxyFetch(url, options)
   H.fetched[#H.fetched + 1] = url
   local r = H.responses[url]
-  if r == nil then return { ok = false, status = 404 } end
+  if r == nil then return { ok = true, status = 404 } end
   if type(r) == "function" then return r(url, options) end
   return r
 end

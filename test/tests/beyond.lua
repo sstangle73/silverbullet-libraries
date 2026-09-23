@@ -274,7 +274,7 @@ end)
 
 test("beyond: a character that isn't public says so", "dm", function()
   eq(gmb.import(ILSE_LINK), nil)
-  has(lastNotification().message, "may be private")
+  has(lastNotification().message, "D&D Beyond answered 404: the character is private, or has been deleted")
   eq(lastNotification().kind, "error")
   eq(gmb.import("not a link"), nil)
   has(lastNotification().message, "isn't a link to a D&D Beyond character")
