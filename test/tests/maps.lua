@@ -527,3 +527,16 @@ test("maps: a label never measures differently in the two Luas", "adventure", fu
   eq(m.legend["O"].label, nil, "a label outside ASCII is not drawn")
   eq(#m.warn, 1)
 end)
+
+-------------------------------------------------------------- a stale tab
+
+-- A tab left open over a Library: Update runs the old GM Maps over the new
+-- pages; GM Book asks maps.stale before it builds.
+test("maps: stale says when the space holds another GM Maps", "dm", function()
+  local page = "Adventure/Library/Storie/GM Maps"
+  eq(maps.stale(), nil, "the tab runs the page the space holds")
+  H.pages[page] = (H.pages[page]:gsub('\nversion: "[^"\n]*"\n', '\nversion: "7.0.0"\n', 1))
+  eq(maps.stale(), "This tab runs GM Maps " .. maps.version .. ", but the space has 7.0.0: " ..
+    "reload it (System: Reload, Ctrl-Alt-R) before building.")
+  eq(maps.printed.stale(), maps.stale(), "GM Book finds it through the printer")
+end)

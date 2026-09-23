@@ -20,6 +20,8 @@ Self-contained as of 1.1: it no longer needs GM Kit, so it can live inside a sta
 
 A build takes a while, and one runs at a time: a click while one is running is told so and starts nothing.
 
+**A tab that needs a reload builds nothing.** Space Lua is read when a tab opens and not again, so a tab left open while `Library: Update` brings a new GM Book, or a new release of a library the book prints with, runs the old code over the new pages. Its build is refused, with a notification naming each library and both versions, and the bar on a built edition says so first, *⟳ Reload this tab*, until `System: Reload` (Ctrl-Alt-R). Both have a *Reload* button that runs it, for a phone, which has no keyboard to press it on. Each library's version is read from its own page, at any depth of the space, so a copy at another depth with another version is named too: remove the one you don't use. `gmbook.stale()` gives GM Book's message, or nil, and `gmbook.staleLibraries()` every message, GM Book's and those of the libraries in `gmbook.printers` that have a `stale()` of their own, such as GM Maps.
+
 To put a build button on a page of your own:
 
     ${widgets.commandButton("Build the book", "GM: Build Book")}
@@ -58,7 +60,7 @@ Put `book_order` in the frontmatter of any page that belongs in the book. Pages 
 
     book_order: 20
 
-Leave gaps (10, 20, 30) so you can insert chapters without renumbering. Pages that share a `book_order` go in by their names.
+Leave gaps (10, 20, 30) so you can insert chapters without renumbering. Pages that share a `book_order` go in by their names, and a `book_order` that isn't a number, such as `soon`, puts its page at the end of the book. A build names both, and builds all the same.
 
 ## A chapter in several pages
 
@@ -68,6 +70,8 @@ A long chapter can be split into a page of its own for each scene or section. Gi
     book_section: true
 
 A section carries on the chapter before it. There is no page break ahead of it, and its headings drop a level, so its `#` title prints as a section of that chapter. Number sections with two decimals: with one, YAML reads a tenth section's 18.10 as 18.1, the same as the first.
+
+A section whose chapter an edition leaves out, such as a chapter kept back for the DM from above its title, carries on whatever page comes before it in that edition, under that page's title. A build names such a section, and one with no chapter before it at all.
 
 ## Live values
 
@@ -106,6 +110,8 @@ To print every one in place, or to word the pointer your own way (`%s` is the pa
     config.set("gmBook.transclusions", "inline")
     config.set("gmBook.see", "*For more, see %s.*")
 
+With `gmBook.pageRefs`, the page and section are followed by the page they are on: see *Page numbers*.
+
 ## Building from a larger space
 
 A build reads the pages that sit beside GM Book's own `Library/` folder, and writes `Build/` there. Installed at `Library/Storie/GM Book`, that is the whole space.
@@ -132,6 +138,8 @@ In the larger space, a wiki link written for the adventure folder, such as `[[Wo
 - A section's headings dropped a level
 - A page break before every chapter, though not before a section, and wherever a page fills up
 
+A link prints as its label whatever it names, so in the player edition a label can name a page the players have nothing of: one kept back for the DM whole, one only the DM may see, such as a map's own page, or one not in the book at all. The notification after a build names each such page with the words a link gives it, and `report.missingLinks` lists every such link, its `label`, the `page` it names and the page it is `from`. It may be meant, so it is said, not warned of. A link in code, an image and a link to a website aren't counted, and a link in a section printed in place is read from the page it was written on.
+
 ## Page breaks
 
 Homebrewery never carries text over to the next page. Whatever doesn't fit in a page's two columns runs on into a third column past the right edge, where it is cut off. So the builder lays each page out itself and puts a `\page` before the first block that would not fit.
@@ -150,11 +158,37 @@ Keep it to one block, with no blank line inside: Markdown ends an HTML block at 
 
 It is an estimate, so each page keeps `gmbook.layout.slack` (one line) free at the foot. If a page still spills, raise it. The measurements only hold for 5ePHB on Letter. Set `paginate = false` in the config for chapter breaks only.
 
+**What the page breaks can't allow for is named** in the notification after a build, with the book's page it is on and the Homebrewery page it lands on in each edition, and the book is written all the same:
+
+- A block taller than a column, such as a long table, a long code block or a long box. It can't be broken, so it spills wherever it goes: split it in the source.
+- An image, `![…](…)` or `<img>`, or raw HTML, with no height the model can read. Give it a `height` in px and `display: block`, as above, or leave room for it.
+- A `\page` line inside fenced code. Homebrewery splits the brew into pages before it reads any Markdown, so it breaks the page there all the same, and every page number after it is one out.
+
+A comment, or a tag alone on its line that only opens or closes a wrapper round Markdown, takes no room and isn't named. `report.warnings` lists each for a script, along with the book_order problems under *Setting the order* and *A chapter in several pages*.
+
+## Page numbers
+
+Two settings print page numbers in the book. Both are off, so a book already committed doesn't change when GM Book does:
+
+    config.set("gmBook.contents", true)
+    config.set("gmBook.pageRefs", true)
+
+**`gmBook.contents`** puts a contents page at the front of each edition: a table of its chapters, each with the page it starts on and its title a link to that page, which a PDF printed from the brew keeps. The chapters are the pages with a `book_order` that aren't sections, under their titles as that edition prints them. A long contents takes the pages it needs, a table to a column, and every number allows for them. Give it a title of your own, or words of your own for the table's headings too:
+
+    config.set("gmBook.contents", "Table of Contents")
+    config.set("gmBook.contents", { title = "Inhalt", chapter = "Kapitel", page = "Seite" })
+
+**`gmBook.pageRefs`** gives a pointer the page it points to, *See Lantern: Rules (p. 21).*: the page the section's heading is on, or the page a whole page starts on.
+
+The numbers are Homebrewery's own: a brew is split into pages at each `\page` line and nowhere else, and a number is the page its line lands on, the contents counted. A number can move what follows it onto the next page, so a build lays each edition out again until no number moves, and says so if they won't settle. With `paginate = false` they count the page breaks the book has of itself. A `\page` inside fenced code puts every number after it one out, which the build names (see *Page breaks*).
+
 ## Rendering it
 
 **Homebrewery**: open a built page, press *Copy for Homebrewery*, then *Open Homebrewery* and paste into the new brew. Free, authentic PHB look, PDF export.
 
 **A PDF beside the edition**: GM Book can't print a PDF itself, since that takes a browser's print engine, but something outside SilverBullet can print one and leave it beside the edition, `Build/Book DM.pdf` beside `Build/Book DM`. The bar then has *Open PDF*, which opens it in a tab of its own. A PDF older than its edition gets *Open PDF (older)*, so one from before the last build never passes for the current one.
+
+The script that prints it can say what it printed in a JSON file beside it, `Build/Book DM.pdf.json`: an object with `pages`, `printed_at` (UTC, as ISO 8601 gives it), `homebrewery` (`{ "version": …, "hash": … }`), `spills`, the pages whose text ran past their foot as `[[page, text], …]`, and whatever else it keeps, such as `edition`, `chrome` and `sandbox`. The bar then says beside *Open PDF*, *83 pages · printed 22 Sep · Homebrewery 3.23.0*, and when any page spills, *⚠ 2 pages spill: p. 14, p. 31*. A field missing or of the wrong kind is left out, and a file that isn't a JSON object says nothing.
 
 **Pandoc with a 5e LaTeX template**: for a fully local, reproducible build.
 
@@ -173,6 +207,9 @@ It is an estimate, so each page keeps `gmbook.layout.slack` (one line) free at t
 ```space-lua
 -- priority: 10
 gmbook = gmbook or {}
+-- The version this tab's Lua is, the same as this page's frontmatter: a tab
+-- left open over a Library: Update runs the old one (see gmbook.stale).
+gmbook.version = "1.13.0"
 
 gmbook.config = {
   outputFolder = "Build/",
@@ -200,6 +237,9 @@ gmbook.config = {
   -- with a book_order, and prints nothing where a page shows it. The type
   -- GM Maps is set to give its pages counts too.
   privateTypes = { "map" },
+  -- The words of the contents page gmBook.contents puts at the front of
+  -- each edition: its title, and its table's two headings.
+  contentsWords = { title = "Contents", chapter = "Chapter", page = "Page" },
 }
 
 gmbook.editions = {
@@ -914,6 +954,118 @@ function gmbook.delink(text)
   return text
 end
 
+-- The page a Markdown link on page `base` names, as SilverBullet resolves
+-- one: its <...> off, a leading / from the top of the space, anything else
+-- from base's folder, each leading .. a folder up, and a #section or @place
+-- after it no part of the name. Nil for a link to this same page, or to a
+-- file that isn't a page, such as a PDF.
+local function linkedPage(base, url)
+  url = url:match("^<(.*)>$") or url
+  -- %20 and the like, as decodeURI decodes them
+  url = (url:gsub("%%(%x%x)", function(h)
+    local n = tonumber(h, 16)
+    local ch = n < 128 and string.char(n) or nil
+    if ch and not (";/?:@&=+$,#"):find(ch, 1, true) then return ch end
+    return nil
+  end))
+  local path = url:match("^([^#@%$|]*)")
+  if path == "" then return nil end
+  local name
+  if path:sub(1, 1) == "/" then
+    name = path:sub(2)
+  else
+    local parts = {}
+    for part in base:gmatch("[^/]+") do parts[#parts + 1] = part end
+    parts[#parts] = nil
+    local rel = {}
+    for part in (path .. "/"):gmatch("([^/]*)/") do rel[#rel + 1] = part end
+    local k = 1
+    while rel[k] == ".." do
+      parts[#parts] = nil
+      k = k + 1
+    end
+    for j = k, #rel do parts[#parts + 1] = rel[j] end
+    name = table.concat(parts, "/")
+  end
+  -- a name that ends in an extension is a file; .md is a page's
+  local ext = name:match("%.(%w+)$")
+  if ext then
+    if ext ~= "md" then return nil end
+    name = name:sub(1, -4)
+  end
+  return name
+end
+
+-- A link on its way to the book: Markdown links to pages with their pages
+-- named from the top of the space, so text shown in another page still
+-- names the pages it did where it was written. The book prints a link as
+-- its label either way.
+local function linksFromTop(text, page)
+  return (text:gsub("(!?)%[([^%]]*)%](%b())", function(bang, label, target)
+    if bang ~= "" then return nil end
+    local url = target:sub(2, -2)
+    url = url:match("^<(.*)>$") or url
+    if url:find("://", 1, true) or url:match("^mailto:") or url:match("^tel:") or url:match("^[/#]") then
+      return nil
+    end
+    local name = linkedPage(page, url)
+    if not name then return nil end
+    return "[" .. label .. "](</" .. name .. ">)"
+  end))
+end
+
+-- A line without its inline code, `...` or ``...``.
+local function withoutCode(line)
+  local out, i = {}, 1
+  while true do
+    local a = line:find("`", i, true)
+    if not a then break end
+    local run = line:match("^`+", a)
+    local close = line:find(run, a + #run, true)
+    if not close then break end
+    out[#out + 1] = line:sub(i, a - 1)
+    i = close + #run
+  end
+  out[#out + 1] = line:sub(i)
+  return table.concat(out)
+end
+
+-- The links a text prints as their labels, outside code: [[Page]],
+-- [[Page#Section]] and [[Page|Label]] as `wiki` with the name written, and
+-- [Label](<page>) with the name it resolves to from page `base`. Each with
+-- the label the book prints. Images, media and links to websites are left
+-- out, and so is a link to the page it is on.
+local function linksIn(text, base)
+  local found, fence = {}, nil
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local mark = line:sub(1, 3)
+    if fence then
+      if mark == fence then fence = nil end
+    elseif mark == "```" or mark == "~~~" then
+      fence = mark
+    else
+      local plain = withoutCode(line)
+      for bang, inner in plain:gmatch("(!?)%[%[([^%]]*)%]%]") do
+        local page, label = inner:match("^([^|]*)|(.*)$")
+        page = (page or inner):match("^([^#]*)")
+        if bang == "" and page ~= "" then
+          found[#found + 1] = { wiki = true, target = page, label = label or page:match("([^/]+)$") or page }
+        end
+      end
+      for bang, label, target in plain:gmatch("(!?)%[([^%]]*)%](%b())") do
+        local url = target:sub(2, -2)
+        url = url:match("^<(.*)>$") or url
+        if bang == "" and not url:find("://", 1, true) and not url:match("^mailto:")
+            and not url:match("^tel:") then
+          local name = linkedPage(base, url)
+          if name then found[#found + 1] = { target = name, label = label } end
+        end
+      end
+    end
+  end
+  return found
+end
+
 function gmbook.unbake(text)
   text = text:gsub("<!%-%-#lua.-%-%->\n?", "")
   text = text:gsub("<!%-%-/lua%-%->\n?", "")
@@ -1084,6 +1236,77 @@ function gmbook.copies()
   return names
 end
 
+-- Whether this tab runs the library the space holds. Space Lua is read when
+-- a client boots and not again, so a tab left open over a Library: Update
+-- runs the old code over the new pages until it reloads. Every copy of the
+-- library's page at any depth is read from the index, and a message names
+-- the first whose version differs from the one this tab runs; nil when none
+-- does, or when a copy gives no version as text.
+local function staleText(name, running, lib)
+  local pages = query[[
+    from p = index.pages()
+    where p.name:endsWith(lib)
+  ]]
+  local copies, other = 0, nil
+  for _, p in ipairs(pages) do
+    local at = p.name:sub(1, #p.name - #lib)
+    if at == "" or at:endsWith("/") then
+      copies = copies + 1
+      if not other and type(p.version) == "string" and p.version ~= running then other = p end
+    end
+  end
+  if not other or type(running) ~= "string" then return nil end
+  if copies > 1 then
+    return "This tab runs " .. name .. " " .. running .. ", but " .. other.name .. " has " ..
+      other.version .. ": reload it (System: Reload, Ctrl-Alt-R) before building, or remove " ..
+      "the copy you don't use."
+  end
+  return "This tab runs " .. name .. " " .. running .. ", but the space has " .. other.version ..
+    ": reload it (System: Reload, Ctrl-Alt-R) before building."
+end
+
+-- Nil when this tab runs the GM Book the space holds, else a message saying
+-- which version each has and to reload. Never raises: a check that fails
+-- says nothing.
+function gmbook.stale()
+  local ok, message = pcall(staleText, "GM Book", gmbook.version, gmbook.config.libraryPage)
+  if ok then return message end
+  return nil
+end
+
+-- Reads this tab's Space Lua afresh, as System: Reload does: the cure for a
+-- stale tab, a tap away on a phone, which has no Ctrl-Alt-R.
+function gmbook.reload()
+  editor.invokeCommand("System: Reload")
+end
+
+-- What is stale of GM Book and of each library it prints with: a message
+-- for each, GM Book's first, then each table in gmbook.printers that has a
+-- stale function (GM Party, GM Sheets, GM Maps, GM Bestiary), by its name.
+function gmbook.staleLibraries()
+  local out, seen = {}, {}
+  local function add(message)
+    if type(message) == "string" and message ~= "" and not seen[message] then
+      seen[message] = true
+      out[#out + 1] = message
+    end
+  end
+  add(gmbook.stale())
+  local names = {}
+  for name in pairs(gmbook.printers or {}) do
+    if type(name) == "string" then names[#names + 1] = name end
+  end
+  table.sort(names)
+  for _, name in ipairs(names) do
+    local printer = gmbook.printers[name]
+    local ok, message = pcall(function()
+      if type(printer) == "table" and type(printer.stale) == "function" then return printer.stale() end
+    end)
+    if ok then add(message) end
+  end
+  return out
+end
+
 function gmbook.output(edition, root)
   return (root or gmbook.root()) .. gmbook.config.outputFolder ..
          gmbook.editions[edition].page
@@ -1099,20 +1322,41 @@ function gmbook.editionOf(page)
   end
 end
 
+-- A page's book_order as the number the book orders it by: a number, or
+-- text that reads as one. Nil for anything else, such as `soon`.
+local function orderOf(p)
+  local v = p.book_order
+  if type(v) == "string" then v = tonumber(v) end
+  if type(v) ~= "number" or v ~= v then return nil end
+  return v
+end
+
 function gmbook.pages(root)
   -- `~= nil`, not the field alone: a query's where reads 0 as false, so a
-  -- page at book_order 0 would drop out of the book. Pages that share a
-  -- book_order go in by name: the index promises no order of its own, so
-  -- without one the harness and SilverBullet built different books.
+  -- page at book_order 0 would drop out of the book.
   local pages = query[[
     from p = index.pages()
     where p.book_order ~= nil
-    order by p.book_order, p.name
   ]]
   local out = {}
   for _, p in ipairs(pages) do
     if p.name:startsWith(root) then out[#out + 1] = p end
   end
+  -- By book_order, and pages that share one by name: the index promises no
+  -- order of its own, so without one the harness and SilverBullet built
+  -- different books. A book_order that isn't a number goes at the end, by
+  -- name, the same in every Lua: a query's order by compared it with the
+  -- numbers as JavaScript does, which is no order at all, and plain Lua
+  -- can't compare them.
+  table.sort(out, function(a, b)
+    local x, y = orderOf(a), orderOf(b)
+    if x ~= y then
+      if x == nil then return false end
+      if y == nil then return true end
+      return x < y
+    end
+    return a.name < b.name
+  end)
   return out
 end
 
@@ -1361,6 +1605,10 @@ local function shiftHeadings(text, top)
   return table.concat(lines, "\n")
 end
 
+-- Where a pointer's page goes until the edition is laid out and the page is
+-- known: text no page holds, and nothing on the way to the book changes.
+local REF_MARK, REF_END, REF_PATTERN = "@@gmbook-ref-", "@@", "@@gmbook%-ref%-(%d+)@@"
+
 -- What a transclusion prints as, as lines: a pointer, the section itself,
 -- or nothing. level is the heading the transclusion sits under.
 local function transcluded(ref, heading, playerEdition, ctx, level, depth)
@@ -1399,6 +1647,11 @@ local function transcluded(ref, heading, playerEdition, ctx, level, depth)
     title = gmbook.forEdition(title, playerEdition)
     if not title:match("%S") then title = page:match("([^/]+)$") or page end
     local label = title .. (heading and (": " .. heading) or "")
+    -- with gmBook.pageRefs, the page it is on, once the edition is laid out
+    if ctx.refs then
+      ctx.refs[#ctx.refs + 1] = { page = page, heading = heading }
+      label = label .. REF_MARK .. #ctx.refs .. REF_END
+    end
     return { (ctx.see:gsub("%%s", function() return label end)) }
   end
   if depth >= 4 then return {} end
@@ -1407,6 +1660,8 @@ local function transcluded(ref, heading, playerEdition, ctx, level, depth)
   ctx.note(left, why, page)
   -- what an expression printed can hold DM-only text of its own
   body = gmbook.forEdition(body, playerEdition)
+  -- its links still name the pages they did on its own page
+  if ctx.links then body = linksFromTop(body, page) end
   body = gmbook.transclude(body, playerEdition, ctx, depth + 1)
   body = shiftHeadings(body, math.max(level, 1) + 1)
   body = (body:gsub("^%s*\n", "")):gsub("%s+$", "")
@@ -1461,8 +1716,182 @@ function gmbook.render(text, playerEdition, section, ctx)
   if section then text = gmbook.demote(text) end
   text = gmbook.unbake(text)
   if playerEdition then text = gmbook.stripComments(text) end
+  -- the links this page prints as their labels, for the build to check
+  -- that the edition has the pages they name
+  if ctx and ctx.links then
+    for _, link in ipairs(linksIn(text, ctx.root .. ctx.from)) do
+      link.from = ctx.from
+      ctx.links[#ctx.links + 1] = link
+    end
+  end
   text = gmbook.delink(text)
   return gmbook.admonitions(text)
+end
+
+-- Items in words: "A", "A and B", "A, B and C".
+local function andList(items)
+  if #items <= 1 then return items[1] or "" end
+  return table.concat(items, ", ", 1, #items - 1) .. " and " .. items[#items]
+end
+
+-- A frontmatter value as a sentence shows it.
+local function shownValue(v)
+  if type(v) == "string" then return "\"" .. v .. "\"" end
+  if type(v) == "number" then return numeral(v) or "NaN" end
+  if type(v) == "boolean" then return tostring(v) end
+  return "a list"
+end
+
+-- The book's page a line of an edition's text comes from, by the lines
+-- each page's text runs over.
+local function pageOfLine(ranges, line)
+  for _, r in ipairs(ranges) do
+    if line >= r.first and line <= r.last then return r.name end
+  end
+  return nil
+end
+
+-- The links the player edition prints as their labels whose pages it has
+-- nothing of: a page whose every word is the DM's, a page only the DM may
+-- see, a page not in the book. Each page once for each page linking to it,
+-- in the book's order, named from the book's folder where it is in it.
+local function missingLinks(links, inEdition, root)
+  local out, seen, resolved = {}, {}, {}
+  local function short(name) return name:startsWith(root) and name:sub(#root + 1) or name end
+  for _, link in ipairs(links or {}) do
+    local name = link.target
+    if link.wiki then
+      -- a wiki link finds its page as SilverBullet does, by the end of its
+      -- path; a look that fails, offline say, names the link as written
+      if resolved[name] == nil then
+        local ok, found = pcall(gmbook.resolve, name, root)
+        resolved[name] = ok and found or false
+      end
+      name = resolved[name] or name
+    end
+    local key = link.from .. "\n" .. name
+    if not inEdition[name] and not seen[key] then
+      seen[key] = true
+      out[#out + 1] = { label = link.label, page = short(name), from = link.from }
+    end
+  end
+  return out
+end
+
+-- The words of the contents page gmBook.contents asks for, or nil for
+-- none: true for the defaults, a title, or a table of title, chapter and
+-- page, any of them.
+local function contentsWords()
+  local asked = config.get("gmBook.contents", false)
+  if not asked then return nil end
+  local words = {}
+  for k, v in pairs(gmbook.config.contentsWords) do words[k] = v end
+  if type(asked) == "string" then
+    words.title = asked
+  elseif type(asked) == "table" then
+    for _, k in ipairs({ "title", "chapter", "page" }) do
+      if type(asked[k]) == "string" then words[k] = asked[k] end
+    end
+  end
+  return words
+end
+
+-- An edition laid out as Homebrewery will lay it: broken where each page
+-- fills up, or with paginate off only where it says \page.
+local function laidOut(text)
+  if gmbook.config.paginate then return gmbook.paginate(text) end
+  return gmbook.explicitPages(text)
+end
+
+-- An edition laid out with its page numbers in it: a contents page at the
+-- front when `words` asks for one, and each pointer's page. A number can
+-- move what follows it onto another page, and the contents can take more
+-- than one page, so the edition is laid out again until no number moves.
+-- The book after the contents starts a page of its own, so it lies as it
+-- did alone, only later by the pages the contents takes. Returns the text,
+-- its pages, the book's layout without the contents, and whether every
+-- number settled.
+local function numbered(book, chapters, refs, words, sep)
+  local nums, k, head = {}, 0, nil
+  local text, sheets, info
+  for _ = 1, 6 do
+    text, sheets, info = laidOut((book:gsub(REF_PATTERN, function(id)
+      local n = nums[tonumber(id)]
+      return n and (" (p. " .. string.format("%d", n) .. ")") or ""
+    end)))
+    local settled = true
+    if words then
+      k = math.max(k, 1)
+      settled = false
+      for _ = 1, 6 do
+        local rows = {}
+        for i, c in ipairs(chapters) do rows[i] = { title = c.title, page = gmbook.pageAt(info, c.line) + k } end
+        local laid, count = laidOut(gmbook.contentsPage(words, rows))
+        head = laid
+        if count == k then
+          settled = true
+          break
+        end
+        k = count
+      end
+    end
+    for id, r in ipairs(refs) do
+      local p = r.line and (gmbook.pageAt(info, r.line) + k) or nil
+      if p ~= nums[id] then
+        nums[id] = p
+        settled = false
+      end
+    end
+    if settled then return head and (head .. sep .. text) or text, sheets + k, info, true end
+  end
+  return head and (head .. sep .. text) or text, sheets + k, info, false
+end
+
+-- The line of an edition's text each pointer's page and section starts on,
+-- from the lines each page's text runs over: the section's heading, or
+-- the page's first line.
+local function refLines(book, refs, rangeOf)
+  local lines = {}
+  for line in (book .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+  for _, ref in ipairs(refs) do
+    local range = rangeOf[ref.page]
+    if range then
+      ref.line = range.first
+      if ref.heading then
+        for n = range.first, math.min(range.last, #lines) do
+          if lines[n]:match("^#+%s+(.-)%s*$") == ref.heading then
+            ref.line = n
+            break
+          end
+        end
+      end
+    end
+  end
+end
+
+-- Book order problems, which a build reports and never stops for: pages
+-- that share a book_order, and one that isn't a number.
+local function orderProblems(pages, root, warn)
+  local i = 1
+  while i <= #pages do
+    local o = orderOf(pages[i])
+    local name = pages[i].name:sub(#root + 1)
+    if o == nil then
+      warn({ kind = "order", page = name, text = name .. "'s book_order, " ..
+        shownValue(pages[i].book_order) .. ", isn't a number, so it goes at the end of the book" })
+      i = i + 1
+    else
+      local j = i
+      while j < #pages and orderOf(pages[j + 1]) == o do j = j + 1 end
+      if j > i then
+        local names = {}
+        for k = i, j do names[#names + 1] = pages[k].name:sub(#root + 1) end
+        warn({ kind = "order", page = names[1], pages = names, text = andList(names) ..
+          " share book_order " .. (numeral(o) or tostring(o)) .. ", so they go in by name" })
+      end
+      i = j + 1
+    end
+  end
 end
 
 -- Writes each edition asked for ("dm", "player") and reports what it did.
@@ -1477,13 +1906,31 @@ end
 -- book's page it is in (`page`), the page it is written on when that is
 -- another, shown in this one (`from`), its source (`expression`), the error
 -- it raised if it did (`error`), and whether the name it starts from is
--- missing from this client (`unloaded`).
+-- missing from this client (`unloaded`). `warnings` has what a build
+-- reports and writes the book all the same, each with its `kind`, the
+-- book's `page` it is about, and a sentence, `text`: "layout", a block the
+-- page breaks can't allow for, with the `edition` and the Homebrewery page
+-- (`sheet`) it is on; and "order", a book_order problem. `missingLinks`
+-- has each link the player edition prints as its label to a page it has
+-- nothing of, once written: the `label`, the `page` it names, and the page
+-- it is `from`.
 function gmbook.compile(editions, progress)
   local root = gmbook.root()
   local pages = gmbook.pages(root)
   local report = { pages = #pages, root = root, copies = gmbook.copies(), live = {}, unprinted = {},
-                   written = {}, kept = {}, missing = {} }
+                   written = {}, kept = {}, missing = {}, warnings = {}, missingLinks = {} }
   if #pages == 0 then return report end
+  local warned = {}
+  local function warn(w)
+    local key = w.kind .. "\n" .. (w.edition or "") .. "\n" .. tostring(w.sheet) .. "\n" ..
+      (w.page or "") .. "\n" .. w.text
+    if w.kind == "order" then key = w.text end
+    if not warned[key] then
+      warned[key] = true
+      report.warnings[#report.warnings + 1] = w
+    end
+  end
+  orderProblems(pages, root, warn)
   local texts, cache = {}, {}
   local ctx = {
     root = root, inBook = {}, missing = {}, live = {},
@@ -1526,18 +1973,36 @@ function gmbook.compile(editions, progress)
     -- each edition prints its own text, so what is DM-only never runs for
     -- the player edition
     local player, parts = edition == "player", {}
+    local label = gmbook.editions[edition].label
     -- an expression that gives nothing is the edition's own problem: a page
     -- can print in the DM edition and not in the player's
     ctx.live = {}
+    -- the lines of the edition each page's text runs over, to name the page
+    -- a layout note is about and to find a page's page number
+    local ranges, rangeOf, lineCount = {}, {}, 0
+    -- the pointers whose page gmBook.pageRefs puts in, in this edition
+    ctx.refs = config.get("gmBook.pageRefs", false) and {} or nil
+    local function put(s)
+      parts[#parts + 1] = s
+      local _, n = s:gsub("\n", "")
+      lineCount = lineCount + n
+    end
+    -- the chapter a section carries on, and whether this edition has it
+    local chapter, chapterShown = nil, false
+    -- the pages this edition prints something of, and the links the player
+    -- edition prints as their labels, to check it has the pages they name
+    local inEdition = {}
+    ctx.links = player and {} or nil
     for i, raw in ipairs(texts) do
       local from = pages[i].name:sub(#root + 1)
+      local section = pages[i].book_section == true
+      local shown = false
       -- a page only the DM may see is no part of the player edition, and
       -- its expressions never run for it
       if not (player and ctx.private(pages[i].name, raw)) then
         ctx.from = from
         local text, left, why = gmbook.print(gmbook.forEdition(raw, player), pages[i].name)
         ctx.note(left, why, pages[i].name)
-        local section = pages[i].book_section == true
         local body = gmbook.render(text, player, section, ctx)
 
         -- Fail closed: the player edition's page is final here, with what it
@@ -1556,9 +2021,26 @@ function gmbook.compile(editions, progress)
         -- a page with nothing left for this edition, such as one kept back
         -- whole for the DM, takes no room in it
         if body:match("%S") then
-          if #parts > 0 then parts[#parts + 1] = section and "\n\n" or sep end
-          parts[#parts + 1] = body
+          if #parts > 0 then put(section and "\n\n" or sep) end
+          local first = lineCount + 1
+          put(body)
+          ranges[#ranges + 1] = { first = first, last = lineCount + 1, name = from, section = section,
+                                  title = headingOf(body) or from:match("([^/]+)$") or from }
+          rangeOf[pages[i].name] = ranges[#ranges]
+          shown = true
+          inEdition[pages[i].name] = true
         end
+      end
+      -- A section carries on the chapter before it. Without that chapter in
+      -- the edition it carries on whatever came before, under the wrong
+      -- chapter's title: said once for each chapter.
+      if not section then
+        chapter, chapterShown = from, shown
+      elseif shown and not chapterShown then
+        warn({ kind = "order", edition = edition, page = from, text = chapter and
+          (from .. " is a book_section, but its chapter, " .. chapter .. ", isn't in the " .. label) or
+          (from .. " is a book_section with no chapter before it") })
+        chapterShown = true
       end
       tick()
     end
@@ -1582,13 +2064,38 @@ function gmbook.compile(editions, progress)
       tick()
       tick()
     else
-      local book, sheets = table.concat(parts), nil
+      local book, sheets, info = table.concat(parts), nil, nil
       tick()
-      if gmbook.config.paginate then book, sheets = gmbook.paginate(book) end
+      local words, refs = contentsWords(), ctx.refs or {}
+      if words or #refs > 0 then
+        -- page numbers: the contents' chapters, and the pointers' pages
+        local chapters = {}
+        for _, r in ipairs(ranges) do
+          if not r.section then chapters[#chapters + 1] = { title = r.title, line = r.first } end
+        end
+        if #chapters == 0 then words = nil end
+        if #refs > 0 then refLines(book, refs, rangeOf) end
+        local settled
+        book, sheets, info, settled = numbered(book, chapters, refs, words, sep)
+        if not settled then
+          warn({ kind = "numbers", edition = edition, text = "The " .. label .. "'s page numbers " ..
+            "wouldn't settle, so its contents or a pointer's page may be a page out." })
+        end
+      elseif gmbook.config.paginate then
+        book, sheets, info = gmbook.paginate(book)
+      end
+      -- what the page breaks can't allow for, named with its page: the
+      -- edition is written all the same
+      for _, note in ipairs(info and info.notes or {}) do
+        warn({ kind = "layout", edition = edition, page = pageOfLine(ranges, note.line),
+               sheet = note.page, text = note.what })
+      end
       space.writePage(out, book)
       tick()
       report.written[#report.written + 1] = { edition = edition, page = out, sheets = sheets }
+      if player then report.missingLinks = missingLinks(ctx.links, inEdition, root) end
     end
+    ctx.links = nil
   end
   -- each expression once, though both editions left it unprinted
   local seen = {}
@@ -1683,6 +2190,81 @@ local function unprintedText(report)
   return text .. " Then build again."
 end
 
+-- The first three of a list, and how many more.
+local function firstThree(items)
+  local text = table.concat(items, "; ", 1, math.min(3, #items))
+  if #items > 3 then text = text .. "; and " .. (#items - 3) .. " more" end
+  return text
+end
+
+-- What the notification says of what a build wrote all the same: the
+-- blocks the page breaks can't allow for, each once with its page in each
+-- edition, and book_order problems.
+local function warningsText(report)
+  local layout, byKey, order, other = {}, {}, {}, {}
+  for _, w in ipairs(report.warnings or {}) do
+    if w.kind ~= "layout" and w.kind ~= "order" then
+      other[#other + 1] = w.text
+    elseif w.kind == "layout" then
+      local key = (w.page or "") .. "\n" .. w.text
+      local item = byKey[key]
+      if not item then
+        item = { page = w.page, text = w.text, sheets = {} }
+        byKey[key] = item
+        layout[#layout + 1] = item
+      end
+      local e = w.edition or ""
+      item.sheets[e] = item.sheets[e] or {}
+      local list = item.sheets[e]
+      local sheet = numeral(w.sheet) or "?"
+      if list[#list] ~= sheet then list[#list + 1] = sheet end
+    else
+      order[#order + 1] = w.text
+    end
+  end
+  local text = ""
+  if #layout > 0 then
+    local items = {}
+    for _, item in ipairs(layout) do
+      local where = {}
+      for _, e in ipairs({ "dm", "player" }) do
+        local list = item.sheets[e]
+        if list then where[#where + 1] = gmbook.editions[e].label .. " p. " .. andList(list) end
+      end
+      items[#items + 1] = (item.page and (item.page .. ": ") or "") .. item.text ..
+        " (" .. table.concat(where, ", ") .. ")"
+    end
+    text = text .. " The page breaks can't allow for " ..
+      (#layout == 1 and "one block, so its page" or (#layout .. " blocks, so their pages")) ..
+      " may spill: " .. firstThree(items) .. ". See Page breaks in GM Book's docs."
+  end
+  if #order > 0 then
+    text = text .. " Book order: " .. firstThree(order) .. "."
+  end
+  for _, sentence in ipairs(other) do text = text .. " " .. sentence end
+  return text
+end
+
+-- What the notification says of the pages the player edition names by a
+-- link's label but has nothing of: each page once, with the words it is
+-- named by, the first three of them. It may be meant, so it is only said.
+local function missingLinksText(report)
+  local names, label = {}, {}
+  for _, m in ipairs(report.missingLinks or {}) do
+    if not label[m.page] then
+      label[m.page] = m.label
+      names[#names + 1] = m.page
+    end
+  end
+  local items = {}
+  for k = 1, math.min(3, #names) do
+    items[k] = names[k] .. " (“" .. brief(label[names[k]], 40) .. "”)"
+  end
+  if #names > 3 then items[#items + 1] = (#names - 3) .. " more" end
+  return " The player edition names " .. (#names == 1 and "a page" or (#names .. " pages")) ..
+    " it doesn't contain: " .. andList(items) .. ". That may be meant."
+end
+
 -- What the notification says of copies of GM Book at different depths.
 local function copiesText(report)
   local names = report.copies
@@ -1701,6 +2283,15 @@ function gmbook.build(editions)
   if gmbook.building then
     editor.flashNotification("The book is already being built. Wait for it to say it's done, " ..
       "then build again if you need to.", "warning")
+    return nil
+  end
+  -- A tab whose Lua is older, or newer, than the libraries the space holds
+  -- would print the book with code the pages weren't written for, and write
+  -- it over the one on the page. Nothing is written until it reloads.
+  local stale = gmbook.staleLibraries()
+  if #stale > 0 then
+    editor.flashNotification("The book wasn't built. " .. table.concat(stale, " "), "warning",
+      { timeout = 30000, actions = {{ name = "Reload", run = gmbook.reload }} })
     return nil
   end
   gmbook.building = true
@@ -1761,6 +2352,12 @@ function gmbook.build(editions)
     kind = "warning"
     message = message .. copiesText(report)
   end
+  if #report.warnings > 0 then
+    kind = "warning"
+    message = message .. warningsText(report)
+  end
+  -- said, not warned of: a link to a page the players don't get may be meant
+  if #report.missingLinks > 0 then message = message .. missingLinksText(report) end
   -- A warning names pages to go and fix, and is several lines on a phone:
   -- it needs longer on the screen than "built it, here it is".
   editor.flashNotification(message, kind,
@@ -1821,6 +2418,85 @@ function gmbook.pdfOf(page)
   return path, (pdf ~= nil and md ~= nil and pdf < md)
 end
 
+-- The characters Markdown, and SilverBullet's own syntax, read as markup: a
+-- tag, a link, an expression ${...}, a hashtag, emphasis, code, a table's
+-- cell, an entity, and the backslash that escapes the rest.
+local MARKUP = "[\\`*_{}%[%]<>#|$~&]"
+
+-- Text from a page or a file, as Markdown that shows it as it is: a widget's
+-- text is rendered as Markdown, where a backslash escape shows as the
+-- character and an entity such as &lt; shows as written.
+local function plain(s)
+  return (tostring(s):gsub(MARKUP, "\\%0"))
+end
+
+local MONTHS = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }
+
+-- A whole number, or nil for anything else.
+local function whole(v)
+  if type(v) == "number" and v == math.floor(v) and v >= 0 and v < 1e9 then return v end
+  return nil
+end
+
+-- What the script that printed a PDF says of it, in <pdf>.json beside it:
+-- its `pages`, when it was `printed` (day and month, UTC), the
+-- `homebrewery` version it was printed with, and the pages it found
+-- spilling (`spills`, in order, each once). A field missing or of the
+-- wrong kind is left out; nil when there is no such file or it isn't a
+-- JSON object. Never raises: the bar is drawn whatever the file holds.
+function gmbook.provenance(pdf)
+  local ok, info = pcall(function()
+    local path = pdf .. ".json"
+    if not space.fileExists(path) then return nil end
+    -- SilverBullet reads a file that isn't a page as bytes
+    local data = space.readFile(path)
+    local text = type(data) == "string" and data or encoding.utf8Decode(data)
+    -- JSON is YAML, as SilverBullet's own reader reads it
+    return yaml.parse(text)
+  end)
+  if not ok or type(info) ~= "table" then return nil end
+  local out = { pages = whole(info.pages), spills = {} }
+  if type(info.printed_at) == "string" then
+    local month, day = info.printed_at:match("^%d%d%d%d%-(%d%d)%-(%d%d)")
+    day = day and tonumber(day)
+    if month and MONTHS[tonumber(month)] and day >= 1 and day <= 31 then
+      out.printed = string.format("%d", day) .. " " .. MONTHS[tonumber(month)]
+    end
+  end
+  if type(info.homebrewery) == "table" and type(info.homebrewery.version) == "string" then
+    out.homebrewery = info.homebrewery.version
+  end
+  if type(info.spills) == "table" then
+    local seen = {}
+    for _, spill in ipairs(info.spills) do
+      local page = whole(type(spill) == "table" and spill[1] or spill)
+      if page and not seen[page] then
+        seen[page] = true
+        out.spills[#out.spills + 1] = page
+      end
+    end
+  end
+  return out
+end
+
+-- The provenance as the bar says it: a line, "83 pages · printed 22 Sep ·
+-- Homebrewery 3.23.0", and one naming the pages that spill, with a glyph
+-- and words, or nil when none does.
+local function provenanceText(p)
+  local parts = {}
+  if p.pages then parts[#parts + 1] = string.format("%d", p.pages) .. (p.pages == 1 and " page" or " pages") end
+  if p.printed then parts[#parts + 1] = "printed " .. p.printed end
+  if p.homebrewery then parts[#parts + 1] = "Homebrewery " .. plain(brief(p.homebrewery, 20)) end
+  local spill
+  if #p.spills > 0 then
+    local pages = {}
+    for k = 1, math.min(5, #p.spills) do pages[k] = "p. " .. string.format("%d", p.spills[k]) end
+    spill = "⚠ " .. #p.spills .. (#p.spills == 1 and " page spills: " or " pages spill: ") ..
+      table.concat(pages, ", ") .. (#p.spills > 5 and (", and " .. (#p.spills - 5) .. " more") or "")
+  end
+  return table.concat(parts, " · "), spill
+end
+
 -- A space file in a tab of its own, as SilverBullet opens a document it has
 -- no editor for: the space's address, then .fs/ and the path.
 function gmbook.openFile(path)
@@ -1834,19 +2510,34 @@ function gmbook.bar(page)
   local edition = gmbook.editionOf(page)
   if not edition then return nil end
   local label = gmbook.editions[edition].label
-  local parts = {
-    class = "gmbook-bar",
-    dom.span {
-      class = "gmbook-bar-text",
-      "**" .. label:sub(1, 1):upper() .. label:sub(2) .. "**, built by GM Book. " ..
-      "A build replaces this page, so make changes in the pages it comes from.",
-    },
-    gmbook.button("Build again", function() gmbook.build({ "dm", "player" }) end, true),
+  local parts = { class = "gmbook-bar" }
+  -- first, since a build from this tab would be refused: the glyph and the
+  -- words say so, not a colour
+  local stale = gmbook.staleLibraries()
+  if #stale > 0 then
+    parts[#parts + 1] = dom.span {
+      class = "gmbook-bar-stale",
+      "⟳ **Reload this tab:** " .. plain(table.concat(stale, " ")),
+    }
+    parts[#parts + 1] = gmbook.button("Reload", gmbook.reload, true)
+  end
+  parts[#parts + 1] = dom.span {
+    class = "gmbook-bar-text",
+    "**" .. label:sub(1, 1):upper() .. label:sub(2) .. "**, built by GM Book. " ..
+    "A build replaces this page, so make changes in the pages it comes from.",
   }
+  parts[#parts + 1] = gmbook.button("Build again", function() gmbook.build({ "dm", "player" }) end, true)
   local pdf, older = gmbook.pdfOf(page)
   if pdf then
     parts[#parts + 1] = gmbook.button(older and "Open PDF (older)" or "Open PDF",
       function() gmbook.openFile(pdf) end)
+    -- what the script that printed it says of it, beside it
+    local printed = gmbook.provenance(pdf)
+    if printed then
+      local line, spill = provenanceText(printed)
+      if line ~= "" then parts[#parts + 1] = dom.span { class = "gmbook-bar-pdf", line } end
+      if spill then parts[#parts + 1] = dom.span { class = "gmbook-bar-spill", spill } end
+    end
   end
   parts[#parts + 1] = gmbook.button("Copy for Homebrewery", function() gmbook.copy(edition) end)
   parts[#parts + 1] = gmbook.button("Open Homebrewery", gmbook.openHomebrewery)
@@ -2100,6 +2791,49 @@ local function opensBlock(l)
     or l:match("^~~~") or l:match("^<") or isBreak(l)
 end
 
+-- A line Homebrewery breaks the page at: \page or \pagebreak, alone or with
+-- its {attributes}. The brew is split on these before any Markdown is read
+-- (brewRenderer.jsx, PAGEBREAK_REGEX_V3), so one inside fenced code breaks
+-- the page there all the same.
+local function hbPage(l)
+  local rest = l:match("^\\page(.*)$")
+  if not rest then return false end
+  if rest:sub(1, 5) == "break" then rest = rest:sub(6) end
+  return rest == "" or rest:match("^ *{[^{}]*}$") ~= nil
+end
+
+-- Elements that take room of their own, which the model can't measure.
+local MEDIA_TAGS = { img = true, picture = true, svg = true, iframe = true, video = true, audio = true,
+  canvas = true, object = true, embed = true, table = true }
+
+-- Why raw HTML the model leaves out of the count matters, or nil where it
+-- takes no room: comments, and tags alone on their lines that open or
+-- close a wrapper round Markdown the model measures as usual.
+local function unmeasured(html)
+  local text = (table.concat(html, "\n"):gsub("<!%-%-.-%-%->", ""))
+  -- a comment that runs on past the block, to its end
+  text = (text:gsub("<!%-%-.*$", ""))
+  local image, media = false, false
+  local rest = (text:gsub("</?([%a][%w%-]*)[^>]*>", function(tag)
+    tag = tag:lower()
+    if tag == "img" or tag == "picture" then image = true end
+    if MEDIA_TAGS[tag] then media = true end
+    return ""
+  end))
+  if image then return "an image without a declared height" end
+  if media or rest:match("%S") then return "raw HTML without a declared height" end
+  return nil
+end
+
+-- Whether any of lines a to b holds a Markdown image, ![alt](url), which
+-- the model measures as nothing.
+local function imageIn(lines, a, b)
+  for k = a, b do
+    if lines[k]:find("!%[[^%]]*%]%(") then return true end
+  end
+  return false
+end
+
 local function parse(text)
   local lines = {}
   for l in (text .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = l end
@@ -2173,6 +2907,7 @@ local function parse(text)
       local last = out[#out]
       if last and last.kind == "li" and b.at >= last.content then
         -- a nested item lives inside its parent's box, and they never part
+        if imageIn(lines, b.first, i - 1) then last.image = true end
         last.subs = last.subs or {}
         local above = last.subs[#last.subs]
         if not above then b.level = 1
@@ -2195,6 +2930,7 @@ local function parse(text)
       i = i + 1
       while i <= n and lines[i]:sub(1, 3) ~= fence do
         b.code[#b.code + 1] = lines[i]
+        if hbPage(lines[i]) then b.pageInCode = true end
         i = i + 1
       end
       i = i + 1
@@ -2221,6 +2957,8 @@ local function parse(text)
       if h and blocked then
         -- one wider than a column spans both, and gets a page to itself
         b.kind, b.h, b.wide = "drawn", h, w ~= nil and w > W1 + 0.5
+      else
+        b.unmeasured = unmeasured(html)
       end
     else
       b.kind, b.text = "p", l
@@ -2231,6 +2969,9 @@ local function parse(text)
       end
     end
     if b then
+      if b.kind ~= "code" and b.kind ~= "html" and b.kind ~= "drawn" and imageIn(lines, b.first, i - 1) then
+        b.image = true
+      end
       out[#out + 1] = b
       blank = false
     end
@@ -2439,6 +3180,16 @@ local function keepsWithNext(b)
   return b.kind:match("^h[2-6]$") ~= nil or (b.kind == "p" and b.text:match(":%s*$") ~= nil)
 end
 
+-- A block no page can hold, by its kind, as a build names it: it spills
+-- wherever it goes, so it wants splitting in the source.
+local TALL = {
+  p = "a paragraph longer than a page", li = "a list item taller than a column",
+  quote = "a quote taller than a column", note = "a box taller than a column",
+  descriptive = "a box taller than a column", box = "a box taller than a column",
+  table = "a table taller than a column", code = "a code block taller than a column",
+  drawn = "a drawing taller than a column", block = "a block taller than a column",
+}
+
 -- Lay blocks out on one page, starting at block s, the way the two columns
 -- fill. Returns the block the next page starts at, and whether an explicit
 -- \page already puts it there; nil once the rest fits.
@@ -2478,6 +3229,7 @@ local function fitPage(bs, s, trace, pageNo)
       -- a page to itself: whatever is already here stays on this page, and
       -- whatever comes after it starts the next
       if #placed > 0 then return i, false end
+      if b.h > H + 0.01 then b.spills = "a drawing taller than a page" end
       if trace then
         trace[#trace + 1] = {line = b.first, kind = k, page = pageNo, col = 1, y = 0, h = b.h}
       end
@@ -2529,7 +3281,10 @@ local function fitPage(bs, s, trace, pageNo)
           local rest = 0
           for j = fit + 1, #ls do rest = rest + ls[j] end
           y = top + rest
-          if y > H - L.slack + 0.01 and #placed > content then return breakAt(i) end
+          if y > H - L.slack + 0.01 then
+            if #placed > content then return breakAt(i) end
+            b.spills = TALL[k] or TALL.block  -- longer than both columns: it spills
+          end
         else
           return breakAt(i)
         end
@@ -2543,6 +3298,7 @@ local function fitPage(bs, s, trace, pageNo)
         return breakAt(i)
       else
         y = at + h  -- taller than a page: it spills whatever happens
+        b.spills = TALL[k] or TALL.block
       end
       if trace then
         trace[#trace + 1] = {line = b.first, kind = k, page = pageNo, col = col, y = at, h = h}
@@ -2555,21 +3311,44 @@ local function fitPage(bs, s, trace, pageNo)
   return nil
 end
 
--- Put a \page wherever a page fills up. Returns the text and its page count.
+-- Put a \page wherever a page fills up. Returns the text, its page count,
+-- and what the layout found: `notes`, each block the model can't fit or
+-- measure ({ line, page, what }, line being the text's own line), and
+-- `starts`, the page each block starts on ({ line, page }, in order), which
+-- gmbook.pageAt reads.
 function gmbook.paginate(text, trace)
   cache = {}
   local bs, lines = parse(text)
   local at, s, pages = {}, 1, 1
   while s <= #bs do
     local nxt, explicit = fitPage(bs, s, trace, pages)
-    if not nxt or nxt > #bs then break end
-    if nxt <= s then nxt = s + 1 end
+    if not nxt or nxt > #bs then
+      for j = s, #bs do bs[j].page = pages end
+      break
+    end
+    if nxt <= s then
+      -- nothing fitted, so the block goes here whatever happens, and spills
+      bs[s].spills = bs[s].spills or TALL[bs[s].kind] or TALL.block
+      nxt = s + 1
+    end
+    for j = s, nxt - 1 do bs[j].page = pages end
     while trace and #trace > 0 and trace[#trace].line >= bs[nxt].first do
       table.remove(trace)  -- a heading that moved on with its text
     end
     if not explicit then at[bs[nxt].first] = true end
     pages = pages + 1
     s = nxt
+  end
+  local notes, starts = {}, {}
+  for _, b in ipairs(bs) do
+    local page = b.page or pages
+    starts[#starts + 1] = { line = b.first, page = page }
+    for _, what in ipairs({ b.spills or false, b.unmeasured or false,
+                            b.image and "an image without a declared height" or false,
+                            b.pageInCode and "a \\page line inside a code block, " ..
+                              "where Homebrewery breaks the page all the same" or false }) do
+      if what then notes[#notes + 1] = { line = b.first, page = page, what = what } end
+    end
   end
   local out = {}
   for n, l in ipairs(lines) do
@@ -2580,7 +3359,76 @@ function gmbook.paginate(text, trace)
     end
     out[#out + 1] = l
   end
-  return table.concat(out, "\n"), pages
+  return table.concat(out, "\n"), pages, { notes = notes, starts = starts }
+end
+
+-- The pages of a text Homebrewery breaks only where it says \page, with the
+-- same `starts` as gmbook.paginate gives, a line at a time: for a build
+-- with paginate off. Each line of \page starts a page, even in code.
+function gmbook.explicitPages(text)
+  local starts, page, n = {}, 1, 0
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    n = n + 1
+    if hbPage(line) then page = page + 1 end
+    starts[#starts + 1] = { line = n, page = page }
+  end
+  return text, page, { notes = {}, starts = starts }
+end
+
+-- The contents page gmBook.contents puts at the front of an edition: its
+-- title, and a table of the chapters, each with the page it starts on and
+-- its title a link to that page (#pN is Homebrewery's own id for page N).
+-- Neither the model nor Homebrewery breaks a table, so a long contents is
+-- as many tables as it takes for none to be taller than a column, each as
+-- long as a column holds, measured as the page breaks measure it. `words`
+-- has the title and the two headings; rows are { title, page }.
+function gmbook.contentsPage(words, rows)
+  local L = gmbook.layout
+  local flat = { y = 0, inset = function() return 0 end }
+  local room = L.height - L.slack - measure({ kind = "h1", text = words.title }, flat).h - 1
+  local function cell(s) return (tostring(s):gsub("|", "\\|")) end
+  local head = { "| " .. cell(words.chapter) .. " | " .. cell(words.page) .. " |", "|:--|--:|" }
+  local all = {}
+  for _, r in ipairs(rows) do
+    local title = (cell(r.title):gsub("[%[%]]", "\\%0"))
+    local page = string.format("%d", r.page)
+    all[#all + 1] = "| [" .. title .. "](#p" .. page .. ") | " .. page .. " |"
+  end
+  -- whether rows a to b make a table no taller than a column
+  local function fits(a, b)
+    local t = { head[1], head[2] }
+    for k = a, b do t[#t + 1] = all[k] end
+    return tableHeight(t) <= room
+  end
+  local out, a = { "# " .. words.title }, 1
+  while a <= #all do
+    -- the most rows from a that fit, and at least one; a column holds
+    -- fewer than 60 rows of one line
+    local lo, hi = a, math.min(#all, a + 59)
+    while lo < hi do
+      local mid = math.floor((lo + hi + 1) / 2)
+      if fits(a, mid) then lo = mid else hi = mid - 1 end
+    end
+    local t = { head[1], head[2] }
+    for k = a, lo do t[#t + 1] = all[k] end
+    out[#out + 1] = ""
+    out[#out + 1] = table.concat(t, "\n")
+    a = lo + 1
+  end
+  return table.concat(out, "\n")
+end
+
+-- The page a line of a laid-out text is on: the page of the first block
+-- that starts on that line or after it, or the last page.
+function gmbook.pageAt(info, line)
+  local starts, lo, hi = info.starts, 1, #info.starts
+  if hi == 0 then return 1 end
+  if starts[hi].line < line then return starts[hi].page end
+  while lo < hi do
+    local mid = math.floor((lo + hi) / 2)
+    if starts[mid].line < line then lo = mid + 1 else hi = mid end
+  end
+  return starts[lo].page
 end
 ```
 
@@ -2664,6 +3512,12 @@ event.listen {
 
 .gmbook-bar-text {
   flex: 1 1 18em;
+}
+
+/* A tab that has to reload before it builds says so on a line of its own,
+   above the rest of the bar. */
+.gmbook-bar-stale {
+  flex: 1 1 100%;
 }
 
 /* The widget's own Copy and Reload overlay would cover the bar's buttons. */

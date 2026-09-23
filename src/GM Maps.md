@@ -139,6 +139,18 @@ Nothing here carries meaning by colour. Terrain is told apart by pattern — hat
 
 **That is also the ceiling on new kinds.** Patterns and silhouettes have to stay apart at a square's size, and these twelve use up the ones that do. Another kind would mean a mark too close to one already here, so the next distinction belongs in a label — `object` covers a cart and a cauldron alike — rather than in a thirteenth kind.
 
+## Coordinates
+
+Letters across the top and numbers down the left side, outside the frame, so a square can be called out at the table: *the crate at C4*. They are off unless you ask for them. For every map:
+
+    config.set("gmMaps.coordinates", true)
+
+For one map, a line in its block, `coordinates` or `coordinates off`, which has its way whatever the setting says:
+
+    coordinates
+
+They are drawn in the map's ink, at whole px, on the page and in print. The grid is drawn a little smaller to make room for them, so the map and its key still fit a column and the key's rows break where they did. Columns past Z go on AA, AB, and a map drawn too small to label every square labels every other one. A book built with them changes, so a committed book stays as it was until you turn them on.
+
 ## How it prints
 
 The map on the page is a widget: an SVG plan with the DM's layer on it, each thing that names a page a link to it, and a Markdown face that is the same plan with that layer left off. The key is inside the drawing either way, so there is one figure to place and nothing to keep in step with it.
@@ -173,9 +185,12 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
       scale = 5,
       units = "ft",
       width = 319,
+      coordinates = false,
     })
 
-`type` is the page type that holds a map. `scale` is how many feet a square is, and `units` what to call them. `width` is a column of the book in px, which is what a map is drawn to fit.
+`type` is the page type that holds a map. `scale` is how many feet a square is, and `units` what to call them. `width` is a column of the book in px, which is what a map is drawn to fit. `coordinates` letters and numbers every map's squares: see *Coordinates*.
+
+**A tab that needs a reload.** Space Lua is read when a tab opens and not again, so a tab left open while `Library: Update` brings a new GM Maps draws with the old code. `maps.stale()` is nil when the tab runs the GM Maps the space holds, read from this page at any depth of the space, and otherwise a message saying which version each has and to reload (System: Reload, Ctrl-Alt-R). [GM Book](<GM Book>) asks it before a build, and builds nothing until the tab is reloaded.
 
 ## Changes in 1.3
 
@@ -192,18 +207,56 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
 ```space-lua
 -- priority: 10
 maps = maps or {}
+-- The version this tab's Lua is, the same as this page's frontmatter: a tab
+-- left open over a Library: Update runs the old one (see maps.stale).
+maps.version = "1.3.0"
 
 maps.config = {
   type  = "map",   -- the page type that holds a map
   scale = 5,       -- feet to a square
   units = "ft",    -- what to call them
   width = 319,     -- a column of the book, in px
+  coordinates = false,  -- letters across the top and numbers down the side
 }
 
 function maps.setting(key)
   local value = config.get("gmMaps." .. key, nil)
   if value == nil then value = maps.config[key] end
   return value
+end
+
+-- Nil when this tab runs the GM Maps the space holds, else a message saying
+-- which version each has and to reload. Space Lua is read when a client
+-- boots and not again, so a tab left open over a Library: Update runs the
+-- old code over the new pages; GM Book asks this before it builds. Every
+-- copy of this page at any depth is read from the index. Never raises: a
+-- check that fails says nothing.
+function maps.stale()
+  local ok, message = pcall(function()
+    local lib = "Library/Storie/GM Maps"
+    local pages = query[[
+      from p = index.pages()
+      where p.name:endsWith(lib)
+    ]]
+    local copies, other = 0, nil
+    for _, p in ipairs(pages) do
+      local at = p.name:sub(1, #p.name - #lib)
+      if at == "" or at:endsWith("/") then
+        copies = copies + 1
+        if not other and type(p.version) == "string" and p.version ~= maps.version then other = p end
+      end
+    end
+    if not other then return nil end
+    if copies > 1 then
+      return "This tab runs GM Maps " .. maps.version .. ", but " .. other.name .. " has " ..
+        other.version .. ": reload it (System: Reload, Ctrl-Alt-R) before building, or remove " ..
+        "the copy you don't use."
+    end
+    return "This tab runs GM Maps " .. maps.version .. ", but the space has " .. other.version ..
+      ": reload it (System: Reload, Ctrl-Alt-R) before building."
+  end)
+  if ok then return message end
+  return nil
 end
 
 ------------------------------------------------------------------ the pages
@@ -348,7 +401,7 @@ local THING = {
   token = true, object = true, control = true, treasure = true, hidden = true,
 }
 
-local KEYWORDS = { grow = true, scale = true, units = true, title = true }
+local KEYWORDS = { grow = true, scale = true, units = true, title = true, coordinates = true }
 
 -- Whether a line is a declaration rather than a row of the grid. A blank
 -- line is what really separates the two, and this only decides a block
@@ -443,7 +496,7 @@ end
 -- character, the order it was written in, and what else it was told.
 function maps.parse(source, printing)
   local rows, legend, order, warn = {}, {}, {}, {}
-  local grow, title = nil, nil
+  local grow, title, coordinates = nil, nil, nil
   local scale, units = maps.setting("scale"), maps.setting("units")
   local inGrid, indented = true, {}
   for line in (expand(source or "", printing) .. "\n"):gmatch("([^\n]*)\n") do
@@ -457,9 +510,19 @@ function maps.parse(source, printing)
       if lead then indented[#indented + 1] = #rows end
     else
       inGrid = false
-      local word = l:match("^(%a+)%s")
+      -- a keyword takes an argument, but coordinates can stand alone
+      local word = l:match("^(%a+)%s") or (l == "coordinates" and l) or nil
       local char, rest = l:match("^(%S)%s+(.*)$")
-      if word == "grow" then
+      if word == "coordinates" then
+        local arg = (l:match("^coordinates%s+(%S+)") or "on"):lower()
+        if arg == "on" or arg == "yes" or arg == "true" then
+          coordinates = true
+        elseif arg == "off" or arg == "no" or arg == "false" or arg == "none" then
+          coordinates = false
+        else
+          warn[#warn + 1] = "A coordinates line is on or off: " .. l
+        end
+      elseif word == "grow" then
         grow = tonumber(l:match("to%s+(%-?%d+)"))
         if not grow then
           warn[#warn + 1] = "A grow line needs a number of squares across: " .. l
@@ -508,7 +571,7 @@ function maps.parse(source, printing)
       listed(unknown) .. (#unknown == 1 and ", so it is" or ", so they are") .. " drawn as open floor."
   end
   return { rows = rows, legend = legend, order = order, grow = grow,
-           scale = scale, units = units, title = title, warn = warn }
+           scale = scale, units = units, title = title, coordinates = coordinates, warn = warn }
 end
 
 ------------------------------------------------------------------ the size
@@ -762,7 +825,7 @@ end
 -- second with the first's patterns. Taken from the grid and the legend's
 -- keys, which are ASCII, so the same map always gets the same id and a
 -- built edition stays byte for byte what it was.
-local function patternId(m, grid, tokens)
+local function patternId(m, grid, tokens, coords)
   local h = 5381
   local function feed(s)
     for i = 1, #s do
@@ -775,6 +838,8 @@ local function patternId(m, grid, tokens)
     feed(m.legend[ch].kind)
   end
   feed(tokens and "t" or "-")
+  -- with coordinates the squares are smaller, and so are their patterns
+  if coords then feed("c") end
   return string.format("gmm%x", h)
 end
 
@@ -983,6 +1048,50 @@ local function wrapLabel(text, room, size)
   return lines
 end
 
+-- A column's letters, as a spreadsheet gives them: A to Z, then AA, AB.
+local function columnName(c)
+  local name = ""
+  while c > 0 do
+    local r = (c - 1) % 26
+    name = string.char(65 + r) .. name
+    c = math.floor((c - 1 - r) / 26)
+  end
+  return name
+end
+
+-- A whole number of px, written the same by any Lua.
+local function px(n)
+  return round(math.floor(n + 0.5))
+end
+
+-- The map's coordinates, outside its frame: a letter over each column and
+-- a number beside each row, in the map's ink, at whole px. Where a square
+-- is too small for its label, every second or fifth one is labelled.
+local function coordinateLabels(ox, oy, cell, rows, cols, size, ink)
+  local out = {}
+  local function text(x, y, anchor, s)
+    out[#out + 1] = table.concat {
+      '<text class="gmm-coord" x="', px(x), '" y="', px(y), '" text-anchor="', anchor, '" fill="', ink,
+      '" font-family="Georgia, serif" font-size="', px(size), '">', s, "</text>",
+    }
+  end
+  local function every(need)
+    for _, k in ipairs({ 1, 2, 5, 10, 20 }) do
+      if k * cell >= need then return k end
+    end
+    return 50
+  end
+  local across = every(#columnName(cols) * size * 0.65 + 2)
+  for c = 1, cols, across do
+    text(ox + (c - 1) * cell + cell / 2, oy - 3, "middle", columnName(c))
+  end
+  local down = every(size + 3)
+  for r = 1, rows, down do
+    text(ox - 3, oy + (r - 1) * cell + cell / 2 + size * 0.35, "end", tostring(r))
+  end
+  return table.concat(out)
+end
+
 -- The map as an SVG plan: the squares, the creatures if they are wanted, a
 -- scale bar, and a key drawn with the same ink and the same patterns as the
 -- squares it explains. Returns the SVG, its height and any note.
@@ -996,10 +1105,23 @@ function maps.svg(m, opts)
   -- the DM's layer: creatures, and anything hidden. "tokens" was its name
   -- in 1.1, when creatures were the only thing it covered.
   local dm = opts.dm == true or opts.tokens == true
-  local id = opts.id or patternId(m, grid, dm)
   local width = opts.width or maps.setting("width")
   local pad, foot = 1, 24
   local KEY_ROW, KEY_SWATCH, KEY_SIZE = 17, 15, 10.5
+  -- Coordinates, from the map's own line or else the setting: a margin over
+  -- the grid for the letters and one to its left for the numbers, so the
+  -- grid, still a column wide with them, is drawn a little smaller. The
+  -- labels' size comes from the square the map would have without them.
+  local coords = m.coordinates
+  if coords == nil then coords = maps.setting("coordinates") == true end
+  local mx, my, labelSize = 0, 0, 0
+  if coords then
+    labelSize = math.max(6, math.min(10, math.floor(math.min(34, (width - pad * 2) / cols) * 0.4)))
+    my = labelSize + 4
+    mx = #tostring(rows) * math.ceil(labelSize * 0.6) + 5
+  end
+  local ox, oy = pad + mx, pad + my  -- the grid's top left corner
+  local id = opts.id or patternId(m, grid, dm, coords)
 
   -- what the key explains: every square the map actually draws, in the
   -- order the legend was written, with the creatures only where they show
@@ -1029,16 +1151,16 @@ function maps.svg(m, opts)
   end
   -- a whole number of px to a square, so every line in the drawing lands on
   -- an integer and the text of it is the same in any Lua
-  local cell = math.min(34, math.floor((width - pad * 2) / cols))
+  local cell = math.min(34, math.floor((width - pad * 2 - mx) / cols))
   local max = opts.maxHeight or 860
-  local extra = pad * 2 + foot + keyHeight
+  local extra = pad * 2 + foot + keyHeight + my
   if cell * rows + extra > max then
     cell = math.floor((max - extra) / rows)
   end
   if cell < 6 then cell = 6 end
   local gw, gh = cell * cols, cell * rows
   -- the key gets the whole column to write in, however narrow the grid is
-  local canvas = #keys > 0 and math.max(gw + pad * 2, width) or (gw + pad * 2)
+  local canvas = #keys > 0 and math.max(gw + pad * 2 + mx, width) or (gw + pad * 2 + mx)
   local out = {}
   local function put(...) out[#out + 1] = table.concat({...}) end
   local svgAt = #out + 1
@@ -1057,7 +1179,7 @@ function maps.svg(m, opts)
         local g = m.legend[groundAt(m, grid, r, c, under)]
         kind = g and g.kind or "floor"
       end
-      local x, y = round(pad + (c - 1) * cell), round(pad + (r - 1) * cell)
+      local x, y = round(ox + (c - 1) * cell), round(oy + (r - 1) * cell)
       local fill = FILL[kind]
       if fill then
         put('<rect x="', x, '" y="', y, '" width="', round(cell), '" height="', round(cell),
@@ -1067,12 +1189,12 @@ function maps.svg(m, opts)
   end
   put('<g stroke="', ink, '" stroke-width="0.4" opacity="0.4">')
   for c = 0, cols do
-    put('<line x1="', round(pad + c * cell), '" y1="', round(pad), '" x2="', round(pad + c * cell),
-        '" y2="', round(pad + gh), '"/>')
+    put('<line x1="', round(ox + c * cell), '" y1="', round(oy), '" x2="', round(ox + c * cell),
+        '" y2="', round(oy + gh), '"/>')
   end
   for r = 0, rows do
-    put('<line x1="', round(pad), '" y1="', round(pad + r * cell), '" x2="', round(pad + gw),
-        '" y2="', round(pad + r * cell), '"/>')
+    put('<line x1="', round(ox), '" y1="', round(oy + r * cell), '" x2="', round(ox + gw),
+        '" y2="', round(oy + r * cell), '"/>')
   end
   put("</g>")
   for r = 1, rows do
@@ -1080,7 +1202,7 @@ function maps.svg(m, opts)
       local ch = grid[r][c]
       local e = m.legend[ch]
       local kind = e and e.kind or "floor"
-      local x, y = pad + (c - 1) * cell, pad + (r - 1) * cell
+      local x, y = ox + (c - 1) * cell, oy + (r - 1) * cell
       if kind == "exit" or kind == "door" then
         local dx, dy = exitDir(r, c, rows, cols)
         local cx, cy = x + cell / 2, y + cell / 2
@@ -1110,9 +1232,10 @@ function maps.svg(m, opts)
       end
     end
   end
-  put('<rect x="', round(pad), '" y="', round(pad), '" width="', round(gw), '" height="', round(gh),
+  put('<rect x="', round(ox), '" y="', round(oy), '" width="', round(gw), '" height="', round(gh),
       '" fill="none" stroke="', ink, '" stroke-width="1.2"/>')
-  local by, bx = pad + gh + 14, pad
+  if coords then put(coordinateLabels(ox, oy, cell, rows, cols, labelSize, ink)) end
+  local by, bx = oy + gh + 14, ox
   put('<g stroke="', ink, '" stroke-width="1">')
   put('<line x1="', round(bx), '" y1="', round(by), '" x2="', round(bx + cell),
       '" y2="', round(by), '"/>')
@@ -1124,7 +1247,7 @@ function maps.svg(m, opts)
   put('<text x="', round(bx + cell + 5), '" y="', round(by + 4), '" fill="', ink,
       '" font-family="Georgia, serif" font-size="9.5">',
       esc(round(m.scale) .. " " .. m.units .. " to a square"), "</text>")
-  put('<text x="', round(pad + gw), '" y="', round(by + 4), '" text-anchor="end" fill="', ink,
+  put('<text x="', round(ox + gw), '" y="', round(by + 4), '" text-anchor="end" fill="', ink,
       '" font-family="Georgia, serif" font-size="9.5">',
       esc(round(cols * m.scale) .. " " .. m.units .. " across"), "</text>")
 
@@ -1133,7 +1256,7 @@ function maps.svg(m, opts)
   -- wall, a stippled one for difficult ground, the arrow for a way out, the
   -- creature's own ring and letter. Nothing here asks the reader to match a
   -- symbol they cannot see.
-  local y = pad + gh + foot
+  local y = oy + gh + foot
   for k, e in ipairs(keys) do
     local cy = y + KEY_SWATCH / 2
     local swatch
@@ -1192,7 +1315,7 @@ function maps.svg(m, opts)
     y = y + KEY_ROW + (#lines - 1) * (KEY_SIZE + 1.5)
   end
 
-  local height = #keys > 0 and (y + pad) or (gh + pad * 2 + foot)
+  local height = #keys > 0 and (y + pad) or (gh + pad * 2 + foot + my)
   out[svgAt] = table.concat {
     '<svg xmlns="http://www.w3.org/2000/svg" width="', round(canvas),
     '" height="', round(height), '" viewBox="0 0 ', round(canvas), " ", round(height),
