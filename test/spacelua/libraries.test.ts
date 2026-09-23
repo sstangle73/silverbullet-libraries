@@ -487,11 +487,14 @@ __bar = __text(gm.bar("${SCENE2}").html)`);
 
 // A character's bar reads the page's frontmatter through yaml.parse, whose
 // lists and maps reach Lua as JavaScript's own arrays and objects: the rows,
-// the buttons and the play state, in SilverBullet's own Lua.
+// the buttons and the play state, in SilverBullet's own Lua. The client's
+// list of pages is held from before the page and its record exist, as a tab
+// that opens straight onto the page draws its bar before the list has loaded.
 test("a character's bar counts what runs out, from the page's own YAML, in SilverBullet's own Lua", async () => {
-  const { env, run, pages, notes, prompts, state, printed } = await setup(ROOT);
+  const { env, run, pages, notes, prompts, state, printed, freeze } = await setup(ROOT);
   const BRAM = "Party/Bram";
   const RECORD = "State/Characters/Bram";
+  freeze();
   pages.set(BRAM, [
     "---", "type: pc", "player: Sam", "level: 5", "class: Fighter 3 / Wizard 2", "con: 14", "hp: 28",
     "hit_dice: 3d10 + 2d6", "slots: [3, 1]", "resources:",

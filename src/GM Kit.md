@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.9.0"
+version: "3.9.1"
 ---
 
 # GM Kit
@@ -329,6 +329,10 @@ A link in a players' copy to an adventure page they won't have, hidden, private,
 
 An embed of a page they won't have, or of a section of one they don't get, `![[World/People/The Warden#What They Want]]`, is left out of the copy, and the report names it. Links in code and in `${...}` stay as they are.
 
+## Changes in 3.9.1
+
+**A character's bar shows in a tab that opens straight onto the page.** It asked the client's list of pages whether the page and its record were there, and a tab that has only just opened draws its bar before that list has loaded: the bar showed nothing, or a character hurt at the table as whole, until you went to another page and back. It asks the space itself now.
+
 ## Changes in 3.9
 
 **A character's page counts what runs out at the table.** A page of `type: pc` gets a bar of its own: hit points and temporary hit points, death saves at 0, spell slots, Pact Magic, resources with uses, Hit Point Dice and Heroic Inspiration, with a Short Rest and a Long Rest by the 2024 rules. What has gone is play state, in `State/Characters/<name>`, and the character's page is never written to, so a refresh from D&D Beyond keeps what the table has done. See *Characters*.
@@ -454,7 +458,7 @@ Buttons: the GM bar, the header buttons, pickers, and *Undo*. Marking someone me
 gm = gm or {}
 -- The version this code is, as the page's frontmatter says: gm.stale()
 -- holds it to the copies of GM Kit the space has.
-gm.version = "3.9.0"
+gm.version = "3.9.1"
 
 gm.config = {
   sessionPage     = "Session Table",
@@ -3097,8 +3101,9 @@ end
 
 -- Where a character's play state is, and whether it is there: its own path,
 -- or else the record whose subject links the page, for a character renamed
--- since, as SilverBullet rewrites the link. A bar asks the cheap way; an
--- action, `exact`, asks the space.
+-- since, as SilverBullet rewrites the link. `exact` asks the space itself,
+-- as GM Kit's own bar and actions do; without it, the client's list of
+-- pages, which a tab that has only just opened doesn't have yet.
 function gm.characterState(page, exact)
   local function there(path)
     if exact then return gm.exists(path) end
@@ -3682,11 +3687,16 @@ function gm.characterBar(page)
   page = page or editor.getCurrentPage()
   if not mayBeCharacter(page) then return nil end
   local render <close> = gm.rendering()
-  if not gm.seen(page) then return nil end
-  local text = space.readPage(page)
+  -- the page and its record asked of the space itself, never the client's
+  -- list of pages: a tab that opens straight onto a character's page draws
+  -- this bar before that list has loaded, and draws it only then, so the
+  -- list would say there is no page, or no record, and the bar would show
+  -- nothing, or a character hurt at the table as whole
+  local found, text = pcall(space.readPage, page)
+  if not found or type(text) ~= "string" then return nil end
   if gm.frontmatter(text).type ~= gm.config.characterType then return nil end
   local c = gm.character(page, text)
-  local path, stated = gm.characterState(page)
+  local path, stated = gm.characterState(page, true)
   local st = stated and tracked(space.readPage(path)) or {}
   local spec = { class = "gmkit-bar" }
   local function add(x) spec[#spec + 1] = x end

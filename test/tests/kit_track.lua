@@ -609,3 +609,17 @@ test("kit track: every change on the bar has undo", "dm", function()
     eq(H.pages[RECORD], before, "step " .. i .. " undone: " .. n.message)
   end
 end)
+
+test("kit track: a tab that opens straight onto a character's page draws the bar as the character stands", "dm", function()
+  bram()
+  ok(gm.damage(BRAM, 6))
+  -- a tab just opened: the client's list of pages hasn't loaded, so it knows
+  -- of no page at all, and the bar is drawn only now
+  H.known = {}
+  local bar = gm.topBar()
+  settle()
+  ok(bar, "a bar, though the client's list knows no page yet")
+  local text = textOf(bar.html)
+  has(text, "22 of 28 hit points", "the damage recorded, not a whole character")
+  has(text, "Play state")
+end)

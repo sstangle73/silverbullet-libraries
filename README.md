@@ -8,7 +8,7 @@ Each library is one page in `src/`, installed into a space as `Library/Storie/<n
 
 | Library | What it does | Space | Version |
 |---|---|---|---|
-| [GM Kit](src/GM%20Kit.md) | Play state kept out of the adventure: who the party met, where they went, what they found and its uses, rolls and decisions logged by session, each character's hit points, slots and rests, and fog-of-war publishing of what the players have learned into their own space, with a preview before and a report after, and a recap of each session for the players | The DM space, the one that holds the others | 3.9.0 |
+| [GM Kit](src/GM%20Kit.md) | Play state kept out of the adventure: who the party met, where they went, what they found and its uses, rolls and decisions logged by session, each character's hit points, slots and rests, and fog-of-war publishing of what the players have learned into their own space, with a preview before and a report after, and a recap of each session for the players | The DM space, the one that holds the others | 3.9.1 |
 | [GM Beyond](src/GM%20Beyond.md) | D&D Beyond characters: an import that writes a character's whole sheet into a page, for GM Sheets to draw, a refresh that says what it changes before it writes, one for the whole party, and a roster read from the pages | The DM space | 2.2.0 |
 | [GM Book](src/GM%20Book.md) | Compiles the adventure into DM and player editions of one manuscript, for Homebrewery to render as a 5e book | The adventure space | 1.14.0 |
 | [GM Party](src/GM%20Party.md) | Numbers, hand-outs, fights and DCs that follow the party's size and level: your table's on the page, the general rule in print | The adventure space | 1.5.0 |
