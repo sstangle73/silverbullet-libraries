@@ -6,15 +6,19 @@ usage: python tools/handout.py SPACE [PAGE ...] [--out DIR] [--type TYPE]
 
 SPACE is the folder a SilverBullet space serves, and a PAGE is a page's name
 in it, "Party/Tamsin Reed". With no PAGE, every page whose frontmatter has
-`type: TYPE` (pc) is filled. Each goes to DIR, SPACE/Handouts unless you say,
-as "<name>.pdf": the two pages of the sheet with the character written in,
-then as many plain pages as the rest needs, the features, traits and feats
-with their rules and whatever outgrew its box.
+`type: TYPE` (pc) is filled, but one marked `retired: true`. Each goes to
+DIR, SPACE/Handouts unless you say, as "<name>.pdf": the two pages of the
+sheet with the character written in, then as many plain pages as the rest
+needs, the features, traits and feats with their rules and whatever outgrew
+its box.
 
 The numbers are GM Sheets' own: a number the page writes, or else the SRD's
-sum for it. --extras names a campaign's own keys to put in the sheet's
-Backstory & Personality box, "want:Want" for a key `want` shown as "Want";
-what doesn't fit there goes on the pages after the sheet.
+sum for it, with Jack of All Trades on a skill without proficiency and
+Disadvantage on a passive score as GM Sheets counts them; a roll with
+Advantage or Disadvantage is marked ADV or DIS, and neither where both apply.
+--extras names a campaign's own keys to put in the sheet's Backstory &
+Personality box, "want:Want" for a key `want` shown as "Want"; what doesn't
+fit there goes on the pages after the sheet.
 
 The sheet's font shows the letters of Windows' Western alphabet (cp1252). A
 letter it can't show is printed as the nearest it can, Łucja Dvořák as Lucja
@@ -299,12 +303,67 @@ def signed(n):
     return "" if n is None else (f"+{n}" if n >= 0 else f"-{-n}")
 
 
+def class_level(d, name):
+    """A character's level in a class named in lower case, "bard", as GM
+    Sheets reads it (sheets.classLevel): `class` split at each / and comma,
+    the first part that starts with the name and no letter after it, and the
+    first number after that, "Monk 2 / Bard 3", "Bard 3, Fighter 2" or "Bard
+    (Lore) 6"; or the page's `level` where it is the only class. None where
+    the class isn't there, or its level isn't given: "Bard / Fighter"."""
+    line = d.get("class")
+    if not isinstance(line, str):
+        return None
+    parts = [p.strip() for p in re.split(r"[/,]", line) if p.strip()]
+    for part in parts:
+        low = part.lower()
+        if not low.startswith(name) or re.match(r"[A-Za-z]", low[len(name):]):
+            continue
+        n = re.search(r"[0-9]+", low[len(name):])
+        if n:
+            return int(n.group(0))
+        return whole(d.get("level")) if len(parts) == 1 else None
+    return None
+
+
+def jack_of_all_trades(d):
+    """Whether the sheet adds Jack of All Trades' half Proficiency Bonus to a
+    skill, as GM Sheets works it out (sheets.jackOfAllTrades): the page's
+    `jack_of_all_trades`, true or false, where it has one; else a feature,
+    trait or feat of that name; else Bard at level 2 or more."""
+    said = d.get("jack_of_all_trades")
+    if isinstance(said, bool):
+        return said
+    for what in ("features", "traits", "feats"):
+        for e in items(d.get(what)):
+            name = e.get("name") if isinstance(e, dict) else e
+            if name is not None and key(name) == "jack_of_all_trades":
+                return True
+    return (class_level(d, "bard") or 0) >= 2
+
+
+def rolls(v, k):
+    """How a roll is marked, a skill, "initiative" or a save, "str_save":
+    ADV, DIS, or None for neither or both, which cancel."""
+    adv, dis = k in v["adv"], k in v["dis"]
+    if adv and not dis:
+        return "ADV"
+    if dis and not adv:
+        return "DIS"
+    return None
+
+
 def values(d):
     """Every number the sheet shows, as GM Sheets works them out: a number
-    the page writes, or else the SRD's sum."""
+    the page writes, or else the SRD's sum. Jack of All Trades adds half the
+    Proficiency Bonus, rounded down, to a skill with neither proficiency nor
+    Expertise, never to initiative or a save; a passive score is 10 and its
+    skill, 5 more with Advantage and 5 less with Disadvantage, which cancel."""
     level = max(1, whole(d.get("level")) or 1)
     v = {"pb": whole(d.get("pb")) or 2 + (level - 1) // 4, "scores": {}, "mods": {}, "saves": {},
-         "save_prof": {}, "skills": {}, "skill_prof": {}, "adv": keyset(d.get("advantage"))}
+         "save_prof": {}, "skills": {}, "skill_prof": {}, "adv": keyset(d.get("advantage")),
+         "dis": keyset(d.get("disadvantage"))}
+    v["jack"] = jack_of_all_trades(d)
+    half = v["pb"] // 2 if v["jack"] else 0
     saves, skills, expert = keyset(d.get("saves")), keyset(d.get("skills")), keyset(d.get("expertise"))
     for a in ABILITIES:
         score = whole(d.get(a))
@@ -319,15 +378,16 @@ def values(d):
         p = 2 if s in expert else (1 if s in skills else 0)
         v["skill_prof"][s] = p
         written = whole(d.get(s))
-        v["skills"][s] = written if written is not None else (None if m is None else m + p * v["pb"])
+        v["skills"][s] = written if written is not None else (
+            None if m is None else m + p * v["pb"] + (half if p == 0 else 0))
     written = whole(d.get("initiative"))
     v["initiative"] = written if written is not None else v["mods"]["dex"]
     v["passive"] = {}
     for s in ("perception", "insight", "investigation"):
         written = whole(d.get("passive_" + s))
         skill = v["skills"][s]
-        v["passive"][s] = written if written is not None else (
-            None if skill is None else 10 + skill + (5 if s in v["adv"] else 0))
+        edge = {"ADV": 5, "DIS": -5}.get(rolls(v, s), 0)
+        v["passive"][s] = written if written is not None else (None if skill is None else 10 + skill + edge)
     v["casting"] = ability_key(d.get("spellcasting"))
     cm = v["mods"].get(v["casting"]) if v["casting"] else None
     written = whole(d.get("spell_dc"))
@@ -470,7 +530,8 @@ def fill_front(layer, d, v, name, overflow):
     # a number is feet, as GM Sheets writes it; text is as it stands
     number_ = isinstance(speed, (int, float)) and not isinstance(speed, bool)
     speed = f"{text_of(speed)} ft." if number_ else text_of(speed)
-    initiative = signed(v["initiative"]) + (" ADV" if "initiative" in v["adv"] else "")
+    mark = rolls(v, "initiative")
+    initiative = signed(v["initiative"]) + (" " + mark if mark else "")
     layer.fit(263.5, 627, initiative, 70, 15, bold=True, align="center")
     layer.fit(354, 627, speed, 70, 12, bold=True, align="center")
     layer.fit(445.5, 627, text_of(d.get("creature_size")), 70, 11, align="center")
@@ -486,8 +547,9 @@ def fill_front(layer, d, v, name, overflow):
         layer.text(tx - 12, ty, signed(v["saves"][a]), 8.5, True, "center")
         if v["save_prof"][a]:
             layer.dot(tx - 26.1, ty + 2.7, 2.7)
-        if (a + "_save") in v["adv"]:
-            layer.text(tx + text_width("Saving Throw", 7.5, True) + 3, ty, "ADV", 5.5, True)
+        mark = rolls(v, a + "_save")
+        if mark:
+            layer.text(tx + text_width("Saving Throw", 7.5, True) + 3, ty, mark, 5.5, True)
         for s, kx, ky in spot["skills"]:
             layer.text(kx - 11, ky, signed(v["skills"][s]), 8.5, True, "center")
             p = v["skill_prof"][s]
@@ -495,8 +557,9 @@ def fill_front(layer, d, v, name, overflow):
                 layer.dot(kx - 25.1, ky + 2.7, 2.7)
             if p == 2:
                 layer.ring(kx - 25.1, ky + 2.7, 4.4)
-            if s in v["adv"]:
-                layer.text(kx + text_width(SKILL_LABELS[s], 7.5) + 3, ky, "ADV", 5.5, True)
+            mark = rolls(v, s)
+            if mark:
+                layer.text(kx + text_width(SKILL_LABELS[s], 7.5) + 3, ky, mark, 5.5, True)
 
     trained = keyset(d.get("armor_training"))
     for kind, x in (("light", 60), ("medium", 95), ("heavy", 139), ("shields", 176)):
@@ -830,6 +893,7 @@ def template_path(given, cache):
 
 
 def pages_of_type(space, kind):
+    """Every page of a type, but a retired character's: `retired: true`."""
     import yaml
     out = []
     for p in sorted(pathlib.Path(space).rglob("*.md")):
@@ -838,8 +902,10 @@ def pages_of_type(space, kind):
         if not m or not re.search(r"^type:\s*" + re.escape(kind) + r"\s*$", m.group(1), re.M):
             continue
         try:
-            yaml.safe_load(m.group(1))
+            data = yaml.safe_load(m.group(1))
         except yaml.YAMLError:
+            continue
+        if isinstance(data, dict) and data.get("retired") is True:
             continue
         out.append(p.relative_to(space).as_posix()[:-3])
     return out

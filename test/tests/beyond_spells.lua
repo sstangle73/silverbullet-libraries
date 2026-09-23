@@ -194,7 +194,9 @@ test("beyond: an item's spells come while it is attuned, and name the item", "dm
   eq(spellNamed(d.cantrips, "Mage Hand").notes, "from Wand of Sparks")
   -- no longer attuned, the staff's spell goes, and the wand's stays
   staff.isAttuned = false
+  H.confirms = { true }
   gmb.refresh(page)
+  has(H.confirmsAsked[1], "Takes away Burning Hands.")
   d = values(page)
   eq(d.always_prepared, nil)
   eq(spellNamed(d.cantrips, "Mage Hand").notes, "from Wand of Sparks")

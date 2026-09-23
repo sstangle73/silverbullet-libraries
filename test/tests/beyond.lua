@@ -240,7 +240,10 @@ test("beyond: a refresh rewrites the import's keys and keeps everything else", "
   H.pages[page] = text
   -- the character gains Hit Points on D&D Beyond
   data.baseHitPoints = 40
+  H.confirms = { true }
   gmb.refresh(page)
+  has(H.confirmsAsked[1], "HP 99→70.")
+  has(H.confirmsAsked[1], "Writes over what you changed by hand: hp (you wrote 99).")
   local after = H.pages[page]
   has(after, "\nplayer: Sam\nwant: Courage\n")
   has(after, "\nhp: 70\n")
@@ -319,6 +322,7 @@ test("beyond: an imported page has a bar to refresh it, and nothing else does", 
   has(bar.html.outerHTML, 'href="https://www.dndbeyond.com/characters/1001"')
   eq(gmb.bar("index"), nil)
   data.baseHitPoints = 41
+  H.confirms = { true }
   click(bar, "Refresh from D&D Beyond")
   has(H.pages[page], "\nhp: 71\n")
 end)

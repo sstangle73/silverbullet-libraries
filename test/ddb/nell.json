@@ -1,0 +1,1076 @@
+{
+ "id": 0,
+ "success": true,
+ "message": "Character successfully received.",
+ "data": {
+  "bonusStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "overrideStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "bonusHitPoints": null,
+  "overrideHitPoints": null,
+  "background": {
+   "definition": {
+    "name": "Wayfarer",
+    "grantedFeats": []
+   }
+  },
+  "feats": [
+   {
+    "componentTypeId": null,
+    "componentId": null,
+    "definitionId": 5501,
+    "definition": {
+     "id": 5501,
+     "entityTypeId": 1088085227,
+     "name": "Elemental Adept",
+     "description": "<p>Elemental Adept, for the tests.</p>"
+    }
+   }
+  ],
+  "characterValues": [],
+  "preferences": {
+   "showUnarmedStrike": true
+  },
+  "customItems": [],
+  "currencies": {
+   "cp": 0,
+   "sp": 0,
+   "gp": 0,
+   "ep": 0,
+   "pp": 0
+  },
+  "spells": {
+   "race": [],
+   "class": [],
+   "background": null,
+   "feat": [],
+   "item": []
+  },
+  "options": {
+   "race": [],
+   "background": null,
+   "item": null,
+   "feat": [],
+   "class": [
+    {
+     "componentId": 704,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 66001,
+      "entityTypeId": 258900837,
+      "name": "Quickened Spell",
+      "description": "<p>Quickened Spell, made up for the tests.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 704,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 66002,
+      "entityTypeId": 258900837,
+      "name": "Twinned Spell",
+      "description": "<p>Twinned Spell, made up for the tests.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    }
+   ]
+  },
+  "choices": {
+   "race": [
+    {
+     "id": "1960452172-3-8101-55",
+     "parentChoiceId": null,
+     "componentId": 8101,
+     "componentTypeId": 1960452172,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 55,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    }
+   ],
+   "background": [],
+   "item": null,
+   "feat": [
+    {
+     "id": "1088085227-3-5501-12",
+     "parentChoiceId": null,
+     "componentId": 5501,
+     "componentTypeId": 1088085227,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 12,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    }
+   ],
+   "class": [
+    {
+     "id": "12168134-3-704-66001",
+     "parentChoiceId": null,
+     "componentId": 704,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 66001,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-704-66002",
+     "parentChoiceId": null,
+     "componentId": 704,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 66002,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-704-None",
+     "parentChoiceId": null,
+     "componentId": 704,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": null,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-7-703-31",
+     "parentChoiceId": null,
+     "componentId": 703,
+     "componentTypeId": 12168134,
+     "type": 7,
+     "subType": 1,
+     "optionValue": 31,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-4-705-41",
+     "parentChoiceId": null,
+     "componentId": 705,
+     "componentTypeId": 12168134,
+     "type": 4,
+     "subType": 1,
+     "optionValue": 41,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    }
+   ],
+   "choiceDefinitions": [
+    {
+     "id": "12168134-3",
+     "options": [
+      {
+       "id": 66001,
+       "label": "Quickened Spell",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 66002,
+       "label": "Twinned Spell",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 66003,
+       "label": "Careful Spell",
+       "description": null,
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "12168134-7",
+     "options": [
+      {
+       "id": 31,
+       "label": "Flexible Casting",
+       "description": "<p>Flexible Casting, made up for the tests.</p>",
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "12168134-4",
+     "options": [
+      {
+       "id": 41,
+       "label": "Draconic Sorcery",
+       "description": "<p>Draconic Sorcery, for the tests.</p>",
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "1960452172-3",
+     "options": [
+      {
+       "id": 55,
+       "label": "Red",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 56,
+       "label": "Blue",
+       "description": null,
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "1088085227-3",
+     "options": [
+      {
+       "id": 12,
+       "label": "Fire",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 13,
+       "label": "Cold",
+       "description": null,
+       "sourceId": null
+      }
+     ]
+    }
+   ],
+   "definitionKeyNameMap": {}
+  },
+  "customProficiencies": [],
+  "customSenses": [
+   {
+    "senseId": 2,
+    "distance": 120,
+    "source": null
+   }
+  ],
+  "customSpeeds": [],
+  "id": 1008,
+  "name": "Nell Ashgrove",
+  "stats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": 12
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": 16
+   }
+  ],
+  "baseHitPoints": 14,
+  "race": {
+   "fullName": "Dragonborn",
+   "sizeId": 4,
+   "weightSpeeds": {
+    "normal": {
+     "walk": 30,
+     "fly": 0,
+     "burrow": 0,
+     "swim": 0,
+     "climb": 0
+    }
+   },
+   "racialTraits": [
+    {
+     "definition": {
+      "id": 8101,
+      "entityTypeId": 1960452172,
+      "name": "Draconic Ancestry",
+      "hideInSheet": false,
+      "description": "<p>Draconic Ancestry, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "id": 8102,
+      "entityTypeId": 1960452172,
+      "name": "Breath Weapon",
+      "hideInSheet": false,
+      "description": "<p>Breath Weapon, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "id": 8103,
+      "entityTypeId": 1960452172,
+      "name": "Damage Resistance",
+      "hideInSheet": false,
+      "description": "<p>Damage Resistance, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "id": 8104,
+      "entityTypeId": 1960452172,
+      "name": "Darkvision",
+      "hideInSheet": false,
+      "description": "<p>Darkvision, for the tests.</p>"
+     }
+    }
+   ]
+  },
+  "classes": [
+   {
+    "id": 9301,
+    "level": 3,
+    "isStartingClass": true,
+    "definition": {
+     "id": 7,
+     "name": "Sorcerer",
+     "hitDice": 6,
+     "canCastSpells": true,
+     "spellCastingAbilityId": 6,
+     "spellRules": {
+      "multiClassSpellSlotDivisor": 1,
+      "multiClassSpellSlotRounding": 1,
+      "levelSpellSlots": [
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ]
+      ]
+     }
+    },
+    "subclassDefinition": {
+     "name": "Draconic Sorcery",
+     "canCastSpells": false
+    },
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 701,
+       "name": "Spellcasting",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Spellcasting: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 702,
+       "name": "Innate Sorcery",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Innate Sorcery: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 706,
+       "name": "Proficiencies",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Proficiencies: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 707,
+       "name": "Hit Points",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Hit Points: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 703,
+       "name": "Font of Magic",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Font of Magic: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 704,
+       "name": "Metamagic",
+       "requiredLevel": 2,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Metamagic: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 705,
+       "name": "Sorcerer Subclass",
+       "requiredLevel": 3,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Sorcerer Subclass: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   }
+  ],
+  "modifiers": {
+   "race": [
+    {
+     "type": "set-base",
+     "subType": "darkvision",
+     "value": 60,
+     "fixedValue": 60,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Darkvision",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 8104,
+     "componentTypeId": 1960452172
+    },
+    {
+     "type": "language",
+     "subType": "common",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Common",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 8105,
+     "componentTypeId": 1960452172
+    },
+    {
+     "type": "language",
+     "subType": "draconic",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Draconic",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 8105,
+     "componentTypeId": 1960452172
+    }
+   ],
+   "class": [
+    {
+     "type": "proficiency",
+     "subType": "constitution-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Constitution Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 706,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "charisma-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Charisma Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 706,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "simple-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Simple Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 706,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "arcana",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Arcana",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 706,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "persuasion",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Persuasion",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 706,
+     "componentTypeId": 12168134
+    }
+   ],
+   "background": [],
+   "feat": [],
+   "item": [],
+   "condition": []
+  },
+  "inventory": [],
+  "actions": {
+   "class": [
+    {
+     "name": "Sorcery Points",
+     "limitedUse": {
+      "maxUses": 3,
+      "resetType": 2,
+      "statModifierUsesId": null,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    }
+   ],
+   "race": [],
+   "feat": []
+  },
+  "classSpells": [
+   {
+    "characterClassId": 9301,
+    "spells": [
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Fire Bolt",
+       "level": 0,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 120,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": true,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": [
+        {
+         "type": "damage",
+         "subType": "fire",
+         "friendlySubtypeName": "Fire",
+         "die": {
+          "diceString": "1d10"
+         },
+         "atHigherLevels": {
+          "higherLevelDefinitions": [
+           {
+            "level": 5,
+            "dice": {
+             "diceString": "2d10"
+            }
+           },
+           {
+            "level": 11,
+            "dice": {
+             "diceString": "3d10"
+            }
+           }
+          ],
+          "scaleType": "characterlevel"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Shield",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 4
+       },
+       "range": {
+        "origin": "Self",
+        "rangeValue": null,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     },
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Chromatic Orb",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 90,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2,
+        3
+       ],
+       "componentsDescription": "a diamond worth 50+ GP",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

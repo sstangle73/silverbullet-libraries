@@ -43,19 +43,44 @@ def ranger():
     return src[src.index("[==[", at) + 4:src.index("]==]", at)]
 
 
+# A level 5 bard, Proficiency Bonus +3, so Jack of All Trades is +1: the page
+# GM Sheets' own tests hold Jack of All Trades to, as tests/sheets.lua has it
+# where GM Sheets works Jack of All Trades out.
+BARD = """---
+type: pc
+level: 5
+class: Bard
+str: 8
+dex: 14
+con: 12
+int: 10
+wis: 13
+cha: 16
+saves: [dex, cha]
+skills: [deception, performance, persuasion]
+expertise: [persuasion]
+history: 5
+spellcasting: cha
+---
+
+# Wren Hollow
+"""
+
 IMPORTED = {"1001": "Bram Holloway", "1002": "Ilse Marrow", "1003": "Cass Ironwood",
-            "1004": "Wren Ashdown", "1005": "Sorrel Fenwick"}
+            "1004": "Wren Ashdown", "1005": "Sorrel Fenwick", "1006": "Vesper Quill",
+            "1007": "Rook Varga", "1008": "Nell Ashgrove"}
 
 
 def imported(L):
     """The made-up D&D Beyond characters' pages as GM Beyond writes them."""
     L.execute('reset("dm")')
+    L.globals().__ids = L.table(*IMPORTED.keys())
     L.execute('''
 __imported = {}
 for name, body in pairs(DDB) do
   H.responses[gmb.endpoint .. tostring(body.data.id)] = { ok = true, status = 200, body = body }
 end
-for _, id in ipairs({ "1001", "1002", "1003", "1004", "1005" }) do
+for _, id in ipairs(__ids) do
   __imported[id] = H.pages[gmb.import(id)]
 end
 ''')
@@ -111,18 +136,78 @@ def main():
     pages["Tamsin Written"] = ranger().replace(
         "hp: 28", "hp: 28\ninitiative: 5\nstr_save: 9\narcana: 4\npassive_perception: 11\nspell_dc: 15\npb: 3")
     pages.update(imported(L))
+    # the rules GM Sheets gained with Jack of All Trades and Disadvantage
+    newer = {"Wren Hollow": BARD,
+             "Wren Lore": BARD.replace("history: 5", "arcana: 0\nhistory: 5\npassive_perception: 12\n"
+                                       "disadvantage: [perception]"),
+             "Tamsin Hindered": ranger().replace("advantage: [perception]",
+                                                 "advantage: [perception, stealth]\n"
+                                                 "disadvantage: [perception, insight]")}
+    pages.update(newer)
     with tempfile.TemporaryDirectory() as tmp:
         space = pathlib.Path(tmp)
         (space / "Party").mkdir()
         for name, text in pages.items():
             (space / "Party" / f"{name}.md").write_text(text, encoding="utf-8", newline="\n")
 
-        # the sums, the same in both languages
+        # the sums, the same in both languages; the newer rules only where
+        # the GM Sheets beside this script has them too
+        has_newer = bool(L.eval("sheets.jackOfAllTrades ~= nil and sheets.rolls ~= nil"))
         for name, text in pages.items():
+            if name in newer and not has_newer:
+                continue
             lua = lua_values(L, text)
             py = py_values(space, f"Party/{name}")
             for k in lua:
                 check(f"{name}: {k}", py[k], lua[k])
+        if not has_newer:
+            print("note: GM Sheets here doesn't work out Jack of All Trades or Disadvantage yet, so "
+                  + ", ".join(newer) + " weren't held against it")
+
+        # Jack of All Trades and Disadvantage, worked out by hand
+        v = handout.values(handout.read_page(space, "Party/Wren Hollow"))
+        check("the bard's bonus", v["pb"], 3)
+        check("a bard at level 5 has Jack of All Trades", v["jack"], True)
+        for s, want in (("athletics", 0), ("arcana", 1), ("stealth", 3), ("perception", 2), ("deception", 6),
+                        ("performance", 6), ("persuasion", 9), ("history", 5)):
+            check(f"the bard's {s}", v["skills"][s], want)
+        check("a passive has it through its skill", (v["passive"]["perception"], v["passive"]["insight"],
+                                                     v["passive"]["investigation"]), (12, 12, 11))
+        check("never initiative", v["initiative"], 2)
+        check("nor a save", (v["saves"]["str"], v["saves"]["wis"], v["saves"]["dex"]), (-1, 1, 5))
+        v = handout.values(handout.read_page(space, "Party/Wren Lore"))
+        check("a number written still wins", (v["skills"]["arcana"], v["passive"]["perception"]), (0, 12))
+        d = handout.read_page(space, "Party/Wren Hollow")
+        d["jack_of_all_trades"] = False
+        check("the page's word against it", handout.values(d)["skills"]["arcana"], 0)
+        d["jack_of_all_trades"], d["level"] = None, 13
+        check("half of +5 is 2", handout.values(d)["skills"]["arcana"], 2)
+        for line, level, want in (("Bard", 1, False), ("Bard", 2, True), ("bard", 9, True),
+                                  ("Monk 2 / Bard 2 / Warlock 1", 5, True), ("Fighter 3 / Bard 1", 4, False),
+                                  ("Bard 3, Fighter 2", 5, True), ("Bard (College of Lore) 6", 6, True),
+                                  ("Barbarian", 9, False), ("Bardic Scholar", 9, False),
+                                  ("Bard / Fighter", 9, False), ("Wizard", 3, False)):
+            check(f"Jack of All Trades for {line} at level {level}",
+                  handout.jack_of_all_trades({"class": line, "level": level}), want)
+        check("a feature of that name", handout.jack_of_all_trades(
+            {"class": "Fighter", "level": 7, "features": [{"name": "Jack of All Trades"}]}), True)
+        check("a feat, named any sensible way", handout.jack_of_all_trades(
+            {"class": "Rogue", "level": 3, "feats": ["jack-of-all-trades"]}), True)
+        check("the page's word for it", handout.jack_of_all_trades({"class": "Wizard", "jack_of_all_trades": True}),
+              True)
+        check("a bard's level in a line", [handout.class_level(d_, "bard") for d_ in (
+            {"class": "Monk 2 / Bard 3"}, {"class": "Bard", "level": 4}, {"class": "Bard"}, {"class": "Wizard 3"})],
+            [3, 4, None, None])
+        tamsin = handout.read_page(space, "Party/Tamsin Reed")
+        check("Advantage on a passive", handout.values(tamsin)["passive"]["perception"], 19)
+        for dis, want in (("[perception]", (14, 12, 10)), ("Insight, investigation", (19, 7, 5))):
+            t = dict(tamsin, disadvantage=dis if "," in dis else ["perception"])
+            v = handout.values(t)
+            check(f"Disadvantage {dis}", (v["passive"]["perception"], v["passive"]["insight"],
+                                          v["passive"]["investigation"]), want)
+        v = handout.values(handout.read_page(space, "Party/Tamsin Hindered"))
+        check("both cancel, and Disadvantage alone is 5 less",
+              (v["passive"]["perception"], v["passive"]["insight"]), (14, 7))
 
         # a sheet filled on a stand-in the sheet's size
         template = space / "blank.pdf"
@@ -149,13 +234,27 @@ def main():
         filled = PdfReader(io.BytesIO(handout.fill(template, d, "Tamsin Reed", [("want", "Want")])))
         check("the Want", "Want: Home" in filled.pages[1].extract_text(), True)
 
+        # Disadvantage is the word DIS where Advantage is ADV, and both are neither
+        front = PdfReader(io.BytesIO(handout.fill(template, d, "Tamsin Reed", []))).pages[0].extract_text()
+        check("Advantage on Perception, marked", (front.count("ADV"), front.count("DIS")), (1, 0))
+        hindered = dict(d, disadvantage=["stealth", "initiative", "str_save"])
+        front = PdfReader(io.BytesIO(handout.fill(template, hindered, "Tamsin Reed", []))).pages[0].extract_text()
+        check("Stealth, initiative and the Strength save, DIS", (front.count("ADV"), front.count("DIS")), (1, 3))
+        check("initiative's DIS beside its number", "+3 DIS" in front, True)
+        both = dict(d, disadvantage=["perception"])
+        front = PdfReader(io.BytesIO(handout.fill(template, both, "Tamsin Reed", []))).pages[0].extract_text()
+        check("both on Perception: neither", (front.count("ADV"), front.count("DIS")), (0, 0))
+
         # a long list overflows onto the extra pages, all of it
         d["equipment"] = [f"Thing {i}" for i in range(1, 200)]
         filled = PdfReader(io.BytesIO(handout.fill(template, d, "Tamsin Reed", [])))
         text = "".join(p.extract_text() for p in filled.pages[2:])
         check("equipment that outgrew its box", "Thing 199" in text, True)
 
-        # every page from the command line, into the folder asked for
+        # every page from the command line, into the folder asked for, but a
+        # retired character's
+        (space / "Party" / "Old Soldier.md").write_text(ranger().replace("type: pc\n", "type: pc\nretired: true\n"),
+                                                        encoding="utf-8", newline="\n")
         out = space / "out"
         sys.argv = ["handout.py", str(space), "--template", str(template), "--out", str(out), "--extras", "want:Want"]
         try:

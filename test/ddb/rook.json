@@ -1,0 +1,1103 @@
+{
+ "id": 0,
+ "success": true,
+ "message": "Character successfully received.",
+ "data": {
+  "bonusStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "overrideStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "bonusHitPoints": null,
+  "overrideHitPoints": null,
+  "background": {
+   "definition": {
+    "name": "Soldier",
+    "grantedFeats": []
+   }
+  },
+  "feats": [
+   {
+    "componentTypeId": 1960452172,
+    "componentId": 8203,
+    "definitionId": 6001,
+    "definition": {
+     "id": 6001,
+     "entityTypeId": 1088085227,
+     "name": "Alert",
+     "description": "<p>Alert, for the tests.</p>"
+    }
+   }
+  ],
+  "characterValues": [
+   {
+    "typeId": 33,
+    "value": 3,
+    "notes": null,
+    "valueId": "3",
+    "valueTypeId": "660121713",
+    "contextId": null,
+    "contextTypeId": null
+   }
+  ],
+  "preferences": {
+   "showUnarmedStrike": true
+  },
+  "customItems": [],
+  "currencies": {
+   "cp": 0,
+   "sp": 0,
+   "gp": 0,
+   "ep": 0,
+   "pp": 0
+  },
+  "spells": {
+   "race": [],
+   "class": [],
+   "background": null,
+   "feat": [],
+   "item": []
+  },
+  "options": {
+   "race": [],
+   "background": null,
+   "item": null,
+   "feat": [],
+   "class": [
+    {
+     "componentId": 601,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 77001,
+      "entityTypeId": 258900837,
+      "name": "Archery",
+      "description": "<p>Archery, made up for the tests: +2 to hit at range.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 605,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 77011,
+      "entityTypeId": 258900837,
+      "name": "Riposte",
+      "description": "<p>Riposte, made up for the tests.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 605,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 77012,
+      "entityTypeId": 258900837,
+      "name": "Precision Attack",
+      "description": "<p>Precision Attack, made up for the tests.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 605,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 77013,
+      "entityTypeId": 258900837,
+      "name": "Trip Attack",
+      "description": "<p>Trip Attack, made up for the tests.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 612,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 77030,
+      "entityTypeId": 258900837,
+      "name": "Longsword (Sap)",
+      "description": "<p>Sap, for the tests.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    }
+   ]
+  },
+  "choices": {
+   "race": [
+    {
+     "id": "1960452172-5-8203-6001",
+     "parentChoiceId": null,
+     "componentId": 8203,
+     "componentTypeId": 1960452172,
+     "type": 5,
+     "subType": 1,
+     "optionValue": 6001,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "1960452172-2-8202-3017",
+     "parentChoiceId": null,
+     "componentId": 8202,
+     "componentTypeId": 1960452172,
+     "type": 2,
+     "subType": 1,
+     "optionValue": 3017,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    }
+   ],
+   "background": [],
+   "item": null,
+   "feat": [],
+   "class": [
+    {
+     "id": "12168134-3-601-77001",
+     "parentChoiceId": null,
+     "componentId": 601,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 77001,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-605-77011",
+     "parentChoiceId": null,
+     "componentId": 605,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 77011,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-605-77012",
+     "parentChoiceId": null,
+     "componentId": 605,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 77012,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-605-77013",
+     "parentChoiceId": null,
+     "componentId": 605,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 77013,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-612-77030",
+     "parentChoiceId": null,
+     "componentId": 612,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 77030,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-6-612-4",
+     "parentChoiceId": null,
+     "componentId": 612,
+     "componentTypeId": 12168134,
+     "type": 6,
+     "subType": 1,
+     "optionValue": 4,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-2-606-115",
+     "parentChoiceId": null,
+     "componentId": 606,
+     "componentTypeId": 12168134,
+     "type": 2,
+     "subType": 1,
+     "optionValue": 115,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    }
+   ],
+   "choiceDefinitions": [
+    {
+     "id": "12168134-3",
+     "options": [
+      {
+       "id": 77001,
+       "label": "Archery",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 77002,
+       "label": "Defense",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 77011,
+       "label": "Riposte",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 77012,
+       "label": "Precision Attack",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 77013,
+       "label": "Trip Attack",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 77030,
+       "label": "Longsword (Sap)",
+       "description": null,
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "12168134-6",
+     "options": [
+      {
+       "id": 4,
+       "label": "Longbow",
+       "description": "",
+       "sourceId": null
+      },
+      {
+       "id": 5,
+       "label": "Dagger",
+       "description": "",
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "12168134-2",
+     "options": [
+      {
+       "id": 115,
+       "label": "Smith's Tools",
+       "description": "",
+       "sourceId": null
+      },
+      {
+       "id": 116,
+       "label": "Tinker's Tools",
+       "description": "",
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "1960452172-5",
+     "options": [
+      {
+       "id": 6001,
+       "label": "Alert",
+       "description": "<p>Alert, for the tests.</p>",
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "1960452172-2",
+     "options": [
+      {
+       "id": 3017,
+       "label": "Stealth",
+       "description": "",
+       "sourceId": null
+      }
+     ]
+    }
+   ],
+   "definitionKeyNameMap": {}
+  },
+  "customProficiencies": [
+   {
+    "id": 3,
+    "name": "Riverlore",
+    "type": 1,
+    "statId": 5,
+    "proficiencyLevel": 3,
+    "notes": null,
+    "description": null,
+    "override": null,
+    "magicBonus": null,
+    "miscBonus": 1
+   }
+  ],
+  "customSenses": [],
+  "customSpeeds": [
+   {
+    "movementId": 1,
+    "distance": 35,
+    "source": null
+   }
+  ],
+  "id": 1007,
+  "name": "Rook Varga",
+  "stats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": 15
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": 16
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": 12
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": 8
+   }
+  ],
+  "baseHitPoints": 34,
+  "race": {
+   "fullName": "Human",
+   "sizeId": 4,
+   "weightSpeeds": {
+    "normal": {
+     "walk": 30,
+     "fly": 0,
+     "burrow": 0,
+     "swim": 0,
+     "climb": 0
+    }
+   },
+   "racialTraits": [
+    {
+     "definition": {
+      "id": 8201,
+      "entityTypeId": 1960452172,
+      "name": "Resourceful",
+      "hideInSheet": false,
+      "description": "<p>Resourceful, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "id": 8202,
+      "entityTypeId": 1960452172,
+      "name": "Skillful",
+      "hideInSheet": false,
+      "description": "<p>Skillful, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "id": 8203,
+      "entityTypeId": 1960452172,
+      "name": "Versatile",
+      "hideInSheet": false,
+      "description": "<p>Versatile, for the tests.</p>"
+     }
+    }
+   ]
+  },
+  "classes": [
+   {
+    "id": 9201,
+    "level": 5,
+    "isStartingClass": true,
+    "definition": {
+     "id": 5,
+     "name": "Fighter",
+     "hitDice": 10,
+     "canCastSpells": false,
+     "spellCastingAbilityId": null
+    },
+    "subclassDefinition": {
+     "name": "Battle Master",
+     "canCastSpells": false
+    },
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 601,
+       "name": "Fighting Style",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Fighting Style: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 602,
+       "name": "Second Wind",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Second Wind: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 612,
+       "name": "Weapon Mastery",
+       "requiredLevel": 1,
+       "displayOrder": 3,
+       "hideInSheet": false,
+       "description": "<p>Weapon Mastery: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 609,
+       "name": "Proficiencies",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Proficiencies: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 610,
+       "name": "Hit Points",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Hit Points: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 603,
+       "name": "Action Surge",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Action Surge: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 604,
+       "name": "Martial Archetype",
+       "requiredLevel": 3,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Martial Archetype: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 605,
+       "name": "Combat Superiority",
+       "requiredLevel": 3,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Combat Superiority: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 606,
+       "name": "Student of War",
+       "requiredLevel": 3,
+       "displayOrder": 3,
+       "hideInSheet": false,
+       "description": "<p>Student of War: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 607,
+       "name": "Ability Score Improvement",
+       "requiredLevel": 4,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Ability Score Improvement: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 608,
+       "name": "Extra Attack",
+       "requiredLevel": 5,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Extra Attack: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 611,
+       "name": "Know Your Enemy",
+       "requiredLevel": 7,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Know Your Enemy: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   }
+  ],
+  "modifiers": {
+   "race": [
+    {
+     "type": "language",
+     "subType": "common",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Common",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 8204,
+     "componentTypeId": 1960452172
+    },
+    {
+     "type": "proficiency",
+     "subType": "stealth",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Stealth",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 8202,
+     "componentTypeId": 1960452172
+    }
+   ],
+   "class": [
+    {
+     "type": "proficiency",
+     "subType": "strength-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Strength Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "constitution-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Constitution Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "light-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Light Armor",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "medium-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Medium Armor",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "heavy-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Heavy Armor",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "shields",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Shields",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "simple-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Simple Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "martial-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Martial Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "athletics",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Athletics",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "perception",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Perception",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 609,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "smiths-tools",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 2103445194,
+     "restriction": "",
+     "friendlySubtypeName": "Smith's Tools",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 606,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "weapon-mastery",
+     "subType": "sap-longsword",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Sap (Longsword)",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 612,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "weapon-mastery",
+     "subType": "slow-longbow",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Slow (Longbow)",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 612,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "bonus",
+     "subType": "ranged-weapon-attacks",
+     "value": 2,
+     "fixedValue": 2,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Ranged Weapon Attacks",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 77001,
+     "componentTypeId": 258900837
+    }
+   ],
+   "background": [],
+   "feat": [],
+   "item": [],
+   "condition": []
+  },
+  "inventory": [
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Chain Mail",
+     "filterType": "Armor",
+     "type": "Chain Mail",
+     "armorTypeId": 3,
+     "armorClass": 16,
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": []
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Longsword",
+     "filterType": "Weapon",
+     "type": "Longsword",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 2,
+     "attackType": 1,
+     "damage": {
+      "diceString": "1d8"
+     },
+     "damageType": "Slashing",
+     "properties": [
+      {
+       "name": "Versatile",
+       "notes": "1d10"
+      },
+      {
+       "name": "Sap"
+      }
+     ]
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Longbow",
+     "filterType": "Weapon",
+     "type": "Longbow",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 2,
+     "attackType": 2,
+     "damage": {
+      "diceString": "1d8"
+     },
+     "damageType": "Piercing",
+     "properties": [
+      {
+       "name": "Ammunition"
+      },
+      {
+       "name": "Heavy"
+      },
+      {
+       "name": "Two-Handed"
+      },
+      {
+       "name": "Slow"
+      }
+     ],
+     "range": 150,
+     "longRange": 600
+    }
+   }
+  ],
+  "actions": {
+   "class": [
+    {
+     "name": "Second Wind",
+     "limitedUse": {
+      "maxUses": 1,
+      "resetType": 1,
+      "statModifierUsesId": null,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    },
+    {
+     "name": "Superiority Dice",
+     "limitedUse": {
+      "maxUses": 4,
+      "resetType": 1,
+      "statModifierUsesId": null,
+      "useProficiencyBonus": false,
+      "proficiencyBonusOperator": 1
+     }
+    }
+   ],
+   "race": [],
+   "feat": []
+  },
+  "classSpells": []
+ }
+}

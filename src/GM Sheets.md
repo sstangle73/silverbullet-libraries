@@ -150,7 +150,7 @@ A sheet that can't be drawn, from a page that isn't there or whose frontmatter d
 
     python tools/handout.py <your space's folder> "Party/Tamsin Reed"
 
-It writes `Handouts/Tamsin Reed.pdf` in the space's folder: the sheet's two pages with the character written in, then plain pages for everything that outgrew a box, the features, traits and feats with their rules first. With no page named, it fills every page of `type: pc`, or of the type `--type` names. `--extras want:Want` writes a campaign's own key into the sheet's Backstory & Personality box.
+It writes `Handouts/Tamsin Reed.pdf` in the space's folder: the sheet's two pages with the character written in, then plain pages for everything that outgrew a box, the features, traits and feats with their rules first. With no page named, it fills every page of `type: pc`, or of the type `--type` names, less those `retired: true`. It counts what this library counts, Jack of All Trades and a passive score's Advantage and Disadvantage among them, and marks a roll ADV or DIS, and neither where both apply. `--extras want:Want` writes a campaign's own key into the sheet's Backstory & Personality box.
 
 The sheet is Wizards of the Coast's, and its only terms are that you may print and photocopy it for personal use. So the script doesn't carry it: the first run fetches it from D&D Beyond into `~/.cache/gm-sheets`, and a filled copy is for your own table. **Keep `Handouts/` out of version control**, and out of anything you publish. It needs `pip install pypdf pyyaml`.
 

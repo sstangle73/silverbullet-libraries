@@ -49,12 +49,39 @@ test("beyond: the keys the import owns are exactly the keys it can write", "dm",
   end
   local written = {}
   local characters = { sink }
-  for _, name in ipairs({ "bram", "ilse", "cass", "wren", "sorrel" }) do characters[#characters + 1] = DDB[name].data end
+  for _, name in ipairs({ "bram", "ilse", "cass", "wren", "sorrel", "vesper", "rook", "nell" }) do
+    characters[#characters + 1] = DDB[name].data
+  end
   for _, c in ipairs(characters) do
     for _, e in ipairs(gmb.sheet(copy(c))) do written[e[1]] = true end
   end
   for key in pairs(written) do ok(gmb.owned[key], key .. " is written but not owned") end
   for key in pairs(gmb.owned) do ok(written[key], key .. " is owned, but the import never writes it") end
+  ok(gmb.owned.jack_of_all_trades, "Jack of All Trades, said either way")
+end)
+
+test("beyond: Jack of All Trades is said either way, and its half is the sheet's to add", "dm", function()
+  serve("bram")
+  has(H.pages[gmb.import("1001")], "\njack_of_all_trades: false\n")
+  -- Ilse, a bard, has it, and her lucky stone's +1 on every check besides:
+  -- each skill without proficiency is written, since the sum is short by 1
+  local data = serve("ilse")
+  local page = gmb.import("1002")
+  local head = frontmatter(H.pages[page])
+  has(head, "\njack_of_all_trades: true\n")
+  has(head, "\narcana: 6\n")
+  -- without the stone, half proficiency is all there is: the sheet adds it,
+  -- so no skill of hers is written as a number that differs
+  table.remove(data.inventory, 1)
+  H.confirms = { true }
+  eq(gmb.refresh(page), page)
+  head = frontmatter(H.pages[page])
+  has(head, "\njack_of_all_trades: true\n")
+  hasnt(head, "\narcana:")
+  hasnt(head, "\nathletics:")
+  hasnt(head, "\nstealth:", "Expertise's twice +3 is the sheet's sum too")
+  -- D&D Beyond's half on initiative, which the sheet doesn't add, is written
+  has(head, "\ninitiative: 4\n")
 end)
 
 test("beyond: a refresh keeps a loadout and a proficiency bonus written by hand", "dm", function()
@@ -63,6 +90,7 @@ test("beyond: a refresh keeps a loadout and a proficiency bonus written by hand"
   H.pages[page] = (H.pages[page]:gsub("\nddb: 1001\n",
     "\npb: 4\nkit:\n  label: Travelling\n  ac: 15\nddb: 1001\n"))
   data.baseHitPoints = 40
+  H.confirms = { true }
   eq(gmb.refresh(page), page)
   has(H.pages[page], "\npb: 4\nkit:\n  label: Travelling\n  ac: 15\n")
   has(H.pages[page], "\nhp: 70\n")
@@ -80,7 +108,10 @@ test("beyond: a refresh keeps a comment and a key YAML reads with quotes or spac
   text = (text:gsub("\nhp: 68\n", "\n\"hp\": 99\n"))
   H.pages[page] = text
   data.baseHitPoints = 40
+  H.confirms = { true }
   gmb.refresh(page)
+  -- the list rewritten in the import's own shape loses its comment, and says so
+  has(H.confirmsAsked[1], "Writes over what you changed by hand: saves, hp (you wrote 99).")
   local after = H.pages[page]
   has(after, "\n# the DM's own note\nreal name: Bramwell Holloway\n\"shadow hook\": the ferryman\n'debt': 30 gp\n" ..
     "allies:\n- Sam\n- Mara\n")
@@ -101,12 +132,13 @@ test("beyond: a character renamed on D&D Beyond is found by its number", "dm", f
   H.pages[page] = H.pages[page] .. "\nOwes the ferryman.\n"
   data.name = "Bram the Bold"
   data.baseHitPoints = 40
+  H.confirms = { true }
   eq(gmb.import(BRAM_LINK), page, "the page it has")
   eq(H.pages["Characters/Bram the Bold"], nil, "no second page")
   has(H.pages[page], "\nhp: 70\n")
   has(H.pages[page], "Owes the ferryman.")
   local n = lastNotification()
-  has(n.message, "Refreshed Characters/Bram Holloway from D&D Beyond: Bram the Bold, level 5.")
+  has(n.message, "Refreshed Characters/Bram Holloway from D&D Beyond: Bram the Bold, HP 68→70.")
   has(n.message, "The name has changed on D&D Beyond; the page keeps its own.")
   local pcs = 0
   for _, text in pairs(H.pages) do
@@ -121,6 +153,7 @@ test("beyond: of two pages with the character's number, the one named for it is 
   local older = "---\ntype: pc\nddb: 1001\nlevel: 5\n---\n\n# Bram, before\n"
   H.pages["Characters/Bram (before)"] = older
   data.baseHitPoints = 40
+  H.confirms = { true }
   eq(gmb.import(BRAM_LINK), page)
   has(H.pages[page], "\nhp: 70\n")
   eq(H.pages["Characters/Bram (before)"], older)
@@ -165,6 +198,7 @@ test("beyond: Undo takes away only what the import wrote", "dm", function()
   has(lastNotification().message, "has changed since, so Undo left it as it is")
   -- a refresh's Undo, the same
   data.baseHitPoints = 31
+  H.confirms = { true }
   gmb.refresh(page)
   local refreshed = lastNotification()
   H.pages[page] = H.pages[page] .. "More notes.\n"
@@ -190,6 +224,7 @@ test("beyond: a refresh saves what is typed into the open page first", "dm", fun
     -- what was typed while the fetch was out reaches the page
     H.pages[page] = H.pages[page] .. "\nTyped while it fetched.\n"
   end, function()
+    H.confirms = { true }
     eq(gmb.refresh(page), page)
   end)
   eq(savedBeforeFetch, false, "fetched first, then saved")
@@ -200,6 +235,7 @@ test("beyond: a refresh saves what is typed into the open page first", "dm", fun
   -- a page that isn't open has nothing to save
   H.current = "index"
   data.baseHitPoints = 41
+  H.confirms = { true }
   gmb.refresh(page)
   eq(H.saves, 1)
   eq(H.reloads, 1)
@@ -249,9 +285,17 @@ test("beyond: a refresh that would drop the level asks first", "dm", function()
   H.confirms = { true }
   eq(gmb.refresh(page), page)
   has(H.pages[page], "\nlevel: 3\n")
-  -- a level that rises needs no asking
+  -- with the question turned off, a level that rises needs no asking
+  config.set("gmBeyond", { ask = false })
   data.classes[1].level = 3
   eq(gmb.refresh(page), page)
   eq(#H.confirmsAsked, 2)
+  has(H.pages[page], "\nlevel: 5\n")
+  -- and one that drops is asked about even so
+  data.classes[1].level = 1
+  H.confirms = { false }
+  eq(gmb.refresh(page), nil)
+  eq(H.confirmsAsked[3], "D&D Beyond has Bram Holloway at level 3, and Characters/Bram Holloway says level 5. " ..
+    "Refresh the page to level 3?")
   has(H.pages[page], "\nlevel: 5\n")
 end)

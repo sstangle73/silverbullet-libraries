@@ -1,0 +1,1295 @@
+{
+ "id": 0,
+ "success": true,
+ "message": "Character successfully received.",
+ "data": {
+  "bonusStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "overrideStats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": null
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": null
+   }
+  ],
+  "bonusHitPoints": null,
+  "overrideHitPoints": null,
+  "background": {
+   "definition": {
+    "name": "Wayfarer",
+    "grantedFeats": []
+   }
+  },
+  "feats": [],
+  "characterValues": [
+   {
+    "typeId": 35,
+    "value": 3,
+    "notes": null,
+    "valueId": "11",
+    "valueTypeId": "906033267",
+    "contextId": null,
+    "contextTypeId": null
+   }
+  ],
+  "preferences": {
+   "showUnarmedStrike": true
+  },
+  "customItems": [],
+  "currencies": {
+   "cp": 0,
+   "sp": 0,
+   "gp": 0,
+   "ep": 0,
+   "pp": 0
+  },
+  "spells": {
+   "race": [
+    {
+     "prepared": false,
+     "alwaysPrepared": false,
+     "countsAsKnownSpell": true,
+     "definition": {
+      "name": "Thaumaturgy",
+      "level": 0,
+      "activation": {
+       "activationTime": 1,
+       "activationType": 1
+      },
+      "range": {
+       "origin": "Ranged",
+       "rangeValue": 60,
+       "aoeType": null,
+       "aoeValue": null
+      },
+      "components": [
+       1,
+       2
+      ],
+      "componentsDescription": "",
+      "ritual": false,
+      "concentration": false,
+      "requiresAttackRoll": false,
+      "requiresSavingThrow": false,
+      "saveDcAbilityId": null,
+      "modifiers": []
+     },
+     "spellCastingAbilityId": 6,
+     "componentId": 7003,
+     "componentTypeId": 1960452172
+    }
+   ],
+   "class": [],
+   "background": null,
+   "feat": [],
+   "item": []
+  },
+  "options": {
+   "race": [
+    {
+     "componentId": 7003,
+     "componentTypeId": 1960452172,
+     "definition": {
+      "id": 88101,
+      "entityTypeId": 258900837,
+      "name": "Infernal",
+      "description": "<p>Infernal, made up for the tests: fire, and the hells.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    }
+   ],
+   "background": null,
+   "item": null,
+   "feat": [],
+   "class": [
+    {
+     "componentId": 502,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 88001,
+      "entityTypeId": 258900837,
+      "name": "Agonizing Blast",
+      "description": "<p>Agonizing Blast, made up for the tests: your Charisma on each beam.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 502,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 88002,
+      "entityTypeId": 258900837,
+      "name": "Devil's Sight",
+      "description": "<p>Devil's Sight, made up for the tests: you see in any dark.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 503,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 88003,
+      "entityTypeId": 258900837,
+      "name": "Pact of the Tome",
+      "description": "<p>Pact of the Tome, made up for the tests: a book of shadows.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    },
+    {
+     "componentId": 511,
+     "componentTypeId": 12168134,
+     "definition": {
+      "id": 88011,
+      "entityTypeId": 258900837,
+      "name": "Tome of Ancient Secrets",
+      "description": "<p>Not yet, for the tests.</p>",
+      "snippet": "",
+      "activation": null,
+      "sourceId": null,
+      "sourcePageNumber": null,
+      "creatureRules": [],
+      "spellListIds": []
+     }
+    }
+   ]
+  },
+  "choices": {
+   "race": [
+    {
+     "id": "1960452172-3-7003-88101",
+     "parentChoiceId": null,
+     "componentId": 7003,
+     "componentTypeId": 1960452172,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 88101,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "1960452172-3-7005-3013",
+     "parentChoiceId": null,
+     "componentId": 7005,
+     "componentTypeId": 1960452172,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 3013,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    }
+   ],
+   "background": [],
+   "item": null,
+   "feat": [],
+   "class": [
+    {
+     "id": "12168134-3-502-88001",
+     "parentChoiceId": null,
+     "componentId": 502,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 88001,
+     "optionIds": [
+      88001,
+      88002,
+      88004
+     ],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-502-88002",
+     "parentChoiceId": null,
+     "componentId": 502,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 88002,
+     "optionIds": [
+      88001,
+      88002,
+      88004
+     ],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-503-88003",
+     "parentChoiceId": null,
+     "componentId": 503,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 88003,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-3-511-88011",
+     "parentChoiceId": null,
+     "componentId": 511,
+     "componentTypeId": 12168134,
+     "type": 3,
+     "subType": 1,
+     "optionValue": 88011,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-4-505-99",
+     "parentChoiceId": null,
+     "componentId": 505,
+     "componentTypeId": 12168134,
+     "type": 4,
+     "subType": 1,
+     "optionValue": 99,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    },
+    {
+     "id": "12168134-2-507-3005",
+     "parentChoiceId": null,
+     "componentId": 507,
+     "componentTypeId": 12168134,
+     "type": 2,
+     "subType": 1,
+     "optionValue": 3005,
+     "optionIds": [],
+     "options": [],
+     "label": null,
+     "isOptional": false,
+     "isInfinite": false,
+     "defaultSubtypes": [],
+     "displayOrder": null,
+     "tagConstraints": [],
+     "itemDefinitionKey": null
+    }
+   ],
+   "choiceDefinitions": [
+    {
+     "id": "12168134-3",
+     "options": [
+      {
+       "id": 88001,
+       "label": "Agonizing Blast",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 88002,
+       "label": "Devil's Sight",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 88003,
+       "label": "Pact of the Tome",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 88004,
+       "label": "Mask of Many Faces",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 88011,
+       "label": "Tome of Ancient Secrets",
+       "description": null,
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "12168134-4",
+     "options": [
+      {
+       "id": 99,
+       "label": "The Fiend",
+       "description": "<p>The Fiend, for the tests.</p>",
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "12168134-2",
+     "options": [
+      {
+       "id": 3005,
+       "label": "Deception",
+       "description": "",
+       "sourceId": null
+      },
+      {
+       "id": 3006,
+       "label": "History",
+       "description": "",
+       "sourceId": null
+      }
+     ]
+    },
+    {
+     "id": "1960452172-3",
+     "options": [
+      {
+       "id": 88101,
+       "label": "Infernal",
+       "description": null,
+       "sourceId": null
+      },
+      {
+       "id": 3013,
+       "label": "Infernal",
+       "description": "",
+       "sourceId": null
+      }
+     ]
+    }
+   ],
+   "definitionKeyNameMap": {}
+  },
+  "customProficiencies": [
+   {
+    "id": 1,
+    "name": "Old Marsh Cant",
+    "type": 3,
+    "statId": null,
+    "proficiencyLevel": 3,
+    "notes": null,
+    "description": null,
+    "override": null,
+    "magicBonus": null,
+    "miscBonus": null
+   },
+   {
+    "id": 2,
+    "name": "Chess Set",
+    "type": 2,
+    "statId": 4,
+    "proficiencyLevel": 3,
+    "notes": null,
+    "description": null,
+    "override": null,
+    "magicBonus": null,
+    "miscBonus": null
+   }
+  ],
+  "customSenses": [
+   {
+    "senseId": 1,
+    "distance": 10,
+    "source": null
+   }
+  ],
+  "customSpeeds": [
+   {
+    "movementId": 4,
+    "distance": 30,
+    "source": null
+   }
+  ],
+  "id": 1006,
+  "name": "Vesper Quill",
+  "stats": [
+   {
+    "id": 1,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 2,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 3,
+    "name": null,
+    "value": 14
+   },
+   {
+    "id": 4,
+    "name": null,
+    "value": 10
+   },
+   {
+    "id": 5,
+    "name": null,
+    "value": 12
+   },
+   {
+    "id": 6,
+    "name": null,
+    "value": 16
+   }
+  ],
+  "baseHitPoints": 28,
+  "race": {
+   "fullName": "Tiefling",
+   "sizeId": 4,
+   "weightSpeeds": {
+    "normal": {
+     "walk": 30,
+     "fly": 0,
+     "burrow": 0,
+     "swim": 0,
+     "climb": 0
+    }
+   },
+   "racialTraits": [
+    {
+     "definition": {
+      "id": 7001,
+      "entityTypeId": 1960452172,
+      "name": "Darkvision",
+      "hideInSheet": false,
+      "description": "<p>Darkvision, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "id": 7002,
+      "entityTypeId": 1960452172,
+      "name": "Hellish Resistance",
+      "hideInSheet": false,
+      "description": "<p>Hellish Resistance, for the tests.</p>"
+     }
+    },
+    {
+     "definition": {
+      "id": 7003,
+      "entityTypeId": 1960452172,
+      "name": "Fiendish Legacy",
+      "hideInSheet": false,
+      "description": "<p>Fiendish Legacy, for the tests.</p>"
+     }
+    }
+   ]
+  },
+  "classes": [
+   {
+    "id": 9101,
+    "level": 5,
+    "isStartingClass": true,
+    "definition": {
+     "id": 9,
+     "name": "Warlock",
+     "hitDice": 8,
+     "canCastSpells": true,
+     "spellCastingAbilityId": 6,
+     "spellRules": {
+      "multiClassSpellSlotDivisor": 1,
+      "multiClassSpellSlotRounding": 1,
+      "levelSpellSlots": [
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ]
+      ]
+     }
+    },
+    "subclassDefinition": {
+     "name": "The Fiend",
+     "canCastSpells": false
+    },
+    "classFeatures": [
+     {
+      "definition": {
+       "id": 501,
+       "name": "Pact Magic",
+       "requiredLevel": 1,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Pact Magic: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 505,
+       "name": "Otherworldly Patron",
+       "requiredLevel": 1,
+       "displayOrder": 2,
+       "hideInSheet": false,
+       "description": "<p>Otherworldly Patron: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 506,
+       "name": "Dark One's Blessing",
+       "requiredLevel": 1,
+       "displayOrder": 3,
+       "hideInSheet": false,
+       "description": "<p>Dark One's Blessing: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 507,
+       "name": "Proficiencies",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Proficiencies: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 508,
+       "name": "Hit Points",
+       "requiredLevel": 1,
+       "displayOrder": 0,
+       "hideInSheet": false,
+       "description": "<p>Hit Points: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 502,
+       "name": "Eldritch Invocations",
+       "requiredLevel": 2,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Eldritch Invocations: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 503,
+       "name": "Pact Boon",
+       "requiredLevel": 3,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Pact Boon: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 504,
+       "name": "Ability Score Improvement",
+       "requiredLevel": 4,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Ability Score Improvement: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     },
+     {
+      "definition": {
+       "id": 511,
+       "name": "Improved Pact",
+       "requiredLevel": 9,
+       "displayOrder": 1,
+       "hideInSheet": false,
+       "description": "<p>Improved Pact: a made-up feature for the tests.</p>",
+       "entityTypeId": 12168134
+      },
+      "levelScale": null
+     }
+    ]
+   }
+  ],
+  "modifiers": {
+   "race": [
+    {
+     "type": "bonus",
+     "subType": "charisma-score",
+     "value": 2,
+     "fixedValue": 2,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Charisma Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 7004,
+     "componentTypeId": 1960452172
+    },
+    {
+     "type": "bonus",
+     "subType": "intelligence-score",
+     "value": 1,
+     "fixedValue": 1,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Intelligence Score",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 7004,
+     "componentTypeId": 1960452172
+    },
+    {
+     "type": "set-base",
+     "subType": "darkvision",
+     "value": 60,
+     "fixedValue": 60,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Darkvision",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 7001,
+     "componentTypeId": 1960452172
+    },
+    {
+     "type": "language",
+     "subType": "common",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Common",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 7005,
+     "componentTypeId": 1960452172
+    },
+    {
+     "type": "language",
+     "subType": "infernal",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": 906033267,
+     "restriction": "",
+     "friendlySubtypeName": "Infernal",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 7005,
+     "componentTypeId": 1960452172
+    }
+   ],
+   "class": [
+    {
+     "type": "proficiency",
+     "subType": "wisdom-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Wisdom Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 507,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "charisma-saving-throws",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Charisma Saving Throws",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 507,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "light-armor",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Light Armor",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 507,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "simple-weapons",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Simple Weapons",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 507,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "arcana",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Arcana",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 507,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "proficiency",
+     "subType": "deception",
+     "value": null,
+     "fixedValue": null,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Deception",
+     "isGranted": true,
+     "availableToMulticlass": false,
+     "componentId": 507,
+     "componentTypeId": 12168134
+    },
+    {
+     "type": "set-base",
+     "subType": "darkvision",
+     "value": 120,
+     "fixedValue": 120,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "You can see normally in darkness, both magical and nonmagical",
+     "friendlySubtypeName": "Darkvision",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 88002,
+     "componentTypeId": 258900837
+    },
+    {
+     "type": "bonus",
+     "subType": "speed",
+     "value": 10,
+     "fixedValue": 10,
+     "statId": null,
+     "entityId": null,
+     "entityTypeId": null,
+     "restriction": "",
+     "friendlySubtypeName": "Speed",
+     "isGranted": true,
+     "availableToMulticlass": true,
+     "componentId": 88011,
+     "componentTypeId": 258900837
+    }
+   ],
+   "background": [],
+   "feat": [],
+   "item": [],
+   "condition": []
+  },
+  "inventory": [
+   {
+    "quantity": 1,
+    "equipped": true,
+    "isAttuned": false,
+    "definition": {
+     "name": "Leather Armor",
+     "filterType": "Armor",
+     "type": "Leather Armor",
+     "armorTypeId": 1,
+     "armorClass": 11,
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": []
+    }
+   },
+   {
+    "quantity": 1,
+    "equipped": false,
+    "isAttuned": false,
+    "definition": {
+     "name": "Dagger",
+     "filterType": "Weapon",
+     "type": "Dagger",
+     "canAttune": false,
+     "canEquip": true,
+     "isConsumable": false,
+     "grantedModifiers": [],
+     "categoryId": 1,
+     "attackType": 1,
+     "damage": {
+      "diceString": "1d4"
+     },
+     "damageType": "Piercing",
+     "properties": [
+      {
+       "name": "Finesse"
+      },
+      {
+       "name": "Light"
+      }
+     ]
+    }
+   }
+  ],
+  "actions": {
+   "class": [],
+   "race": [],
+   "feat": []
+  },
+  "classSpells": [
+   {
+    "characterClassId": 9101,
+    "spells": [
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Eldritch Blast",
+       "level": 0,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 1
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 120,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2
+       ],
+       "componentsDescription": "",
+       "ritual": false,
+       "concentration": false,
+       "requiresAttackRoll": true,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": [
+        {
+         "type": "damage",
+         "subType": "force",
+         "friendlySubtypeName": "Force",
+         "die": {
+          "diceString": "1d10"
+         },
+         "atHigherLevels": {
+          "higherLevelDefinitions": [],
+          "scaleType": "characterlevel"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "prepared": false,
+      "alwaysPrepared": false,
+      "countsAsKnownSpell": true,
+      "definition": {
+       "name": "Hex",
+       "level": 1,
+       "activation": {
+        "activationTime": 1,
+        "activationType": 3
+       },
+       "range": {
+        "origin": "Ranged",
+        "rangeValue": 60,
+        "aoeType": null,
+        "aoeValue": null
+       },
+       "components": [
+        1,
+        2,
+        3
+       ],
+       "componentsDescription": "the petrified eye of a newt",
+       "ritual": false,
+       "concentration": true,
+       "requiresAttackRoll": false,
+       "requiresSavingThrow": false,
+       "saveDcAbilityId": null,
+       "modifiers": []
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

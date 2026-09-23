@@ -22,7 +22,7 @@ About ten seconds. PyYAML stands in for SilverBullet's `yaml.parse`, which GM Sh
 | `tests/*.lua` | The tests, a file for each library or feature; `harness_*.lua` test the harness itself |
 | `install.json` | Which library goes in which space's `Library/Storie/` |
 | `fixture/` | The campaign |
-| `ddb/` | Five made-up characters as D&D Beyond's character service sends them, for GM Beyond's import: casters, a subclass caster, spells from a feat and from a species |
+| `ddb/` | Eight made-up characters as D&D Beyond's character service sends them, for GM Beyond's import: casters, a subclass caster, spells from a feat and from a species, and the options, choices and custom senses, speeds, languages, tools and skills a player picks: a warlock's invocations, a Battle Master's maneuvers, a sorcerer's metamagic |
 | `build_book.py` | Builds the campaign's book, to diff or to commit |
 | `spacelua/` | The same libraries in SilverBullet's own Lua, and `run.py` to run them in a 2.11.0 checkout |
 | `handout_test.py` | `tools/handout.py`, which fills the 2024 character sheet: its sums held against GM Sheets' own, and a sheet filled on a stand-in |
