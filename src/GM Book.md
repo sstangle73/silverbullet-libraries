@@ -81,7 +81,7 @@ A library can print something other than what the page shows. The builder evalua
 
 GM Party does this: on the page its numbers show your party's count, and in print they show the rule behind it.
 
-**A printer that can't draw what it is asked for returns nil**, or raises an error, never a message saying so: a map whose page isn't there, say. Either one keeps the edition back and names the page, the expression and why, and the widget on the page can say what went wrong. A message returned as text would be printed into the book as if it were the map.
+**A printer that can't draw what it is asked for raises an error saying why**, or returns nil, never a message as if it were the thing: a map whose page isn't there, say. Either one keeps the edition back and names the page, the expression and why, and the widget on the page can say what went wrong. A message returned as text would be printed into the book as if it were the map.
 
 While a page is being printed, `gmbook.printing` is that page's name, so an expression that reads the page it sits on prints from the right one. It is nil outside a build. Read it only in a printer: a widget the browser draws while a build runs belongs to the page on the screen, not to the one being printed.
 

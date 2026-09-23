@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs, fights and DCs that follow the party's size and level: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # GM Party
@@ -115,7 +115,7 @@ That fight prints its creatures between the encounter and *Adjusting the Encount
 
 For the whole fight, `difficulty` is what it is meant to be: low, moderate or high. `note` adds a sentence to *Adjusting the Encounter*, `table = false` leaves the table out of print, and `size` writes the fight for a party other than the adventure's.
 
-**On the page** it shows the fight for the characters here tonight, at their levels: the creatures, their XP, the difficulty against the Low, Moderate and High budgets, and a table of other party sizes with yours marked ▶. It flags what the SRD's troubleshooting advice flags: more than two creatures per character, a creature whose CR is above the party's level, more than three stat blocks, and a lone creature. It also flags a fight that has drifted from its intended difficulty. Difficulty always shows as pips and a word, ●○○ Low, ●●○ Moderate, ●●● High and ●●●+ Above High, with colour only as a third cue.
+**On the page** it shows the fight for the characters here tonight, at their levels: the creatures, their XP, the difficulty against the Low, Moderate and High budgets, and a table of other party sizes with yours marked ▶. Your row is the difficulty above it, each character at their own level; another size spends what your characters spend each, on average, so where their levels differ the table still agrees with the fight. It flags what the SRD's troubleshooting advice flags: more than two creatures per character, a creature whose CR is above the party's level (their average level, rounded, not the highest), more than three stat blocks, and a lone creature. It also flags a fight that has drifted from its intended difficulty. Difficulty always shows as pips and a word, ●○○ Low, ●●○ Moderate, ●●● High and ●●●+ Above High, with colour only as a third cue. On a phone, a table too wide for the fight's box scrolls sideways inside it.
 
 **In print** it gives the fight for the adventure's party with its difficulty and XP. Then comes *Adjusting the Encounter*: a sentence for each rule, and a table for three to seven characters at the written level.
 
@@ -204,7 +204,7 @@ A rung of a check can be written the same way, `**${party.dc(15)}**`, and GM Kit
 
 ## The rules it uses
 
-The 2024 encounter rules: choose a difficulty, look up the XP budget per character for each character's level, add them up, and spend that on creatures at their XP. There are no multipliers. Where the characters' levels differ, each is looked up at its own level, which is the rule as written when they are all the same.
+The 2024 encounter rules: choose a difficulty, look up the XP budget per character for each character's level, add them up, and spend that on creatures at their XP. There are no multipliers. Where the characters' levels differ, each is looked up at its own level, which is the rule as written when they are all the same. For a party of another size, as in the table of sizes, each character spends what yours spend on average: three characters from a party at levels 3, 3, 2 and 2 have three quarters of its budget.
 
 `party.budget(levels, "moderate")` and `party.rate(xp, levels)` do the sums, and `party.xp("1/4")` looks up a CR. `party.budgets()` and `party.xpTable()` print the two tables, for a rules page.
 
@@ -212,7 +212,7 @@ The 2024 encounter rules: choose a difficulty, look up the XP budget per charact
 
 On the page each of these is a widget: HTML with its tooltip, and the same text as its Markdown face. SilverBullet draws a table from the Markdown faces of the expressions in it, and its Copy button and Baked Sections use them too, so all of those get your party's numbers. GM Kit 2.2 puts the Markdown face into the copies it publishes, so players see their own party's numbers. A hint from `party.each` has an empty Markdown face, so it never reaches them. A fight's Markdown face is the fight as printed.
 
-GM Book 1.5 evaluates each expression with `party` standing for `party.printed`, which gives the rule, the adventure's number, nothing for a hint, the fight for the adventure's party, every version of a fight in versions, and a DC as written. This library puts `party.printed` in `gmbook.printers`, where GM Book looks for it.
+GM Book 1.5 evaluates each expression with `party` standing for `party.printed`, which gives the rule, the adventure's number, nothing for a hint, the fight for the adventure's party, every version of a fight in versions, and a DC as written. The party it knows is the one the adventure is written for, whoever is playing tonight: `party.get()` is that party, `party.level()` gives nil, as in an adventure space on its own, so GM Book names a page that prints it, `party.dcRise()` gives 0, and `party.summary()` a line saying who the adventure is written for. This library puts `party.printed` in `gmbook.printers`, where GM Book looks for it.
 
 Baked Sections alone couldn't do this: they bake whole blocks, never a number in the middle of a sentence.
 
@@ -220,13 +220,21 @@ Baked Sections alone couldn't do this: they bake whole blocks, never a number in
 
     config.set("gmParty", { book = 5, smallest = 3, largest = 7 })
 
-`book` is the size of the party the adventure is written for. `smallest` and `largest` bound the tables in print.
+`book` is the size of the party the adventure is written for. `smallest` and `largest` bound the tables in print, and a fight whose `size` is outside them gets a row for that size as well.
 
 ## Rules text
 
 The XP Budget per Character and Experience Points by Challenge Rating tables below come from the SRD 5.2.1. A book that prints them carries the same statement:
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## Changes in 1.4
+
+**A mixed-level party's fight agrees with itself.** The row for your party's size in a fight's table is rated at each character's own level, as the difficulty above it is, and the other sizes spend the party's average budget for each character. A creature is flagged as above the party's level against `party.level()`, not the highest level in the party.
+
+**Print gives the adventure's party throughout.** In print `party.dcRise()` is 0, `party.summary()` describes the party the adventure is written for, and `party.level()` prints nothing, which keeps a book edition back rather than printing one table's level. A fight written for a size outside three to seven gets a row for that size.
+
+**A fight's table fits a phone**: it scrolls inside its frame rather than running off it.
 
 ## Changes in 1.3
 
@@ -414,20 +422,28 @@ function party.refresh()
   party.cached = nil
 end
 
+-- The average of some levels, rounded to the nearest: the party's level,
+-- for characters at these levels. Nil for none.
+local function averageLevel(levels)
+  local sum = 0
+  for _, l in ipairs(levels) do sum = sum + l end
+  if #levels == 0 then return nil end
+  return math.floor(sum / #levels + 0.5)
+end
+
 -- The party's level: the average level of the characters here tonight, or
 -- of everyone when nobody is, rounded to the nearest. Nil when nobody has
 -- a level, as in an adventure space on its own.
 function party.level(p)
   p = p or party.get()
-  local function average(members)
-    local sum, n = 0, 0
+  local function levelsOf(members)
+    local out = {}
     for _, m in ipairs(members) do
-      if m.level then sum, n = sum + m.level, n + 1 end
+      if m.level then out[#out + 1] = m.level end
     end
-    if n == 0 then return nil end
-    return math.floor(sum / n + 0.5)
+    return out
   end
-  return average(p.here) or average(p.members)
+  return averageLevel(levelsOf(p.here)) or averageLevel(levelsOf(p.members))
 end
 
 local function whence(p)
@@ -704,6 +720,18 @@ local function levelsFor(n, level)
   return out
 end
 
+-- How hard creatures worth xp are for a party of size characters, spending
+-- what the characters at these levels spend each, on average: for as many
+-- characters as there are levels, exactly what party.rate gives for them.
+-- In whole numbers, xp against size times the budget over the count, so no
+-- fraction of a budget is ever made.
+local function rateFor(xp, levels, size)
+  for _, difficulty in ipairs(party.difficulties) do
+    if xp * #levels <= party.budget(levels, difficulty) * size then return difficulty end
+  end
+  return "above"
+end
+
 local function levelText(levels)
   local lo, hi
   for _, l in ipairs(levels) do
@@ -828,9 +856,12 @@ local function tableSizes(extra)
   return sizes
 end
 
--- Party sizes at one level: the column heads for the creatures whose number
--- changes, and a row per size with those numbers, the XP and the difficulty.
-local function sizeRows(spec, level, sizes)
+-- Party sizes for characters at these levels: the column heads for the
+-- creatures whose number changes, and a row per size with those numbers,
+-- the XP and the difficulty. A size that is theirs is rated at their own
+-- levels, as the fight is; any other spends what they spend each, on
+-- average, so a table for characters at one level is rated at that level.
+local function sizeRows(spec, levels, sizes)
   local rosters = {}
   for _, n in ipairs(sizes) do rosters[n] = party.roster(spec, n) end
   local columns, heads = {}, {}
@@ -848,7 +879,7 @@ local function sizeRows(spec, level, sizes)
     local counts = {}
     for _, i in ipairs(columns) do counts[#counts + 1] = rosters[n][i].count end
     local xp = totalXP(rosters[n])
-    rows[#rows + 1] = { size = n, counts = counts, xp = xp, rated = party.rate(xp, levelsFor(n, level)) }
+    rows[#rows + 1] = { size = n, counts = counts, xp = xp, rated = rateFor(xp, levels, n) }
   end
   return heads, rows
 end
@@ -1063,7 +1094,7 @@ local function printOne(spec, head, withCreatures)
   lines[#lines + 1] = ""
   lines[#lines + 1] = "**Adjusting the Encounter.** " .. party.adjustments(spec)
   if spec.table ~= false then
-    local heads, rows = sizeRows(spec, level, tableSizes())
+    local heads, rows = sizeRows(spec, levelsFor(written, level), tableSizes(written))
     local head, rule = { "Characters" }, {}
     for _, h in ipairs(heads) do head[#head + 1] = h end
     head[#head + 1] = "XP"
@@ -1110,19 +1141,20 @@ function party.fightPrint(spec)
   return table.concat(lines, "\n")
 end
 
--- What to watch for, after the SRD's troubleshooting advice.
+-- What to watch for, after the SRD's troubleshooting advice, for
+-- characters at these levels. A CR is held to the party's level, their
+-- average, as party.level reads it: one strong character doesn't make a
+-- creature safe for the rest.
 function party.warnings(spec, roster, levels, rated)
   local out = {}
-  local creatures, blocks, top = 0, 0, 0
-  for _, l in ipairs(levels) do
-    if l > top then top = l end
-  end
+  local creatures, blocks = 0, 0
+  local level = averageLevel(levels) or 0
   for _, r in ipairs(roster) do
     if r.count > 0 then
       creatures = creatures + r.count
       blocks = blocks + 1
       local cr = crValue(r.creature.cr)
-      if cr and cr > top then
+      if cr and cr > level then
         out[#out + 1] = "The " .. r.creature.one .. "'s CR " .. tostring(r.creature.cr) ..
           " is above the party's level: one of its actions can take a character out."
       end
@@ -1191,9 +1223,7 @@ local function liveBody(spec, p, levels, add)
     for _, w in ipairs(warnings) do items[#items + 1] = dom.li { __rawText = w } end
     add(dom.ul(items))
   end
-  local sum = 0
-  for _, l in ipairs(levels) do sum = sum + l end
-  local heads, rows = sizeRows(spec, math.floor(sum / n + 0.5), tableSizes(n))
+  local heads, rows = sizeRows(spec, levels, tableSizes(n))
   local headCells = { dom.th { __rawText = "Characters" } }
   for _, h in ipairs(heads) do headCells[#headCells + 1] = dom.th { __rawText = h } end
   headCells[#headCells + 1] = dom.th { __rawText = "XP" }
@@ -1207,7 +1237,9 @@ local function liveBody(spec, p, levels, add)
     if r.size == n then cells.class = "gmparty-here" end
     body[#body + 1] = dom.tr(cells)
   end
-  add(dom.table { dom.thead { dom.tr(headCells) }, dom.tbody(body) })
+  -- in a frame of its own, which scrolls sideways where the table is wider
+  -- than the fight's box, as it is on a phone with several creatures
+  add(dom.div { class = "gmparty-table", dom.table { dom.thead { dom.tr(headCells) }, dom.tbody(body) } })
 end
 
 -- A fight at one level on the page, for the characters here tonight, as
@@ -1349,11 +1381,36 @@ end
 
 ------------------------------------------------------------------ in print
 
+-- The party the adventure is written for, as a book knows it: its size,
+-- all of them here, and no level, since a book is played at every level.
+local function bookParty()
+  local members = {}
+  for i = 1, party.setting("book") do members[i] = {} end
+  return { size = #members, members = members, here = members, source = "book" }
+end
+
 -- What each of these prints as: the adventure's number, the rule, nothing
 -- for a hint, and the fight for the adventure's party. GM Book evaluates an
 -- expression with party standing for this table, and finds it in
--- gmbook.printers.
+-- gmbook.printers. Nothing here reads the table playing tonight: what isn't
+-- given its own print falls through to party, so the party itself, its
+-- level, its DCs' rise and its summary are the adventure's.
 party.printed = setmetatable({
+  get = function() return bookParty() end,
+  -- no party level, as in an adventure space on its own: GM Book names a
+  -- page that prints one, since the book has none to give
+  level = function() return nil end,
+  -- a DC prints as written, so it rises by nothing; at a level asked for,
+  -- by what the rule says
+  dcRise = function(level)
+    if level == nil then return 0 end
+    return party.dcRise(level)
+  end,
+  summary = function()
+    local book = party.setting("book")
+    return "**" .. capital(party.word(book)) .. (book == 1 and " character" or " characters") ..
+      ",** the party the adventure is written for."
+  end,
   number = function(spec, cap) return (select(2, numberForms(spec, cap))) end,
   -- the adventure's number, for a library that draws to it: a map printed
   -- in the book is the size the adventure is written for, not tonight's
@@ -1453,9 +1510,15 @@ end
 }
 
 .gmparty-fight > div + div,
-.gmparty-fight > ul,
-.gmparty-fight > table {
+.gmparty-fight > ul {
   margin-top: 4px;
+}
+
+/* A table of sizes wider than the fight's box, as one with several
+   creatures is on a phone, scrolls sideways inside the box instead of
+   running past its edge. */
+.gmparty-table {
+  overflow-x: auto;
 }
 
 .gmparty-note {

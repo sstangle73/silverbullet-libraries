@@ -43,7 +43,9 @@ end)
 -- the map. Printing nothing, the build keeps the edition back and names the
 -- page; the widget on the page says which map it looked for.
 test("maps: a map page that can't be found keeps the edition back", "adventure", function()
-  eq(maps.printed.draw("World/Maps/Nowhere"), nil, "in print it gives nothing")
+  local good, why = pcall(maps.printed.draw, "World/Maps/Nowhere")
+  ok(not good, "in print it gives nothing")
+  has(why, "World/Maps/Nowhere", "and says what it looked for")
   has(maps.draw("World/Maps/Nowhere").html, "No map page for World/Maps/Nowhere",
     "on the page it says what it looked for")
   H.pages["Campaign/Clearing"] = "---\nbook_order: 14\n---\n\n# Clearing\n\n" ..
@@ -54,4 +56,5 @@ test("maps: a map page that can't be found keeps the edition back", "adventure",
   eq(#report.written, 0, "nothing written")
   eq(H.pages["Build/Book DM"], before, "the edition on the page is left as it was")
   has(lastNotification().message, "Campaign/Clearing, ${maps.draw(\"World/Maps/Nowhere\")}")
+  has(lastNotification().message, "No map to draw from World/Maps/Nowhere")
 end)

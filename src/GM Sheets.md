@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Sheets"
 description: "Character sheets drawn from a character page's frontmatter: a page drawn like a sheet, on the wiki and as a page of its own in the printed book, then the features, spells and equipment in full. The page gives the choices, and the sheet does the SRD's sums."
 author: "Steven Storie"
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # GM Sheets
@@ -56,7 +56,7 @@ The drawn page is a sheet a table could print and play from: boxes for the Hit P
 
     ${sheets.draw()}
 
-`${sheets.draw()}` reads the page it is on. Everywhere else, name the page: `${sheets.draw("Party/Tamsin Reed")}`. The name on the sheet is the page's own, the last part of its path.
+`${sheets.draw()}` reads the page it is on, and in print the page being printed; on the wiki it reads its own page even while a build is running. Everywhere else, name the page: `${sheets.draw("Party/Tamsin Reed")}`. A path written for an adventure folder, `Rules/Sample Characters/Tamsin Reed`, also finds its page in a space that holds that folder, such as a DM space holding the adventure. The name on the sheet is the page's own, the last part of its path.
 
 Any kind of page can hold a sheet. What `type` a character's page has is the campaign's to decide, and a type the party is counted from, such as GM Party's `pc`, is one way to keep a book's sample characters out of the party.
 
@@ -70,9 +70,11 @@ Any kind of page can hold a sheet. What `type` a character's page has is the cam
 |---|---|
 | `str` `dex` `con` `int` `wis` `cha` | The six ability scores |
 | `saves` | Proficient saving throws: `[str, con]` |
-| `skills` | Proficient skills, in lowercase with underscores: `[athletics, sleight_of_hand]` |
+| `skills` | Proficient skills: `[athletics, sleight_of_hand]`. A skill can be named as the sheet names it, too, `Sleight of Hand` |
 | `expertise` | Skills with Expertise |
 | `advantage` | What they roll with Advantage, which the sheet marks: `initiative`, a skill, or a saving throw as `str_save` |
+
+Each of these, and `armor_training`, can be a list or a line of names with commas between them: `saves: str, con`. A name the sheet doesn't know, such as `perceptoin`, would leave that skill off without a word, so the page says so over the sheet, naming it. That line is for you: it never prints.
 
 **Worked out unless written.** GM Sheets works these out. Write one only where a feature or an item changes it, and the number written is the one shown:
 
@@ -104,7 +106,9 @@ Any kind of page can hold a sheet. What `type` a character's page has is the cam
 | `coins` | `{gp: 15, sp: 3}` |
 | `kit` | A second loadout, drawn on the same sheet under its `label`, with any of `ac`, `attacks` and `equipment`: a character who starts with nothing, and the gear they are given later |
 
-**Spellcasting:** `spellcasting`, the ability (`int`, `wis` or `cha`); `slots`, spell slots by level, `[4, 3, 2]`; `pact_slots` and `pact_level` for Pact Magic; `cantrips`, a list; `spells`, prepared spells by level, `{1: [Bless], 2: [Aid]}`; and `always_prepared`, the same, for spells always prepared; and `spellbook`, the same again, for a wizard's spells in the book and not prepared today. A spell is its name, or a name with more: `{name: Bless, time: Action, range: 30 ft., concentration: true}`, with `ritual`, `material` and `notes` the same way. A `material` can be the words for it: `material: a diamond worth 300+ GP`.
+**Spellcasting:** `spellcasting`, the ability (`int`, `wis` or `cha`); `slots`, spell slots by level, `[4, 3, 2]` or `{1: 4, 2: 3}`; `pact_slots` and `pact_level` for Pact Magic; `cantrips`, a list; `spells`, prepared spells by level, `{1: [Bless], 2: [Aid]}`; and `always_prepared`, the same, for spells always prepared; and `spellbook`, the same again, for a wizard's spells in the book and not prepared today. A spell is its name, or a name with more: `{name: Bless, time: Action, range: 30 ft., concentration: true}`, with `ritual`, `material` and `notes` the same way. A `material` can be the words for it: `material: a diamond worth 300+ GP`.
+
+A list of spells with no levels, `spells: [Bless, Aid]`, is given as a list, and its places are never read as levels. A level that isn't one, such as `{first: [Bless]}`, an entry that isn't a spell, and slots that aren't numbers are named over the sheet, as unknown names are.
 
 Quote any text in a list or `{...}` that holds a comma or a colon: `notes: "Versatile (1d10), Sap"`.
 
@@ -112,15 +116,21 @@ Quote any text in a list or `{...}` that holds a comma or a colon: `notes: "Vers
 
 The page, top to bottom: the name and level; the class, subclass, species and background; the six abilities with their saving throws; Armor Class, Hit Points, Hit Point Dice and death saves; initiative, speed, size, Proficiency Bonus and passive Perception; the skills beside the attacks, the second loadout and the resources; spellcasting and its slots; training and languages; and the names of the features and the equipment.
 
+On a screen narrower than the page it shrinks to fit, but on one 600px wide or less, such as a phone's, it keeps the size it is drawn at, so its labels stay readable, and scrolls sideways in its own frame.
+
 **Nothing on it means anything by its colour.** A proficient save or skill has a filled circle, one with Expertise a filled diamond, one without an empty circle, and the skills' heading carries that key. Advantage is the word *ADV* beside the number. Armor training is a filled square or an empty one, with its name. The page is drawn in one ink and reads the same in grayscale.
 
-Whatever doesn't fit on the page is counted, "and 4 more", or cut short with an ellipsis, and is always in the text after it: every feature with its rules, every spell by level, with its details, all the equipment, and any attack, resource or proficiency the page had to cut short.
+Whatever doesn't fit on the page is counted, "and 4 more", or cut short with an ellipsis, and is always in the text after it: every feature with its rules, every spell by level, with its details, all the equipment, and any attack, resource or proficiency the page had to cut short. So is any single value it cut short, such as a long subclass, or an Armor Class with a note: `ac: 12 (15 with mage armor)` draws as much as the shield holds, and the text gives all of it.
 
 ## How it prints
 
 The drawn page is two columns wide, so [GM Book](<GM Book>) 1.10 or later gives it a page to itself: a page break before it, unless it already starts a page, and one after it. The text follows as book text: the features under their headings, then the spells and the equipment. The widget's Markdown face is that page and that text, so GM Kit's copies for the players carry it too.
 
+Everything the page says goes in as text. An `&`, `<` or `>` in a name, a feature's rules or anything else shows as itself and is never read as HTML, so a character whose text came from somewhere else, such as a player's own on D&D Beyond, can't put a form or a redirect in front of you. A feature's rules keep their Markdown: lists, tables, bold and italics.
+
 A sheet's page break falls where the expression sits, so put `${sheets.draw()}` after whatever should stay on the page before it: a character's introduction reads well above it, and a heading alone at the foot of the page before it doesn't.
+
+A sheet that can't be drawn, from a page that isn't there or whose frontmatter doesn't parse, says why on the wiki and prints nothing: GM Book 1.11 or later keeps that edition back and names the page, so the book never goes out with the message where the sheet should be.
 
 ## A printable handout
 
@@ -139,6 +149,16 @@ The sheet is Wizards of the Coast's, and its only terms are that you may print a
     })
 
 `extras` are more keys to show beside the class and species, each with the label to draw over it. `width` is the drawn page's width in px, both columns of a book page, and `height` the most it may be.
+
+## Changes in 1.3
+
+**Nothing on a character's page reaches the browser as HTML.** Names, features, spells and equipment are escaped before the sheet's text is drawn, since an imported character's words are its player's.
+
+**Frontmatter written a plausible way reads the way it looks.** `skills: athletics, perception` and `saves: str, con` are lists; `slots` can be a map of level to count, like `spells`; a spell list with no levels prints as **Prepared.** rather than as levels 1, 2, 3; and a ⚠ above the sheet, on the page only, names any save, skill or spell shape it can't read.
+
+**What the sheet cuts short is given whole** in the text after it, and Armor Class and Hit Points shrink to fit their boxes. `sheets.draw` finds a page by its path in the adventure folder from any space.
+
+**In print, a sheet it can't draw prints nothing and says why**, so the book is kept back with the reason rather than printing a note where a character should be. On a phone the sheet scrolls at a size you can read, and a sheet drawn on the page while the book builds is drawn for that page.
 
 ## Implementation
 
@@ -192,10 +212,14 @@ sheets.abilities, sheets.skills = ABILITIES, SKILLS
 
 ------------------------------------------------------------------ the page
 
--- The page a sheet reads with no page named: the one being printed during a
--- build or for the players, or the one open.
-function sheets.here()
-  return (gmbook and gmbook.printing) or (gm and gm.printing) or editor.getCurrentPage()
+-- The page a sheet reads with no page named: in print, the one a build is
+-- printing; otherwise the one being printed for the players, or the one
+-- open. A build takes a while and yields at every call, so a sheet drawn on
+-- the page meanwhile would otherwise draw the page being printed: only the
+-- printer passes printing.
+function sheets.here(printing)
+  if printing and gmbook and gmbook.printing then return gmbook.printing end
+  return (gm and gm.printing) or editor.getCurrentPage()
 end
 
 -- The name on the sheet: the last part of the page's path.
@@ -215,6 +239,30 @@ function sheets.read(page)
     return nil, "The frontmatter of " .. tostring(page) .. " doesn't parse as YAML."
   end
   return data
+end
+
+-- The page a sheet names, as GM Bestiary finds a creature's: the page of
+-- that name; or else the one page whose path ends in it; or, where more
+-- than one does, the one in the adventure's folder. So a path written for
+-- the adventure, "Rules/Sample Characters/Tam", finds its page in a space
+-- that holds that folder, such as the DM's. Nil for none.
+function sheets.find(ref)
+  if type(ref) ~= "string" or ref == "" then return nil end
+  -- getPageMeta asks for the page itself; pageExists is link resolution
+  local function exists(name) return (pcall(space.getPageMeta, name)) end
+  if exists(ref) then return ref end
+  local tail = "/" .. ref
+  local found = query[[
+    from p = index.pages()
+    where p.name:endsWith(tail)
+    select p.name
+  ]]
+  local n, only = 0, nil
+  for _, name in ipairs(found) do n, only = n + 1, name end
+  if n == 1 then return only end
+  local root = gmbook and gmbook.root and gmbook.root() or ""
+  if root ~= "" and exists(root .. ref) then return root .. ref end
+  return nil
 end
 
 ------------------------------------------------------------------ the sums
@@ -246,6 +294,45 @@ local function items(v)
   return out
 end
 
+-- Whether a value from the page is a map, {1: 4} or {name: Bless}, and not
+-- a list. YAML keys a map by text, even a number, so a key that is text
+-- says so; and pairs is the only safe look, since # fails on a map that
+-- comes straight from yaml.parse in SilverBullet.
+local function isMap(v)
+  if type(v) ~= "table" then return false end
+  for k in pairs(v) do
+    if type(k) == "string" then return true end
+  end
+  return false
+end
+
+-- A list of names from the page, such as the skills: its entries, with one
+-- written as a line of text, "athletics, perception", split at its commas.
+-- A map is no list of names, and gives none.
+local function names(v)
+  if isMap(v) then return {} end
+  local out = {}
+  for _, e in ipairs(items(v)) do
+    if type(e) == "string" then
+      for part in (e .. ","):gmatch("([^,]*),") do
+        local s = (part:gsub("^%s+", ""))
+        s = (s:gsub("%s+$", ""))
+        if s ~= "" then out[#out + 1] = s end
+      end
+    else
+      out[#out + 1] = e
+    end
+  end
+  return out
+end
+
+-- A level from a map's key, "1" or 1: a whole number from lo to hi, or nil.
+local function levelKey(k, lo, hi)
+  local n = tonumber(k)
+  if n == nil or n ~= math.floor(n) or n < lo or n > hi then return nil end
+  return math.floor(n)
+end
+
 -- A name as a key: "Sleight of Hand" and "sleight-of-hand" are sleight_of_hand.
 local function key(v)
   local s = tostring(v):lower()
@@ -266,7 +353,7 @@ end
 
 local function set(v)
   local out = {}
-  for _, e in ipairs(items(v)) do
+  for _, e in ipairs(names(v)) do
     local k = key(e)
     out[k] = true
     -- a saving throw can be named by its ability alone, or in full
@@ -342,6 +429,18 @@ local function str(v)
   return tostring(v)
 end
 
+-- Text from the page, as the Markdown after the drawn page carries it: an
+-- &, < or > in it shows as itself and is never read as HTML. A character
+-- imported from D&D Beyond is a player's own text, and SilverBullet keeps
+-- a form or a meta tag in what it renders. The library's own Markdown, its
+-- bold, headings and lists, goes round this, so it still works.
+local function safe(v)
+  local s = str(v)
+  s = (s:gsub("&", "&amp;"))
+  s = (s:gsub("<", "&lt;"))
+  return (s:gsub(">", "&gt;"))
+end
+
 -- An entry of a list that may be a name or a table with one.
 local function nameOf(e)
   if type(e) == "table" then return str(e.name) end
@@ -362,36 +461,134 @@ end
 
 local ORDINAL = { "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th" }
 
--- A map of spell level to list, which YAML may key by number or by text,
--- as sorted pairs: { {level, list}, ... }.
-local function byLevel(v)
-  local out = {}
-  if type(v) ~= "table" then return out end
-  for k, list in pairs(v) do
-    local l = whole(k)
-    if l then out[#out + 1] = { level = l, list = items(list) } end
+-- Spells from the page under one key, `what`: by level, a map such as
+-- {1: [Bless], 2: [Aid]}, which YAML keys by text, as sorted pairs
+-- { {level, list}, ... }; or a list with no levels, [Bless, Aid], kept as a
+-- list and never read by its places as levels 1, 2, 3. Returns the levels,
+-- that list, and what it couldn't read, for the page to flag.
+local function spellLists(v, what)
+  local levels, plain, odd = {}, {}, {}
+  -- a spell is its name, or a map with one; a single spell with its
+  -- details stands for a list of one
+  local function entries(list, where)
+    local out = {}
+    if isMap(list) then list = { list } end
+    for _, e in ipairs(items(list)) do
+      if type(e) == "table" and not (isMap(e) and e.name ~= nil) then
+        odd[#odd + 1] = what .. where .. ": an entry with no spell's name"
+      else
+        out[#out + 1] = e
+      end
+    end
+    return out
   end
-  table.sort(out, function(a, b) return a.level < b.level end)
+  if v == nil then return levels, plain, odd end
+  if isMap(v) then
+    for k, list in pairs(v) do
+      local l = levelKey(k, 0, 9)
+      if l then
+        levels[#levels + 1] = { level = l, list = entries(list, " at level " .. tostring(l)) }
+      else
+        odd[#odd + 1] = what .. " under “" .. tostring(k) .. "”, which isn't a spell level"
+      end
+    end
+    table.sort(levels, function(a, b) return a.level < b.level end)
+  elseif type(v) == "table" or type(v) == "string" then
+    plain = entries(v, "")
+  else
+    odd[#odd + 1] = what .. ": " .. str(v) .. ", which is no list of spells"
+  end
+  return levels, plain, odd
+end
+
+-- Spell slots from the page, by level: a list, [4, 3, 2], or a map keyed by
+-- level, {1: 4, 2: 3}. Returns a count for every level up to the highest
+-- given, and what it couldn't read, for the page to flag.
+local function slotCounts(v)
+  local out, odd = {}, {}
+  local function count(n, l)
+    local c = whole(n)
+    if c == nil then
+      odd[#odd + 1] = "slots at level " .. tostring(l) .. ": “" .. str(n) .. "”, which is no number"
+    end
+    return c or 0
+  end
+  if not isMap(v) then
+    for i, n in ipairs(items(v)) do out[i] = count(n, i) end
+    return out, odd
+  end
+  local top = 0
+  for k, n in pairs(v) do
+    local l = levelKey(k, 1, 9)
+    if l then
+      out[l] = count(n, l)
+      if l > top then top = l end
+    else
+      odd[#odd + 1] = "slots under “" .. tostring(k) .. "”, which isn't a spell level"
+    end
+  end
+  for l = 1, top do out[l] = out[l] or 0 end
+  return out, odd
+end
+
+local SKILL = {}
+for _, s in ipairs(SKILLS) do SKILL[s.key] = true end
+
+-- What the page gives that the sheet can't use: names it doesn't know in
+-- the saves, skills, Expertise, Advantage and armor training, which would
+-- otherwise make nothing proficient without a word, and spells or slots in
+-- a shape it can't read. For a line over the sheet on the page; never
+-- printed.
+function sheets.problems(d)
+  local out = {}
+  local function save(k) return abilityKey((k:gsub("_saves?$", ""))) ~= nil end
+  local function skill(k) return SKILL[k] == true end
+  local kinds = {
+    { "saves", save },
+    { "skills", skill },
+    { "expertise", skill },
+    { "advantage", function(k) return k == "initiative" or skill(k) or save(k) end },
+    { "armor_training", function(k) return k == "light" or k == "medium" or k == "heavy" or k == "shields" end },
+  }
+  for _, kind in ipairs(kinds) do
+    local v = d[kind[1]]
+    if isMap(v) then
+      out[#out + 1] = kind[1] .. ", a map where a list of names goes"
+    else
+      local unknown = {}
+      for _, e in ipairs(names(v)) do
+        if type(e) == "table" then unknown[#unknown + 1] = "{…}"
+        elseif not kind[2](key(e)) then unknown[#unknown + 1] = str(e) end
+      end
+      if #unknown > 0 then out[#out + 1] = kind[1] .. " " .. table.concat(unknown, ", ") end
+    end
+  end
+  for _, what in ipairs({ "spells", "always_prepared", "spellbook" }) do
+    local _, _, odd = spellLists(d[what], what)
+    for _, o in ipairs(odd) do out[#out + 1] = o end
+  end
+  local _, odd = slotCounts(d.slots)
+  for _, o in ipairs(odd) do out[#out + 1] = o end
   return out
 end
 
 -- A spell's name and its details in brackets: "Bless (Action, 30 ft.;
 -- concentration, material: a sprig of mistletoe)".
 local function spellText(e)
-  if type(e) ~= "table" then return str(e) end
+  if type(e) ~= "table" then return safe(e) end
   local where, flags = {}, {}
-  if e.time ~= nil then where[#where + 1] = str(e.time) end
-  if e.range ~= nil then where[#where + 1] = str(e.range) end
+  if e.time ~= nil then where[#where + 1] = safe(e.time) end
+  if e.range ~= nil then where[#where + 1] = safe(e.range) end
   if e.concentration == true then flags[#flags + 1] = "concentration" end
   if e.ritual == true then flags[#flags + 1] = "ritual" end
   if e.material == true then flags[#flags + 1] = "material"
-  elseif e.material ~= nil and e.material ~= false then flags[#flags + 1] = "material: " .. str(e.material) end
-  if e.notes ~= nil then flags[#flags + 1] = str(e.notes) end
+  elseif e.material ~= nil and e.material ~= false then flags[#flags + 1] = "material: " .. safe(e.material) end
+  if e.notes ~= nil then flags[#flags + 1] = safe(e.notes) end
   local parts = {}
   if #where > 0 then parts[#parts + 1] = table.concat(where, ", ") end
   if #flags > 0 then parts[#parts + 1] = table.concat(flags, ", ") end
-  if #parts == 0 then return str(e.name) end
-  return str(e.name) .. " (" .. table.concat(parts, "; ") .. ")"
+  if #parts == 0 then return safe(e.name) end
+  return safe(e.name) .. " (" .. table.concat(parts, "; ") .. ")"
 end
 
 ------------------------------------------------------------------ measuring
@@ -499,7 +696,10 @@ local function canvas()
     if o.anchor then a[#a + 1] = ' text-anchor="' .. o.anchor .. '"' end
     if o.spacing then a[#a + 1] = ' letter-spacing="' .. px(o.spacing) .. '"' end
     if o.faint then a[#a + 1] = ' fill="' .. FAINT .. '"' end
-    a[#a + 1] = ">" .. esc(s) .. "</text>"
+    -- on one line, as SVG shows it anyway: a blank line in a value would
+    -- end the HTML block the drawing prints in, and the rest would be read
+    -- as Markdown
+    a[#a + 1] = ">" .. esc((str(s):gsub("%s+", " "))) .. "</text>"
     c.add(table.concat(a))
   end
   function c.label(x, y, s, o)
@@ -535,12 +735,14 @@ local function canvas()
     for i = 0, n - 1 do c.mark(x + 4 + i * gap, cy, "open") end
     return x + n * gap
   end
-  -- a field: its value over a rule, its label under it
+  -- a field: its value over a rule, its label under it; true when the
+  -- value had to be cut short
   function c.field(x, y, w, label, value)
     local s, size = fitted(str(value), w - 4, 12, 7.5)
     if s ~= "" then c.text(x + 2, y + 14, s, size) end
     c.line(x, y + 18, x + w, y + 18)
     c.label(x + 2, y + 26, label)
+    return s ~= str(value)
   end
   return c
 end
@@ -608,11 +810,19 @@ function sheets.svg(d, v, page)
   local c = canvas()
   local gap = 8
   -- what the page had to cut short or leave out, for the text after it
-  local cut = { attacks = {}, kit = {}, resources = {}, lines = {} }
+  local cut = { attacks = {}, kit = {}, resources = {}, lines = {}, fields = {} }
+  -- a single value fitted to its room, and noted when it had to be cut
+  -- short, so the text after the page gives it whole
+  local function fit(label, value, width, size, min, bold)
+    local s = str(value)
+    local shown, at = fitted(s, width, size, min, bold)
+    if shown ~= s then cut.fields[#cut.fields + 1] = { label, s } end
+    return shown, at
+  end
 
   -- the name and level
   local name = sheets.nameOf(page or "")
-  local nm, nsize = fitted(name, W - 96, 24, 14, true)
+  local nm, nsize = fit("Name", name, W - 96, 24, 14, true)
   c.text(0, 24, nm, nsize, { bold = true })
   c.line(0, 31, W - 84, 31, { weight = 1.2 })
   c.box(W - 76, 0, 76, 36)
@@ -630,7 +840,7 @@ function sheets.svg(d, v, page)
   if d.player ~= nil then fields[#fields + 1] = { "Player", d.player } end
   local fw = (W - gap * (#fields - 1)) / #fields
   for i, f in ipairs(fields) do
-    c.field((i - 1) * (fw + gap), 40, fw, f[1], f[2])
+    if c.field((i - 1) * (fw + gap), 40, fw, f[1], f[2]) then cut.fields[#cut.fields + 1] = { f[1], str(f[2]) } end
   end
 
   -- the six abilities, each with its saving throw under it
@@ -666,11 +876,15 @@ function sheets.svg(d, v, page)
     ' Z" fill="none" stroke="' .. INK .. '" stroke-width="1.2"/>')
   c.label(ax + aw / 2, y + 12, "Armor", { anchor = "middle" })
   c.label(ax + aw / 2, y + 20, "Class", { anchor = "middle" })
-  c.text(ax + aw / 2, y + 43, str(d.ac), 20, { bold = true, anchor = "middle" })
+  -- inside the shield where it narrows, at the line the number sits on
+  local ac, acsize = fit("Armor Class", d.ac, aw - 20, 20, 8, true)
+  c.text(ax + aw / 2, y + 43, ac, acsize, { bold = true, anchor = "middle" })
   local hx, hw = tile(2)
   c.box(hx, y, hw, 60)
   c.label(hx + 6, y + 11, "Hit Points")
-  c.text(hx + 40, y + 42, str(d.hp), 22, { bold = true, anchor = "middle" })
+  -- between the box's edge and the Current box
+  local hp, hpsize = fit("Hit Points", d.hp, 68, 22, 9, true)
+  c.text(hx + 40, y + 42, hp, hpsize, { bold = true, anchor = "middle" })
   c.label(hx + 40, y + 54, "Maximum", { anchor = "middle" })
   c.box(hx + 76, y + 18, 54, 28, { r = 2, weight = 0.8 })
   c.label(hx + 103, y + 54, "Current", { anchor = "middle" })
@@ -679,7 +893,7 @@ function sheets.svg(d, v, page)
   local dx, dw = tile(3)
   c.box(dx, y, dw, 60)
   c.label(dx + 6, y + 11, "Hit Point Dice")
-  local hd, hdsize = fitted(str(d.hit_dice), dw - 12, 16, 9, true)
+  local hd, hdsize = fit("Hit Point Dice", d.hit_dice, dw - 12, 16, 9, true)
   c.text(dx + dw / 2, y + 34, hd, hdsize, { bold = true, anchor = "middle" })
   c.label(dx + 6, y + 53, "Spent")
   c.line(dx + 34, y + 53, dx + dw - 8, y + 53, { weight = 0.8 })
@@ -712,7 +926,7 @@ function sheets.svg(d, v, page)
     local px0 = (i - 1) * (pw + gap)
     c.box(px0, y, pw, 26, { r = 13 })
     c.label(px0 + 12, y + 16, s[1])
-    local val, vsize = fitted(s[2], pw * 0.42, 13, 8, true)
+    local val, vsize = fit(s[1], s[2], pw * 0.42, 13, 8, true)
     c.text(px0 + pw - 12, y + 18, val, vsize, { bold = true, anchor = "end" })
     if s[3] then c.label(px0 + pw - 12 - textWidth(val, vsize, true) - 4, y + 16, "Adv", { anchor = "end" }) end
   end
@@ -781,11 +995,13 @@ function sheets.svg(d, v, page)
   if kit then
     local kitTop = ry
     local label = kit.label ~= nil and str(kit.label) or "Another loadout"
-    local kl, ksize = fitted(label, rw - 110, 9.5, 7.5, true)
+    local kl, ksize = fit("Loadout", label, rw - 110, 9.5, 7.5, true)
     c.text(rx + 8, kitTop + 13, kl, ksize, { bold = true, italic = true })
     if kit.ac ~= nil then
       c.label(rx + rw - 40, kitTop + 12, "Armor Class", { anchor = "end" })
-      c.text(rx + rw - 10, kitTop + 14, str(kit.ac), 13, { bold = true, anchor = "end" })
+      -- between its label and the box's edge
+      local kac, kacsize = fit(label .. ": Armor Class", kit.ac, 26, 13, 8, true)
+      c.text(rx + rw - 10, kitTop + 14, kac, kacsize, { bold = true, anchor = "end" })
     end
     local ky = kitTop + 20
     local kitAttacks = items(kit.attacks)
@@ -833,7 +1049,7 @@ function sheets.svg(d, v, page)
   y = math.max(leftBottom, ry - gap) + gap
 
   -- spellcasting and its slots
-  local slots = items(d.slots)
+  local slots = slotCounts(d.slots)
   local pact = whole(d.pact_slots)
   if v.casting or #slots > 0 or pact then
     local top = y
@@ -852,12 +1068,14 @@ function sheets.svg(d, v, page)
     local sx, syy = 8, top + 34
     c.label(sx, syy, "Slots")
     sx = sx + 34
+    local drawn = 0
     for level, n in ipairs(slots) do
       local count = whole(n) or 0
       if count > 0 then
         if sx + 20 + count * 10 > W - 8 then sx, syy = 42, syy + 16 end
         c.text(sx, syy + 0.5, ORDINAL[level] or tostring(level), 8.5, { bold = true })
         sx = c.ticks(sx + 20, syy - 3, count, 10) + 12
+        drawn = drawn + 1
       end
     end
     if pact then
@@ -867,7 +1085,7 @@ function sheets.svg(d, v, page)
       c.text(sx, syy + 0.5, what, 8.5, { bold = true })
       sx = c.ticks(sx + textWidth(what, 8.5, true) + 6, syy - 3, pact, 10) + 12
     end
-    if #slots == 0 and not pact then c.text(sx, syy + 0.5, "None", 8.5, { faint = true }) end
+    if drawn == 0 and not pact then c.text(sx, syy + 0.5, "None", 8.5, { faint = true }) end
     local cantrips = items(d.cantrips)
     if #cantrips > 0 then
       syy = syy + 16
@@ -1052,13 +1270,14 @@ end
 -- An attack in words, as the text after the page gives one it cut short:
 -- "***Grapple.*** DC 14 Str or Dex, Grappled. A free hand needed."
 local function attackLine(a, label)
-  if type(a) ~= "table" then return "***" .. str(a) .. ".***" end
+  if type(a) ~= "table" then return "***" .. safe(a) .. ".***" end
   local parts = {}
   if type(a.hit) == "number" then parts[#parts + 1] = signed(math.floor(a.hit)) .. " to hit"
-  elseif a.hit ~= nil then parts[#parts + 1] = str(a.hit) end
-  if a.damage ~= nil then parts[#parts + 1] = str(a.damage) end
-  local s = "***" .. str(a.name) .. ".*** " .. (label and (label .. ": ") or "") .. stopped(table.concat(parts, ", "))
-  if a.notes ~= nil and str(a.notes) ~= "" then s = s .. " " .. stopped(str(a.notes)) end
+  elseif a.hit ~= nil then parts[#parts + 1] = safe(a.hit) end
+  if a.damage ~= nil then parts[#parts + 1] = safe(a.damage) end
+  local s = "***" .. safe(a.name) .. ".*** " .. (label and (safe(label) .. ": ") or "") ..
+    stopped(table.concat(parts, ", "))
+  if a.notes ~= nil and str(a.notes) ~= "" then s = s .. " " .. stopped(safe(a.notes)) end
   return s
 end
 
@@ -1086,14 +1305,19 @@ function sheets.text(d, v, cut)
     add("")
     for _, e in ipairs(list) do
       local name, text = entryText(e)
-      add("### " .. name)
+      add("### " .. safe(name))
       add("")
       local ps = paragraphs(text)
-      for i, p in ipairs(ps) do ps[i] = lead(p) end
+      for i, p in ipairs(ps) do ps[i] = lead(safe(p)) end
       if #ps > 0 then block(ps) end
     end
   end
-  -- what the drawn page cut short or left out, in full
+  -- what the drawn page cut short or left out, in full: single values
+  -- first, a subclass or an Armor Class with a note, each under its label
+  for _, f in ipairs(items(cut.fields)) do
+    add("**" .. safe(f[1]) .. ".** " .. stopped(safe(f[2])))
+    add("")
+  end
   local cutAttacks, cutKit = items(cut.attacks), items(cut.kit)
   if #cutAttacks > 0 or #cutKit > 0 then
     add("## Attacks")
@@ -1114,10 +1338,10 @@ function sheets.text(d, v, cut)
     add("## Resources")
     add("")
     for _, r in ipairs(cutResources) do
-      local s = "***" .. nameOf(r) .. ".***"
+      local s = "***" .. safe(nameOf(r)) .. ".***"
       if type(r) == "table" then
-        if r.uses ~= nil then s = s .. " " .. str(r.uses) .. (r.reset ~= nil and ";" or ".") end
-        if r.reset ~= nil then s = s .. " back after " .. stopped(str(r.reset)) end
+        if r.uses ~= nil then s = s .. " " .. safe(r.uses) .. (r.reset ~= nil and ";" or ".") end
+        if r.reset ~= nil then s = s .. " back after " .. stopped(safe(r.reset)) end
       end
       add(s)
       add("")
@@ -1128,7 +1352,7 @@ function sheets.text(d, v, cut)
     add("## Proficiencies")
     add("")
     for _, l in ipairs(cutLines) do
-      add("**" .. l[1] .. ".** " .. stopped(l[2]))
+      add("**" .. l[1] .. ".** " .. stopped(safe(l[2])))
       add("")
     end
   end
@@ -1137,12 +1361,17 @@ function sheets.text(d, v, cut)
   group("Species Traits", d.traits)
   group("Feats", d.feats)
 
-  -- the spells, a paragraph for each level
+  -- the spells, a paragraph for each level, then any listed with no level
   local cantrips = items(d.cantrips)
-  local levels = byLevel(d.spells)
-  local always = byLevel(d.always_prepared)
-  local book = byLevel(d.spellbook)
-  if #cantrips > 0 or #levels > 0 or #always > 0 or #book > 0 then
+  local levels, mineList = spellLists(d.spells, "spells")
+  local always, alwaysList = spellLists(d.always_prepared, "always_prepared")
+  local book, bookList = spellLists(d.spellbook, "spellbook")
+  local unlevelled = {
+    { "Prepared", mineList }, { "Always prepared", alwaysList }, { "In the spellbook, not prepared", bookList },
+  }
+  local any = #cantrips > 0 or #levels > 0 or #always > 0 or #book > 0
+  for _, u in ipairs(unlevelled) do any = any or #u[2] > 0 end
+  if any then
     add("## Spells")
     add("")
     local ab = ""
@@ -1152,16 +1381,16 @@ function sheets.text(d, v, cut)
         " · **Spell attack bonus** " .. signed(v.spellAttack))
       add("")
     end
-    local function names(list)
+    local function listed(list)
       local t = {}
       for _, e in ipairs(list) do t[#t + 1] = spellText(e) end
       return table.concat(t, ", ")
     end
     if #cantrips > 0 then
-      add("**Cantrips.** " .. names(cantrips) .. ".")
+      add("**Cantrips.** " .. listed(cantrips) .. ".")
       add("")
     end
-    local slots = items(d.slots)
+    local slots = slotCounts(d.slots)
     local all = {}
     for _, l in ipairs(levels) do all[l.level] = { mine = l.list } end
     for _, l in ipairs(always) do
@@ -1181,11 +1410,20 @@ function sheets.text(d, v, cut)
       local n = whole(slots[level])
       if n and n > 0 then head = head .. " (" .. tostring(n) .. (n == 1 and " slot" or " slots") .. ")" end
       local parts = {}
-      if e.mine and #e.mine > 0 then parts[#parts + 1] = names(e.mine) end
-      if e.always and #e.always > 0 then parts[#parts + 1] = "always prepared: " .. names(e.always) end
-      if e.book and #e.book > 0 then parts[#parts + 1] = "in the spellbook, not prepared: " .. names(e.book) end
-      add(head .. ".** " .. table.concat(parts, "; ") .. ".")
-      add("")
+      if e.mine and #e.mine > 0 then parts[#parts + 1] = listed(e.mine) end
+      if e.always and #e.always > 0 then parts[#parts + 1] = "always prepared: " .. listed(e.always) end
+      if e.book and #e.book > 0 then parts[#parts + 1] = "in the spellbook, not prepared: " .. listed(e.book) end
+      if #parts > 0 then
+        add(head .. ".** " .. table.concat(parts, "; ") .. ".")
+        add("")
+      end
+    end
+    -- a list written with no levels is given as it is written
+    for _, u in ipairs(unlevelled) do
+      if #u[2] > 0 then
+        add("**" .. u[1] .. ".** " .. listed(u[2]) .. ".")
+        add("")
+      end
     end
     local pact = whole(d.pact_slots)
     if pact then
@@ -1212,7 +1450,7 @@ function sheets.text(d, v, cut)
     add("")
     local function list(t)
       local names = {}
-      for _, e in ipairs(t) do names[#names + 1] = nameOf(e) end
+      for _, e in ipairs(t) do names[#names + 1] = safe(nameOf(e)) end
       return table.concat(names, "; ")
     end
     if #equipment > 0 then
@@ -1228,7 +1466,7 @@ function sheets.text(d, v, cut)
       add("")
     end
     if #kitGear > 0 then
-      local label = kit.label ~= nil and str(kit.label) or "Another loadout"
+      local label = kit.label ~= nil and safe(kit.label) or "Another loadout"
       add("**" .. label .. ".** " .. list(kitGear) .. ".")
       add("")
     end
@@ -1243,43 +1481,69 @@ end
 local function missing(text)
   return widget.new {
     html = '<em class="gmsheets-missing">' .. esc(text) .. "</em>",
-    markdown = "*" .. text .. "*",
+    markdown = "*" .. safe(text) .. "*",
     display = "block",
   }
 end
 
+-- A sheet from a page: its frontmatter, the drawing and the text after it.
+-- Nil, and why, for a page it can't be drawn from. `printing` for the
+-- printer alone, which reads the page a build is printing.
+local function drawn(ref, printing)
+  local page = ref or sheets.here(printing)
+  if not page then return nil, "No page to draw a sheet from." end
+  page = sheets.find(page) or page
+  local d, why = sheets.read(page)
+  if not d then return nil, why end
+  local v = sheets.values(d)
+  local svg, _, cut = sheets.svg(d, v, page)
+  return { data = d, svg = svg, text = sheets.text(d, v, cut) }
+end
+
+-- The Markdown face: the drawing in a block two columns wide, which GM
+-- Book gives a page of its own, then the text.
+local function printedFace(s)
+  local out = '<div class="gmsheets-page" style="column-span:all">\n' .. s.svg .. "\n</div>"
+  if s.text ~= "" then out = out .. "\n\n" .. s.text end
+  return out
+end
+
 -- The sheet on the page and in print: the drawn page, then the text after
--- it. The Markdown face puts the drawing in a block two columns wide, which
--- GM Book gives a page of its own.
+-- it. A page it can't be drawn from shows why.
 function sheets.draw(ref, opts)
   if type(ref) == "table" and opts == nil then ref, opts = nil, ref end
   opts = opts or {}
-  local page = ref or sheets.here()
-  if not page then return missing("No page to draw a sheet from.") end
-  local d, why = sheets.read(page)
-  if not d then return missing(why) end
-  local v = sheets.values(d)
-  local svg, _, cut = sheets.svg(d, v, page)
-  local md = sheets.text(d, v, cut)
-  local html = '<div class="gmsheets"><div class="gmsheets-page">' .. svg .. "</div>"
-  if md ~= "" then
-    html = html .. '<div class="gmsheets-text">' .. markdown.markdownToHtml(md) .. "</div>"
+  local s, why = drawn(ref)
+  if not s then return missing(why) end
+  local html = '<div class="gmsheets">'
+  -- what the sheet leaves out because it can't read it, for the DM: on the
+  -- page only, never in the Markdown face that prints and goes to players
+  local problems = sheets.problems(s.data)
+  if #problems > 0 then
+    html = html .. '<p class="gmsheets-warn">' .. esc("⚠ Left off the sheet, since it can't read them: " ..
+      table.concat(problems, "; ") .. ".") .. "</p>"
+  end
+  html = html .. '<div class="gmsheets-page">' .. s.svg .. "</div>"
+  if s.text ~= "" then
+    html = html .. '<div class="gmsheets-text">' .. markdown.markdownToHtml(s.text) .. "</div>"
   end
   html = html .. "</div>"
-  local printed = '<div class="gmsheets-page" style="column-span:all">\n' .. svg .. "\n</div>"
-  if md ~= "" then printed = printed .. "\n\n" .. md end
-  return widget.new { html = html, markdown = printed, display = "block" }
+  return widget.new { html = html, markdown = printedFace(s), display = "block" }
 end
 
 ------------------------------------------------------------------ in print
 
 -- What a sheet prints as: the widget's Markdown face. GM Book evaluates an
--- expression with sheets standing for this table.
+-- expression with sheets standing for this table. A sheet that can't be
+-- drawn prints nothing at all, not the page's message: it raises the reason,
+-- GM Book then keeps the edition back and names the page with that reason,
+-- so a book never goes out with a note where a character should be.
 sheets.printed = setmetatable({
   draw = function(ref, opts)
-    local w = sheets.draw(ref, opts)
-    if type(w) == "table" and type(w.markdown) == "string" then return w.markdown end
-    return nil
+    if type(ref) == "table" and opts == nil then ref = nil end
+    local s, why = drawn(ref, true)
+    if not s then error(why or "No sheet to draw.", 0) end
+    return printedFace(s)
   end,
 }, { __index = sheets })
 
@@ -1290,8 +1554,13 @@ gmbook.printers.sheets = sheets.printed
 
 ```space-style
 /* The sheet draws in one dark ink, which a dark theme would swallow, so on
-   the page it sits on paper of its own. */
+   the page it sits on paper of its own. Its padding counts in its width:
+   SilverBullet sets border-box only on its standalone pages, and without
+   it a sheet at full width would run 12px past its frame. Its width is the
+   one it is drawn at, not its width attribute taken as the whole box. */
 .gmsheets-page svg {
+  box-sizing: border-box;
+  width: auto;
   max-width: 100%;
   height: auto;
   background: #faf7f0;
@@ -1299,8 +1568,26 @@ gmbook.printers.sheets = sheets.printed
   padding: 6px;
 }
 
+.gmsheets-page {
+  overflow-x: auto;
+}
+
+/* On a phone the sheet would shrink to half its size and its labels to
+   three pixels. There it keeps the size it is drawn at, as on a wider
+   screen, and scrolls sideways in its own frame. Printing is left as it
+   is. */
+@media screen and (max-width: 600px) {
+  .gmsheets-page svg {
+    max-width: none;
+  }
+}
+
 .gmsheets-missing {
   color: var(--subtle-color);
+}
+
+.gmsheets-warn {
+  margin: 0 0 6px;
 }
 
 .gmsheets-missing::before {

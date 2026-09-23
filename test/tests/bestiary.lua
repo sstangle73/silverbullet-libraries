@@ -58,6 +58,35 @@ test("bestiary: a creature with no official match is original to the book", "adv
   eq(bestiary.cite(bestiary.creature("World/Monsters/Rootling"), "rootling"), "original to this book")
 end)
 
+-- The strangler's page with another ddb, and its reference.
+local function withDdb(value)
+  H.pages[STRANGLER] = (FIXTURES.adventure[STRANGLER]:gsub("\nddb: [^\n]+", "\nddb: " .. value))
+  bestiary.refresh()
+  return bestiary.ref(STRANGLER)
+end
+
+test("bestiary: a bare D&D Beyond id links to the creature's page there", "adventure", function()
+  -- the shape a character page's ddb takes, as a number and as text
+  for _, value in ipairs({ "5195252", '"5195252"' }) do
+    local w = withDdb(value)
+    eq(href(w), "https://www.dndbeyond.com/monsters/5195252", value)
+    eq(w.markdown, "[Vine Blight](https://www.dndbeyond.com/monsters/5195252) — Monster Manual, *Blights*", value)
+    hasnt(w.html, "⚠", value)
+    eq(bestiary.creature(STRANGLER).url, "https://www.dndbeyond.com/monsters/5195252")
+  end
+  eq(bestiary.printed.ref(STRANGLER), "Vine Blight — Monster Manual, *Blights*", "print carries no URL")
+end)
+
+test("bestiary: a ddb that is no link isn't linked, and only the page says so", "adventure", function()
+  for _, value in ipairs({ "www.dndbeyond.com/monsters/5195252-vine-blight", '"javascript:alert(1)"', "vine blight" }) do
+    local w = withDdb(value)
+    hasnt(w.html, "href=", value)
+    has(seen(w), "⚠ Not linked: ddb is " .. (value:gsub('"', "")) .. ", not a web address or a D&D Beyond id.")
+    eq(w.markdown, "**Vine Blight** — Monster Manual, *Blights*", value .. ": the Markdown face goes to the players")
+    eq(bestiary.printed.ref(STRANGLER), "Vine Blight — Monster Manual, *Blights*", value)
+  end
+end)
+
 test("bestiary: a page it can't find says so rather than printing", "adventure", function()
   has(seen(bestiary.ref("World/Monsters/Nothing")), "No creature page for World/Monsters/Nothing.")
   eq(bestiary.printed.ref("World/Monsters/Nothing"), nil,
@@ -70,6 +99,21 @@ test("bestiary: the reference reads the page it is on, and the one being printed
   gmbook.printing = CROW
   eq(bestiary.printed.ref(), "Raven — Monster Manual, *Animals*")
   gmbook.printing = nil
+end)
+
+-- A build takes a while and yields at every call, so a reference drawn on
+-- the page while one runs must read its own page, not the one being printed.
+test("bestiary: a live reference during a build reads its own page", "adventure", function()
+  H.current = STRANGLER
+  gmbook.printing = CROW
+  local good, err = pcall(function()
+    local w = bestiary.ref()
+    eq(seen(w), "Vine Blight — Monster Manual, Blights", "the page open, not the one being printed")
+    eq(w.markdown, bestiary.ref(STRANGLER).markdown)
+    eq(bestiary.printed.ref(), "Raven — Monster Manual, *Animals*", "while print reads the page being printed")
+  end)
+  gmbook.printing = nil
+  if not good then error(err, 0) end
 end)
 
 test("bestiary: a path written for Adventure finds the page from DM", "dm", function()
@@ -106,7 +150,7 @@ test("party: a fight's creatures print with the citation from their pages", "adv
 end)
 
 test("party: a fight whose creatures have no page prints as it always did", "adventure", function()
-  hasnt(party.fightPrint({ "Drill site", level = 3, { 1, "wight", cr = 3 } }), "The creatures.")
+  hasnt(party.fightPrint({ "The mill race", level = 3, { 1, "wight", cr = 3 } }), "The creatures.")
 end)
 
 test("party: on the page each creature links to its own", "adventure", function()
@@ -142,6 +186,28 @@ test("party: a CR that disagrees with the creature's page is flagged", "adventur
   -- the wording of that warning, which "disagree" never was
   hasnt(list(party.warnings(ORCHARD, party.roster(ORCHARD, 5), FIVE, "low")), " here, and CR ",
         "Scene 3's fight gives each creature the CR on its page")
+end)
+
+-- A fight's grubs at a CR, on a page of their own at another.
+local GRUB = "World/Monsters/Grub"
+local function grubWarnings(pageCR, fightCR)
+  H.pages[GRUB] = "---\ntype: monster\nstatblock: Giant Centipede\ncr: " .. pageCR .. "\n---\n\n# Grub\n"
+  bestiary.refresh()
+  local fight = { "The ford", level = 1, { 4, "grub", cr = fightCR, page = GRUB } }
+  return list(party.warnings(fight, party.roster(fight, 5), FIVE, "low"))
+end
+
+test("party: a CR is the same CR however it is written", "adventure", function()
+  -- a page's 0.125 is the fight's "1/8", as GM Party counts their XP
+  for _, fightCR in ipairs({ "1/8", 0.125, " 1 / 8 " }) do
+    hasnt(grubWarnings("0.125", fightCR), " here, and CR ", "page 0.125, fight " .. tostring(fightCR))
+    hasnt(grubWarnings('"1/8"', fightCR), " here, and CR ", "page 1/8, fight " .. tostring(fightCR))
+  end
+  hasnt(grubWarnings("[0.125, 1]", 1), " here, and CR ", "and in a list of them")
+  -- a CR that differs is flagged, each written as the SRD writes it
+  has(grubWarnings("0.125", "1/4"), "The grub is CR 1/4 here, and CR 1/8 on Grub.")
+  has(grubWarnings("3.0", 1), "The grub is CR 1 here, and CR 3 on Grub.")
+  has(grubWarnings("[0.125, 0.5]", 0.25), "The grub is CR 1/4 here, and CR 1/8 or 1/2 on Grub.")
 end)
 
 test("party: with no library to cite them, a page is linked and nothing prints", "adventure", function()

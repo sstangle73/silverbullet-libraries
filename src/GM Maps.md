@@ -1297,14 +1297,18 @@ end
 -- standing for this table, and finds it in gmbook.printers.
 maps.printed = setmetatable({
   -- A map it can't draw prints nothing, rather than the page's "No map
-  -- page" as if that were the map: GM Book then keeps the edition back and
-  -- names the page, and the widget on the page says what it looked for.
+  -- page" as if that were the map: it raises why, GM Book then keeps the
+  -- edition back and names the page and the reason, and the widget on the
+  -- page says what it looked for.
   draw = function(ref, opts)
     if type(ref) == "table" and opts == nil then ref, opts = nil, ref end
     local ask = { printing = true }
     for k, v in pairs(opts or {}) do ask[k] = v end
     local w = drawing(ref, ask)
-    return w and w.markdown or nil
+    if not w then
+      error("No map to draw from " .. tostring(ref or maps.here(true)) .. ".", 0)
+    end
+    return w.markdown
   end,
 }, { __index = maps })
 

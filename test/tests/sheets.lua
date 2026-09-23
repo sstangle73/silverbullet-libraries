@@ -145,6 +145,102 @@ test("sheets: saves, skills and Advantage can be named any sensible way", "dm", 
   ok(v.adv.perception and v.adv.wis_save and v.adv.initiative, "each Advantage read")
 end)
 
+test("sheets: saves and skills written as a line of names are read as a list", "dm", function()
+  page(TAMSIN, RANGER)
+  local listed = sheets.draw()
+  page(TAMSIN, (RANGER:gsub("saves: %[str, dex%]", "saves: str, dex")
+    :gsub("skills: %[([^%]]*)%]", "skills: %1")
+    :gsub("expertise: %[survival%]", "expertise: survival")
+    :gsub("advantage: %[perception%]", "advantage: perception")
+    :gsub("armor_training: %[([^%]]*)%]", "armor_training: %1")))
+  local d = sheets.read(TAMSIN)
+  eq(d.skills, "athletics, nature, perception, stealth, survival", "YAML reads the line as one text")
+  local v = sheets.values(d)
+  eq(v.saveProf.str, true)
+  eq(v.saveProf.con, false)
+  eq(v.skillProf.perception, 1)
+  eq(v.skillProf.survival, 2)
+  eq(v.passive.perception, 19)
+  local lined = sheets.draw()
+  eq(svgOf(lined.html), svgOf(listed.html), "the same sheet as the list draws")
+  eq(lined.markdown, listed.markdown)
+  eq(#sheets.problems(d), 0)
+  -- a list whose entry is such a line, too
+  page(TAMSIN, (RANGER:gsub("saves: %[str, dex%]", 'saves: ["str, dex"]')))
+  eq(sheets.values(sheets.read(TAMSIN)).saveProf.dex, true)
+end)
+
+-- The line over a drawn sheet naming what it couldn't read, or nil.
+local function warning(w)
+  return w.html:match('<p class="gmsheets%-warn">(.-)</p>')
+end
+
+test("sheets: a name the sheet doesn't know is named over it, and never printed", "dm", function()
+  page(TAMSIN, (RANGER:gsub("skills: %[athletics", "skills: [athletcs, perceptoin, athletics")
+    :gsub("saves: %[str, dex%]", "saves: [str, dex, death]")
+    :gsub("expertise: %[survival%]", "expertise: [survival, thieves_tools]")
+    :gsub("advantage: %[perception%]", "advantage: [perception, stealth checks, initiative, wis_save, Dexterity]")
+    :gsub("armor_training: %[light, medium, shields%]", "armor_training: [light, medium, shield]")))
+  local w = sheets.draw()
+  eq(warning(w), "⚠ Left off the sheet, since it can't read them: saves death; skills athletcs, perceptoin; " ..
+    "expertise thieves_tools; advantage stealth checks; armor_training shield.")
+  ok(w.html:find("gmsheets-warn", 1, true) < w.html:find("<svg", 1, true), "over the sheet")
+  hasnt(w.markdown, "perceptoin", "never in the Markdown face, which prints and goes to the players")
+  hasnt(sheets.printed.draw(), "Left off the sheet")
+  -- a page the sheet reads all of has no such line
+  page(TAMSIN, RANGER)
+  eq(warning(sheets.draw()), nil)
+  -- nor does one with a map where a list of names goes, without saying so
+  page(TAMSIN, (RANGER:gsub("skills: %[[^%]]*%]", "skills: {athletics: 5}")))
+  has(warning(sheets.draw()), "skills, a map where a list of names goes")
+end)
+
+test("sheets: slots keyed by level draw as a list of them does", "dm", function()
+  page(TAMSIN, (RANGER:gsub("slots: %[3%]", "slots: [4, 2]")))
+  local listed = sheets.draw()
+  has(texts(svgOf(listed.html)), "SLOTS | 1st | 2nd")
+  for _, keyed in ipairs({ "slots: {1: 4, 2: 2}", 'slots: {"2": 2, "1": 4}' }) do
+    page(TAMSIN, (RANGER:gsub("slots: %[3%]", keyed)))
+    local w = sheets.draw()
+    eq(svgOf(w.html), svgOf(listed.html), keyed)
+    eq(w.markdown, listed.markdown, keyed)
+    has(w.markdown, "**Level 1 (4 slots).**", keyed)
+    eq(warning(w), nil, keyed)
+  end
+  -- a level left out is a level with none
+  page(TAMSIN, (RANGER:gsub("slots: %[3%]", "slots: {1: 4, 3: 2}")))
+  has(texts(svgOf(sheets.draw().html)), "SLOTS | 1st | 3rd")
+end)
+
+test("sheets: a list of spells with no levels is given as a list, not read as levels", "dm", function()
+  page(TAMSIN, (RANGER:gsub("spells: {1:[^\n]*}", "spells: [Bless, Cure Wounds, Guiding Bolt, Aid]")
+    :gsub("always_prepared: {1: %[([^\n]*)%]}", "always_prepared: [%1]")))
+  local w = sheets.draw()
+  has(w.markdown, "**Prepared.** Bless, Cure Wounds, Guiding Bolt, Aid.")
+  has(w.markdown, "**Always prepared.** Hunter's Mark (Bonus Action, 90 ft.; concentration).")
+  hasnt(w.markdown, "**Level ", "no levels made up from the list's places")
+  eq(warning(w), nil)
+  -- beside levels that are written
+  page(TAMSIN, (RANGER:gsub("spells: {1:[^\n]*}", "spells: [Bless, Aid]")))
+  local md = sheets.draw().markdown
+  has(md, "**Level 1 (3 slots).** always prepared: Hunter's Mark")
+  has(md, "**Prepared.** Bless, Aid.")
+end)
+
+test("sheets: spells and slots in a shape it can't read are named over the sheet", "dm", function()
+  page(TAMSIN, (RANGER:gsub("spells: {1:[^\n]*}", "spells: {first: [Bless], 1: [Cure Wounds, [Aid, Sleep]]}")
+    :gsub("slots: %[3%]", "slots: {1: three, ninth: 1}")))
+  local w = sheets.draw()
+  local warn = warning(w)
+  has(warn, "spells under “first”, which isn't a spell level")
+  has(warn, "spells at level 1: an entry with no spell's name")
+  has(warn, "slots at level 1: “three”, which is no number")
+  has(warn, "slots under “ninth”, which isn't a spell level")
+  has(w.markdown, "**Level 1.** Cure Wounds; always prepared: Hunter's Mark", "what it can read is still there")
+  hasnt(w.markdown, "three")
+  has(texts(svgOf(w.html)), "SLOTS | None", "no slot it can count, so none drawn")
+end)
+
 test("sheets: the drawn page names the character and every number", "dm", function()
   page(TAMSIN, RANGER)
   local w = sheets.draw()
@@ -252,6 +348,20 @@ test("sheets: a page by name, from anywhere", "dm", function()
   eq(w2.markdown, w.markdown)
 end)
 
+-- A build takes a while and yields at every call, so a sheet drawn on the
+-- page while one runs must draw its own page, not the one being printed.
+test("sheets: a live sheet during a build draws its own page", "dm", function()
+  page(TAMSIN, RANGER)
+  H.pages["Party/Other"] = (RANGER:gsub("class: Ranger", "class: Wizard"))
+  gmbook.printing = "Party/Other"
+  local good, err = pcall(function()
+    has(texts(svgOf(sheets.draw().html)), "Tamsin Reed | LEVEL | 3 | Ranger", "the page open, not the one being printed")
+    has(texts(svgOf(sheets.printed.draw())), "Other | LEVEL | 3 | Wizard", "while print draws the page being printed")
+  end)
+  gmbook.printing = nil
+  if not good then error(err, 0) end
+end)
+
 test("sheets: a page that can't be drawn says why", "dm", function()
   local w = sheets.draw("Party/Nobody")
   has(w.html, "No page Party/Nobody.")
@@ -305,6 +415,60 @@ test("sheets: text too long for its box is fitted, never split mid-character", "
   eq(sheets.dropLast("a"), "")
 end)
 
+-- The text the drawing sets at x and y, and its size.
+local function drawnAt(svg, x, y)
+  local size, s = svg:match('<text x="' .. x .. '" y="' .. y .. '" font%-size="([%d.]+)"[^>]*>([^<]*)</text>')
+  return s, tonumber(size)
+end
+
+test("sheets: a value the page cuts short is given whole after it", "dm", function()
+  -- seven fields across the class line leave each too little room for
+  -- a subclass this long
+  config.set("gmSheets", { extras = { { key = "oath", label = "Oath" }, { key = "patron", label = "Patron" } } })
+  page(TAMSIN, (RANGER:gsub("subclass: Hunter", "subclass: School of Evocation / Champion\noath: Silence\npatron: The Warden")
+    :gsub("ac: 15", "ac: 12 (15 with mage armor)")
+    :gsub("hp: 28", "hp: 28 (35 with Aid, 40 with Heroes' Feast)")
+    :gsub("label: Once the guild outfits her\n  ac: 16", "label: Once the guild outfits her\n  ac: 16 (18 with a shield)")))
+  local w = sheets.draw()
+  local svg = svgOf(w.html)
+  has(texts(svg), "School of Evocation", "cut short on the page")
+  hasnt(texts(svg), "Champion")
+  has(w.markdown, "**Subclass.** School of Evocation / Champion.\n")
+  has(w.markdown, "**Armor Class.** 12 (15 with mage armor).\n")
+  has(w.markdown, "**Hit Points.** 28 (35 with Aid, 40 with Heroes' Feast).\n")
+  has(w.markdown, "**Once the guild outfits her: Armor Class.** 16 (18 with a shield).\n")
+  ok(w.markdown:find("**Subclass.**", 1, true) < w.markdown:find("## Class Features", 1, true),
+    "before the features, where the page leaves off")
+  -- the Armor Class fits its shield and the Hit Points their box, not over the next one
+  local ac, acSize = drawnAt(svg, "39", "215")
+  ok(ac and ac:find("…", 1, true), "the Armor Class is cut short: " .. tostring(ac))
+  ok(sheets.textWidth(ac, acSize, true) <= 58, "and fits the shield: " .. sheets.textWidth(ac, acSize, true))
+  local hp, hpSize = drawnAt(svg, "126", "214")
+  ok(hp and sheets.textWidth(hp, hpSize, true) <= 68, "the Hit Points fit before the Current box")
+  -- what fits is drawn as it was, and isn't repeated
+  page(TAMSIN, RANGER)
+  svg = svgOf(sheets.draw().html)
+  eq(drawnAt(svg, "39", "215"), "15")
+  eq(select(2, drawnAt(svg, "39", "215")), 20)
+  hasnt(sheets.draw().markdown, "**Armor Class.**")
+end)
+
+test("sheets: a path written for the adventure finds its page from the DM space", "dm", function()
+  local sample = (RANGER:gsub("type: pc\nplayer: Sam\n", "type: sample\n"))
+  H.pages["Adventure/Rules/Sample Characters/Tam"] = sample
+  local w = sheets.draw("Rules/Sample Characters/Tam")
+  hasnt(w.html, "No page")
+  has(texts(svgOf(w.html)), "Tam | LEVEL | 3 | Ranger")
+  -- a copy published to the players makes the path ambiguous: the adventure's own is drawn
+  H.pages["Player/Rules/Sample Characters/Tam"] = (sample:gsub("class: Ranger", "class: Copied"))
+  eq(sheets.find("Rules/Sample Characters/Tam"), "Adventure/Rules/Sample Characters/Tam")
+  hasnt(texts(svgOf(sheets.draw("Rules/Sample Characters/Tam").html)), "Copied")
+  eq(sheets.find("Player/Rules/Sample Characters/Tam"), "Player/Rules/Sample Characters/Tam", "a whole name wins")
+  eq(sheets.find("Rules/Sample Characters/Nobody"), nil)
+  has(sheets.draw("Rules/Sample Characters/Nobody").markdown, "No page Rules/Sample Characters/Nobody.")
+  has(sheets.printed.draw("Rules/Sample Characters/Tam"), "<svg ", "and in print")
+end)
+
 test("sheets: a warlock's Pact Magic and a long list are drawn and counted", "dm", function()
   local gear = {}
   for i = 1, 40 do gear[#gear + 1] = "Thing " .. i end
@@ -316,6 +480,122 @@ test("sheets: a warlock's Pact Magic and a long list are drawn and counted", "dm
   has(t, "more, after this page", "the gear that didn't fit is counted")
   has(w.markdown, "Thing 40.", "and all of it is in the text")
   has(w.markdown, "**Pact Magic.** 2 slots of level 3, back after a Short or Long Rest.")
+end)
+
+-- A character whose every name and text is HTML, as a player could write
+-- one on D&D Beyond: a form to catch a password, an image, a redirect, and
+-- an entity that a careless unescape would turn into a tag.
+local FORM = "<form action=x><input name=pw></form>"
+local IMG = "<img src=x>"
+local META = '<meta http-equiv="refresh" content="0;url=https://x">'
+local ENTITY = "&lt;b&gt;"
+local HOSTILE = [==[---
+level: 3
+class: 'FORM'
+subclass: 'IMG'
+species: 'META'
+background: 'ENTITY'
+player: 'IMG'
+oath: 'FORM'
+str: 10
+dex: 10
+con: 10
+int: 16
+wis: 10
+cha: 10
+attacks:
+  - {name: 'IMG', hit: 'FORM FORM', damage: 'ENTITY ENTITY ENTITY', notes: 'META META'}
+resources:
+  - {name: 'IMG', uses: 2, reset: 'META'}
+languages: ['META', 'META', 'META', 'META', 'META', 'META']
+spellcasting: int
+slots: [2]
+cantrips: ['IMG']
+spells: {1: ['FORM', {name: 'IMG', time: 'ENTITY', range: 'FORM', material: 'IMG', notes: 'META'}]}
+features:
+  - name: 'FORM'
+    text: |
+      Hidden. IMG and ENTITY.
+      META
+      - a list item <b>bold</b>
+traits:
+  - name: 'ENTITY'
+feats:
+  - name: 'IMG'
+equipment: ['IMG', 'ENTITY']
+attuned: ['FORM']
+kit: {label: 'IMG', equipment: ['META']}
+---
+]==]
+
+test("sheets: text from the page never reaches the browser as HTML", "dm", function()
+  config.set("gmSheets", { extras = { { key = "oath", label = "Oath" } } })
+  local text = HOSTILE
+  for word, value in pairs({ FORM = FORM, IMG = IMG, META = META, ENTITY = ENTITY }) do
+    text = (text:gsub(word, function() return value end))
+  end
+  local name = "Party/" .. IMG .. " Reed"
+  page(name, text)
+  local w = sheets.draw(name)
+  ok(svgOf(w.html), "drawn")
+  local faces = { html = w.html, markdown = w.markdown, printed = sheets.printed.draw(name) }
+  for which, face in pairs(faces) do
+    for _, tag in ipairs({ "<form", "<input", "<img", "<meta", "<b>" }) do
+      hasnt(face, tag, which)
+    end
+  end
+  -- what the page says is all there, as text
+  local md = w.markdown
+  has(md, "## Class Features\n\n### &lt;form action=x&gt;&lt;input name=pw&gt;&lt;/form&gt;\n")
+  has(md, "### &amp;lt;b&amp;gt;\n", "an entity shows as itself")
+  has(md, "**Level 1 (2 slots).** &lt;form action=x&gt;")
+  has(md, "&lt;img src=x&gt; (&amp;lt;b&amp;gt;, &lt;form")
+  has(md, "**Cantrips.** &lt;img src=x&gt;.")
+  has(md, "## Equipment\n\n&lt;img src=x&gt;; &amp;lt;b&amp;gt;.")
+  has(md, "**Attuned.** &lt;form action=x&gt;")
+  has(md, "**&lt;img src=x&gt;.** &lt;meta http-equiv=")
+  has(md, "## Attacks\n\n***&lt;img src=x&gt;.*** &lt;form action=x&gt;")
+  has(md, "## Resources\n\n***&lt;img src=x&gt;.*** 2; back after &lt;meta")
+  has(md, "**Languages.** &lt;meta http-equiv=")
+  -- and the library's own Markdown still works round it
+  has(md, "***Hidden.*** &lt;img src=x&gt; and &amp;lt;b&amp;gt;.\n\n&lt;meta")
+  has(md, "\n- a list item &lt;b&gt;bold&lt;/b&gt;\n")
+  -- the drawing sets it all as text too, the name included
+  local t = texts(svgOf(w.html))
+  has(t, "&lt;img src=x&gt; Reed")
+  has(t, "&lt;form action=x&gt;")
+  has(svgOf(w.html), 'aria-label="Character sheet: &lt;img src=x&gt; Reed"')
+  -- a message that names a page is text as well
+  hasnt(sheets.draw("Party/" .. IMG).markdown, "<img")
+end)
+
+test("sheets: a value on lines of its own is drawn on one, and the drawing stays one block", "dm", function()
+  page(TAMSIN, (RANGER:gsub("class: Ranger", 'class: "Ranger\\n\\nof the High Country"')))
+  local w = sheets.draw()
+  has(texts(svgOf(w.html)), "Ranger of the High Country")
+  hasnt(w.markdown:match("<div.-</div>"), "\n\n", "a blank line would end the HTML block the drawing prints in")
+end)
+
+-- Measured at 375px in SilverBullet 2.11's widget frame: the sheet ran 12px
+-- past its 333px frame, since its padding came on top of max-width: 100%
+-- (SilverBullet sets border-box only on its standalone pages), and it drew
+-- at half size, its labels at 3px. With these rules it draws at its own 672px
+-- in a frame that scrolls, and a desktop's is as it was.
+test("sheets: on a phone the sheet keeps its size and scrolls, and its padding counts in its width", "dm", function()
+  local style = SRC["GM Sheets"]:match("```space%-style\n(.-)\n```")
+  local svg = style:match("\n%.gmsheets%-page svg%s*(%b{})")
+  ok(svg, "a rule for the drawing")
+  has(svg, "box-sizing: border-box;")
+  has(svg, "width: auto;", "its width the one it is drawn at, not the attribute taken as the whole box")
+  has(svg, "max-width: 100%;")
+  has(svg, "height: auto;")
+  has(style:match("\n%.gmsheets%-page%s*(%b{})") or "", "overflow-x: auto;", "the frame the drawing scrolls in")
+  local phone = style:match("@media screen and %(max%-width: 600px%)%s*(%b{})")
+  ok(phone, "a rule for a phone, for the screen alone, so printing is as it was")
+  has(phone, ".gmsheets-page svg")
+  has(phone, "max-width: none;")
+  page(TAMSIN, RANGER)
+  has(sheets.draw().html, '<div class="gmsheets-page"><svg ', "and the drawing is in that frame")
 end)
 
 test("sheets: the widget's faces are text, so two on one page both draw", "dm", function()
@@ -401,6 +681,38 @@ test("sheets: a sample character builds into both editions with its sheet", "adv
   end
   has(H.pages["Build/Book DM"], "**Her secret.** She owes the guild.")
   hasnt(H.pages["Build/Book Player"], "She owes the guild.")
+end)
+
+test("sheets: a sheet that can't be drawn keeps the book back and names its page", "adventure", function()
+  -- one sheet of a page that isn't there, one of a page whose frontmatter
+  -- doesn't parse; neither page is in the book itself
+  H.pages["Rules/Sample Characters"] = "---\nbook_order: 45\n---\n\n# Sample Characters\n\n" ..
+    '${sheets.draw("Rules/Sample Characters/Nobody")}\n'
+  H.pages["Rules/Sample Characters/Broken"] = "---\nstr: [10\n---\n\n# Broken\n"
+  H.pages["Rules/Sample Heroes"] = "---\nbook_order: 46\n---\n\n# Sample Heroes\n\n" ..
+    '${sheets.draw("Rules/Sample Characters/Broken")}\n'
+  local before = { dm = H.pages["Build/Book DM"], player = H.pages["Build/Book Player"] }
+  H.current = "index"
+  local report = gmbook.build({ "dm", "player" })
+  eq(#report.written, 0, "nothing written")
+  eq(#report.kept, 2, "both editions kept back")
+  eq(list(report.live), "Rules/Sample Characters | Rules/Sample Heroes", "and the pages named")
+  local said = lastNotification().message
+  has(said, "Rules/Sample Characters, ${sheets.draw(\"Rules/Sample Characters/Nobody\")}")
+  has(said, "Rules/Sample Heroes, ${sheets.draw(\"Rules/Sample Characters/Broken\")}")
+  has(said, "doesn't parse as YAML")
+  hasnt(said, "Baked Sections", "a sheet that can't be drawn is no query to bake")
+  eq(H.pages["Build/Book DM"], before.dm, "the edition on the page is left as it was")
+  eq(H.pages["Build/Book Player"], before.player)
+  -- the printer prints nothing but says why, and the wiki still says so too
+  local good, why = pcall(sheets.printed.draw, "Rules/Sample Characters/Nobody")
+  ok(not good, "the printer draws nothing")
+  has(why, "Nobody")
+  good, why = pcall(sheets.printed.draw, "Rules/Sample Characters/Broken")
+  ok(not good)
+  has(why, "doesn't parse as YAML")
+  has(sheets.draw("Rules/Sample Characters/Nobody").markdown, "No page Rules/Sample Characters/Nobody.")
+  has(sheets.draw("Rules/Sample Characters/Broken").markdown, "doesn't parse as YAML")
 end)
 
 test("sheets: a wizard's spellbook prints beside the spells prepared", "dm", function()

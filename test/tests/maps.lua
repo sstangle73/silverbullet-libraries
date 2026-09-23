@@ -277,8 +277,11 @@ test("maps: a page it can't find says so on the page, and prints nothing", "adve
   has(w.html, "No map page for World/Maps/Nowhere")
   has(w.markdown, "No map page for World/Maps/Nowhere")
   -- in print a message would go into the book as if it were the map, so
-  -- it gives nothing, and GM Book keeps the edition back and names the page
-  eq(maps.printed.draw("World/Maps/Nowhere"), nil)
+  -- it prints nothing but raises why, and GM Book keeps the edition back
+  -- and names the page with that reason
+  local good, why = pcall(maps.printed.draw, "World/Maps/Nowhere")
+  ok(not good, "nothing printed")
+  has(why, "No map to draw from World/Maps/Nowhere")
 end)
 
 test("maps: print is the size the adventure is written for", "adventure", function()

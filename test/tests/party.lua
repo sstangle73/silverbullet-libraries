@@ -155,12 +155,33 @@ test("party: character pages count, at their levels, with who is away", "dm", fu
   eq(p.members[3].away, true)
 end)
 
+-- fn run with os.time, which GM Party reads to keep the party two seconds,
+-- giving what the clock says: the test sets clock.now, and the wall clock
+-- never decides what it sees. The real one is put back however fn ends.
+local function withClock(fn)
+  local real = os.time
+  local clock = { now = 1000000 }
+  os.time = function() return clock.now end
+  local good, err = pcall(fn, clock)
+  os.time = real
+  if not good then error(err, 0) end
+end
+
 test("party: the party is read again after a refresh, not before", "dm", function()
-  eq(party.get().size, 5)
-  H.pages["Party/Ann"] = pcPage(3)
-  eq(party.get().size, 5, "cached")
-  party.refresh()
-  eq(party.get().size, 1)
+  withClock(function(clock)
+    party.refresh()
+    eq(party.get().size, 5)
+    H.pages["Party/Ann"] = pcPage(3)
+    clock.now = clock.now + 1
+    eq(party.get().size, 5, "kept for two seconds")
+    party.refresh()
+    eq(party.get().size, 1, "read again after a refresh")
+    H.pages["Party/Ben"] = pcPage(3)
+    clock.now = clock.now + 1
+    eq(party.get().size, 1, "and kept again")
+    clock.now = clock.now + 1
+    eq(party.get().size, 2, "until two seconds have passed")
+  end)
 end)
 
 test("party: settings change the adventure's party", "adventure", function()
@@ -362,6 +383,54 @@ test("party: a fight on the page is for who is here, at their levels", "dm", fun
   has(t, "●●● High")
 end)
 
+-- A fight's table of sizes on the page, a row at a time: the size, with
+-- the ▶ on the party's own, and the difficulty's word.
+local function sizeTable(w)
+  local out = {}
+  for row in w.html:gmatch("<tr[^>]*>(.-)</tr>") do
+    local first = row:match("^<td[^>]*>(.-)</td>")
+    if first then
+      out[#out + 1] = first .. " " .. (row:match('gmparty%-diff%-%a+">[^<]- ([%a ]+)</span>') or "?")
+    end
+  end
+  return table.concat(out, " | ")
+end
+
+-- Characters at these levels, one page each, all here tonight.
+local function levelsParty(levels)
+  useParty(0)
+  for i, l in ipairs(levels) do H.pages[string.format("Party/PC %02d", i)] = pcPage(l) end
+  party.refresh()
+end
+
+test("party: at mixed levels the table of sizes agrees with the fight", "dm", function()
+  -- levels 3, 3, 2 and 2: 900 XP is High against their own budgets, so the
+  -- ▶ row, which is their fight, says High too, and the other sizes spend
+  -- what they spend each, on average (125, 187.5 and 300 XP)
+  levelsParty({ 3, 3, 2, 2 })
+  local w = party.fight(BARROW)
+  has(live(w), "●●● High  Low 500")
+  eq(sizeTable(w), "3 High | ▶ 4 High | 5 High | 6 High | 7 High")
+  -- at one level the table is rated at that level, as it always was
+  useParty(4, 2)
+  eq(sizeTable(party.fight(BARROW)), "3 Above High | ▶ 4 Above High | 5 Above High | 6 Above High | 7 Above High")
+  useParty(5, 3)
+  eq(sizeTable(party.fight(BARROW)), "3 High | 4 Moderate | ▶ 5 Moderate | 6 Moderate | 7 Moderate")
+end)
+
+test("party: a CR is held to the party's level, not its highest", "dm", function()
+  local ford = { "The ford", level = 2, { 1, "wight", cr = 3 }, { 2, "zombie", cr = "1/4" } }
+  -- levels 1, 1, 1 and 5 are a level 2 party: a CR 3 wight can take one out
+  levelsParty({ 1, 1, 1, 5 })
+  has(live(party.fight(ford)), "The wight's CR 3 is above the party's level")
+  eq(party.level(), 2)
+  -- levels 2 and 3 round to 3, and a CR 3 wight is at it, not above it
+  levelsParty({ 2, 3 })
+  hasnt(live(party.fight(ford)), "CR 3 is above")
+  eq(list(party.warnings(ford, party.roster(ford, 4), { 5, 1, 1, 1 }, "high")),
+    "The wight's CR 3 is above the party's level: one of its actions can take a character out.")
+end)
+
 test("party: a fight in Adventure on its own shows the adventure's party", "adventure", function()
   local t = live(party.fight(BARROW))
   has(t, "The adventure's party, five at level 3: a wight, a warhorse skeleton and six skeletons, 1,100 XP.")
@@ -379,6 +448,22 @@ test("party: the SRD's cautions show on the page", "dm", function()
   has(t, "Four stat blocks to run at once.")
   t = live(party.fight { level = 1, { 1, "bugbear warrior", cr = 1 } })
   has(t, "A lone creature")
+end)
+
+-- Measured at 375px in SilverBullet 2.11's widget frame, whose table cells
+-- never wrap: a fight with four creatures whose number changes draws a table
+-- 500 to 760px wide, depending on the font, whose XP and Difficulty columns
+-- ran past the fight's box. It scrolls in a frame of its own inside the box.
+test("party: a fight's table scrolls in its own frame, never past the fight's box", "dm", function()
+  local w = party.fight { "The gatehouse", level = 5,
+    { 1, "guard sergeant", cr = 2 }, { 4, "guard", cr = "1/2", step = 2, min = 2 },
+    { 2, "hound", cr = "1/4", step = 1, max = 4 }, { 1, "guard lieutenant", cr = 3, from = 6 },
+    { 1, "wolf", plural = "wolves", cr = "1/4", upto = 4 } }
+  has(w.html, '<div class="gmparty-table"><table><thead><tr><th>Characters</th><th>Guards</th>')
+  local style = SRC["GM Party"]:match("```space%-style\n(.-)\n```")
+  local frame = style:match("\n%.gmparty%-table%s*(%b{})")
+  ok(frame, "a rule for the table's frame")
+  has(frame, "overflow-x: auto;")
 end)
 
 test("party: fight rules read as sentences", "adventure", function()
@@ -406,6 +491,18 @@ test("party: fight rules read as sentences", "adventure", function()
   has(party.fightPrint(spec), "| Characters | Guards | Hounds | Guard lieutenants | Wolves | XP | Difficulty |")
   eq(party.adjustments { level = 5, { 1, "shade", cr = 1, step = -1 } },
     "For each character fewer than five, add a shade; for each one more, remove one.")
+end)
+
+test("party: a fight written for a size outside the table prints that size's row", "adventure", function()
+  local big = { "The mill race", level = 3, size = 8, { 8, "skeleton", cr = "1/4", step = 1 } }
+  local printed = party.fightPrint(big)
+  has(printed, "a low-difficulty encounter for eight level 3 characters (400 XP).")
+  has(printed, "| 7 | 7 | 350 | Low |")
+  has(printed, "| 8 | 8 | 400 | Low |", "the size it is written for")
+  local small = { "The mill race", level = 3, size = 2, { 2, "skeleton", cr = "1/4", step = 1 } }
+  local rows = {}
+  for size in party.fightPrint(small):gmatch("\n| (%d+) |") do rows[#rows + 1] = size end
+  eq(table.concat(rows, " "), "2 3 4 5 6 7")
 end)
 
 test("party: fight mistakes say what to write", "adventure", function()

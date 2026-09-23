@@ -128,6 +128,30 @@ test("levels: The Party's summary says how far DCs rise", "dm", function()
   has(party.summary().markdown, "At level 9, a DC from `party.dc` is two more than written.")
 end)
 
+-- party.printed once fell through to the live party for these, so a book
+-- built in a space whose party was at level 9 printed 9 and 2 beside the
+-- five and the DC 15 it printed for the adventure's.
+test("levels: print gives the adventure's party, not the one playing tonight", "dm", function()
+  useParty(4, 9)
+  eq(party.level(), 9)
+  eq(party.dcRise(), 2)
+  eq(party.printed.level(), nil, "a book is played at every level")
+  eq(party.printed.dcRise(), 0, "its DCs print as written")
+  eq(party.printed.dcRise(9), 2, "and the rule at a level asked for still holds")
+  eq(party.printed.dc(15), "15")
+  local p = party.printed.get()
+  eq(p.size, 5)
+  eq(#p.here, 5)
+  eq(p.source, "book")
+  eq(party.printed.summary(), "**Five characters,** the party the adventure is written for.")
+  -- as GM Book prints a page: what has no book value is left for it to name
+  local text, left = gmbook.print("Rise ${party.dcRise()}, for ${party.n()}.\n\n${party.summary()}\n\n" ..
+    "At level ${party.level()}.\n", "Adventure/Campaign/Premise")
+  has(text, "Rise 0, for five.\n\n**Five characters,** the party the adventure is written for.\n\n")
+  hasnt(text, "PC 01")
+  eq(list(left), "party.level()")
+end)
+
 ------------------------------------------------------------------ fights in versions
 
 test("levels: a fight in versions prints the rule, then each version", "adventure", function()

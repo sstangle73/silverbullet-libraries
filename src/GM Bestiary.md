@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Bestiary"
 description: "Creature pages that point at official stat blocks: the reference links to a compendium on the page, and cites the book and its entry in print. Wires those pages to GM Party's fights."
 author: "Steven Storie"
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # GM Bestiary
@@ -34,8 +34,8 @@ A page with `type: monster` describes one creature. What it is and how it behave
 | `statblock` | The published stat block to run it with. Leave it out for a creature with no official match |
 | `entry` | The entry in the book that holds that stat block, where the book files it under another name: a vine blight is under *Blights*, a raven under *Animals* |
 | `source` | The book it is in. The settings give the one to assume |
-| `cr` | Its Challenge Rating, which a fight that uses it is checked against. A creature with a stat block for each of several levels lists them all: `cr: ["3", "5"]` |
-| `ddb` | A link to it, for running from a screen |
+| `cr` | Its Challenge Rating, which a fight that uses it is checked against, by value: `0.125` and `"1/8"` are the same CR. A creature with a stat block for each of several levels lists them all: `cr: ["3", "5"]` |
+| `ddb` | A link to it, for running from a screen: a web address, or its D&D Beyond id alone, `5195252`, which links to its page there. Anything else isn't linked, and the page says so |
 
 Then, wherever the reference belongs on the page:
 
@@ -43,7 +43,7 @@ Then, wherever the reference belongs on the page:
 
     ${bestiary.ref()}
 
-`bestiary.ref()` reads the page it is on, and the page being printed during a build. `bestiary.ref("World/Monsters/Strangler")` reads another, named as a link in the adventure would write it: a path written for an adventure folder also finds the page in a space that holds that folder.
+`bestiary.ref()` reads the page it is on, and in print the page being printed. On the wiki it reads its own page even while a build is running. `bestiary.ref("World/Monsters/Strangler")` reads another, named as a link in the adventure would write it: a path written for an adventure folder also finds the page in a space that holds that folder.
 
 **A creature with no official match** carries no `statblock`, and its reference reads *Original to this book.* Its stat block belongs on its own page.
 
@@ -82,6 +82,10 @@ A fight that gives it any of those is fine. One that gives it another is flagged
 ## How it prints
 
 The reference on the page is a widget: HTML with the compendium link, and a Markdown face with the same link, so a table, Copy, Baked Sections and GM Kit's publishing all keep it. GM Book 1.6.3 or later evaluates each expression with `bestiary` standing for `bestiary.printed`, which gives the citation without the URL. This library puts `bestiary.printed` in `gmbook.printers`, where GM Book looks for it, and sets `party.creatureRef`, where GM Party looks.
+
+## Changes in 1.2
+
+**CRs are compared by value**, so a page's `cr: 0.125` agrees with a fight's `"1/8"`, and a warning writes a CR as the rules do. A `ddb` that is D&D Beyond's number for a monster links to its page there; anything else that isn't a web address gets no link, and a ⚠ on the page says so. A creature's reference drawn on the page while the book builds is drawn for that page, not the one being printed.
 
 ## Changes in 1.1
 
@@ -166,11 +170,31 @@ function bestiary.find(ref)
   return all.root ~= "" and all.byName[all.root .. ref] or nil
 end
 
+-- The compendium link a page's ddb gives: a web address as it stands, and
+-- a bare number, the shape a character page's ddb takes, as the creature's
+-- page on D&D Beyond. Anything else is no link, and the second value is
+-- what was there, for the page to flag.
+function bestiary.link(ddb)
+  if ddb == nil or ddb == "" then return nil end
+  if type(ddb) == "number" then
+    if ddb >= 1 and ddb == math.floor(ddb) then
+      return "https://www.dndbeyond.com/monsters/" .. string.format("%d", ddb)
+    end
+    return nil, tostring(ddb)
+  end
+  local s = tostring(ddb)
+  local trimmed = s:match("^%s*(.-)%s*$")
+  if trimmed:match("^%d+$") then return "https://www.dndbeyond.com/monsters/" .. trimmed end
+  if trimmed:lower():match("^https?://%S+$") then return trimmed end
+  return nil, s
+end
+
 -- What a creature page says: its page, its title, and the stat block to run
 -- it with. Nil for a page that isn't there or isn't a creature.
 function bestiary.creature(ref)
   local p = bestiary.find(ref)
   if not p then return nil end
+  local url, unlinked = bestiary.link(p.ddb)
   return {
     page = p.name,
     title = p.name:match("([^/]+)$") or p.name,
@@ -178,7 +202,8 @@ function bestiary.creature(ref)
     entry = p.entry,
     source = p.source or bestiary.setting("source"),
     cr = p.cr,
-    url = p.ddb,
+    url = url,
+    unlinked = unlinked,
   }
 end
 
@@ -228,16 +253,27 @@ local function forms(c)
   else
     said[1] = dom.span { __rawText = tail }
   end
-  local html = dom.span { class = "gmbestiary-ref", name, dom.span(said) }.outerHTML
+  local parts = { class = "gmbestiary-ref", name, dom.span(said) }
+  -- a ddb that is no link, flagged on the page alone: the Markdown face
+  -- goes to tables and the players' copies
+  if c.unlinked then
+    parts[#parts + 1] = dom.span { class = "gmbestiary-unlinked",
+      __rawText = " ⚠ Not linked: ddb is " .. c.unlinked .. ", not a web address or a D&D Beyond id." }
+  end
+  local html = dom.span(parts).outerHTML
   local markdown = c.url and ("[" .. c.statblock .. "](" .. c.url .. ")" .. tail)
     or ("**" .. c.statblock .. "**" .. tail)
   return html, markdown, c.statblock .. tail
 end
 
--- The page a reference reads with no page of its own: the one being printed
--- during a build or for the players, or the one open.
-function bestiary.here()
-  return (gmbook and gmbook.printing) or (gm and gm.printing) or editor.getCurrentPage()
+-- The page a reference reads with no page of its own: in print, the one a
+-- build is printing; otherwise the one being printed for the players, or
+-- the one open. A build takes a while and yields at every call, so a
+-- reference drawn on the page meanwhile would otherwise read the page being
+-- printed as its own: only the printer passes printing.
+function bestiary.here(printing)
+  if printing and gmbook and gmbook.printing then return gmbook.printing end
+  return (gm and gm.printing) or editor.getCurrentPage()
 end
 
 local function missing(ref)
@@ -265,7 +301,7 @@ end
 -- it in gmbook.printers.
 bestiary.printed = setmetatable({
   ref = function(ref)
-    local c = bestiary.creature(ref or bestiary.here())
+    local c = bestiary.creature(ref or bestiary.here(true))
     if not c then return nil end
     return (select(3, forms(c)))
   end,
@@ -277,18 +313,41 @@ gmbook.printers.bestiary = bestiary.printed
 
 ------------------------------------------------------------------ in a fight
 
+-- Whether a fight's CR and a page's are the same: by what they are worth,
+-- as GM Party reads a CR, so 0.125 and "1/8" agree; as written where GM
+-- Party isn't loaded or can't read one of them.
+local function sameCR(a, b)
+  if party and party.xp then
+    local x, y = party.xp(a), party.xp(b)
+    if x and y then return x == y end
+  end
+  local function norm(v) return (tostring(v):gsub("%s", "")) end
+  return norm(a) == norm(b)
+end
+
+-- A CR as the SRD writes it: 0.125 as "1/8", and a whole number with no
+-- decimals, however the page's YAML gave it.
+local function crText(v)
+  if type(v) == "number" then
+    if v == 0.125 then return "1/8" end
+    if v == 0.25 then return "1/4" end
+    if v == 0.5 then return "1/2" end
+    if v == math.floor(v) then return string.format("%d", v) end
+  end
+  return tostring(v)
+end
+
 -- A CR a fight gives a creature that its page disagrees with. A fight
 -- writes the CR it spends XP on, and the page writes the stat block's, so
 -- the two drifting apart is worth catching. A page with a stat block for
 -- each of several levels lists every CR it runs at.
 local function crWarning(c, called, cr)
   if cr == nil or c.cr == nil then return nil end
-  local function norm(v) return (tostring(v):gsub("%s", "")) end
   local listed = type(c.cr) == "table" and c.cr or { c.cr }
   local named = {}
   for _, v in ipairs(listed) do
-    if norm(v) == norm(cr) then return nil end
-    named[#named + 1] = tostring(v)
+    if sameCR(v, cr) then return nil end
+    named[#named + 1] = crText(v)
   end
   local list = ""
   for i, v in ipairs(named) do
@@ -296,7 +355,7 @@ local function crWarning(c, called, cr)
     elseif i == #named then list = list .. " or " .. v
     else list = list .. ", " .. v end
   end
-  return "The " .. called .. " is CR " .. tostring(cr) .. " here, and CR " ..
+  return "The " .. called .. " is CR " .. crText(cr) .. " here, and CR " ..
     list .. " on " .. c.title .. "."
 end
 
@@ -317,6 +376,11 @@ end
 }
 
 .gmbestiary-missing {
+  color: var(--subtle-color);
+}
+
+.gmbestiary-unlinked {
+  font-style: italic;
   color: var(--subtle-color);
 }
 
