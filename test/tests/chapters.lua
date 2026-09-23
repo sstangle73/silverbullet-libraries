@@ -132,6 +132,37 @@ test("chapters: other field names and types", "dm", function()
   eq(chapterNav.markdown("Saga"), nil)
 end)
 
+-- space.pageExists is link resolution: a page whose path only ends in the
+-- name counts. A link in a widget opens the name as written, so a middle link
+-- to a page that isn't there opens an empty one. Book, with its contents
+-- page gone and a reading list called Books elsewhere in the space.
+test("chapters: the contents link goes only to a page of exactly that name", "book", function()
+  local page = "Books/01 The Tin Crown/Chapter 01"
+  local next = " · [[Books/01 The Tin Crown/Chapter 02|Chapter 2 →]]"
+  H.pages["Books/01 The Tin Crown/Contents"] = nil
+  H.pages["Reading Lists/Books"] = "# Books to read\n"
+  eq(chapterNav.markdown(page), "The Tin Crown (1 of 3)" .. next, "a page ending in the top folder's name")
+  H.pages["Archive/Books/01 The Tin Crown"] = "# The old folder page\n"
+  H.pages["Archive/Books/01 The Tin Crown/Contents"] = "# The old contents\n"
+  eq(chapterNav.markdown(page), "The Tin Crown (1 of 3)" .. next, "pages ending in the folder's and its contents' names")
+  -- Each of the three, once it is there, from the top of the tree down.
+  H.pages["Books"] = "# Books\n"
+  eq(chapterNav.markdown(page), "[[Books|The Tin Crown]] (1 of 3)" .. next)
+  H.pages["Books/01 The Tin Crown"] = "# The Tin Crown\n"
+  eq(chapterNav.markdown(page), "[[Books/01 The Tin Crown|The Tin Crown]] (1 of 3)" .. next)
+  H.pages["Books/01 The Tin Crown/Contents"] = "# Contents\n"
+  eq(chapterNav.markdown(page), "[[Books/01 The Tin Crown/Contents|The Tin Crown]] (1 of 3)" .. next)
+end)
+
+-- Offline, say: the page may be there, so the bar links nothing rather than
+-- a page further up the tree, and keeps its other links.
+test("chapters: a contents page that can't be checked leaves the title unlinked", "book", function()
+  H.failMeta = { ["Books/01 The Tin Crown/Contents"] = "Failed to fetch" }
+  eq(chapterNav.markdown("Books/01 The Tin Crown/Chapter 02"),
+     "[[Books/01 The Tin Crown/Chapter 01|← Chapter 1]] · The Tin Crown (2 of 3) · " ..
+     "[[Books/01 The Tin Crown/Chapter 03|Chapter 3 →]]")
+end)
+
 test("chapters: a failure hides the bar instead of breaking the page", "dm", function()
   reset("dm")
   H.current = "Book/Books/01 The Tin Crown/Chapter 02"
@@ -139,7 +170,7 @@ test("chapters: a failure hides the bar instead of breaking the page", "dm", fun
   index.pages = function() error("index gone") end
   local good, err = pcall(function()
     eq(H.views["chapterNavTop"].content(), nil)
-    has(H.printed[1], "index gone")
+    has(takePrinted()[1], "index gone")
   end)
   index.pages = original
   if not good then error(err, 0) end

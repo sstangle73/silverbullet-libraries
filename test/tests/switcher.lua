@@ -317,7 +317,7 @@ test("switcher: a failure hides the strip instead of breaking the page", "dm", f
   system.getBaseURI = function() error("offline") end
   local good, err = pcall(function()
     eq(H.views["spaceSwitcher"].content(), nil)
-    has(H.printed[1], "offline")
+    has(takePrinted()[1], "offline")
   end)
   system.getBaseURI = original
   if not good then error(err, 0) end
@@ -371,4 +371,80 @@ test("switcher: a space without an icon or a name still draws", "dm", function()
   local html = spaceSwitcher.html("index")
   has(html, '<span>?</span>')
   has(html, '<a class="space-switcher-tab" data-space="Two" href="https://wiki.example.org/two/" title="Go to the Two space"><span>Two</span></a>')
+end)
+
+------------------------------------------------------------------ Installing
+-- The repository page, and Space Switcher's own page, on installing the suite
+-- and keeping it up to date. The repository page's tests could as well sit in
+-- tests/libraries.lua, beside the one that it lists every library.
+
+local function trim(s) return (s:match("^%s*(.-)%s*$")) end
+
+-- Library: Install takes one library's address; Library: Add Repository
+-- takes this page's (plugs/configuration-manager at 2.11.0).
+test("repository: its install steps are SilverBullet 2.11's", "dm", function()
+  has(REPOSITORY, "`Library: Add Repository`")
+  has(REPOSITORY, "https://github.com/sstangle73/silverbullet-libraries/blob/main/Repositories/storie.md")
+  has(REPOSITORY, "SilverBullet 2.11")
+  hasnt(REPOSITORY, "Use the `Library: Install` command with the URL to this page")
+end)
+
+-- Every entry has what Library: Add Repository and the Libraries panel read.
+test("repository: each entry in its Contents has a name, uri, website and description", "dm", function()
+  local block = assert(REPOSITORY:match("```#meta/library/remote\n(.-)\n```"), "no #meta/library/remote block")
+  local n = 0
+  for entry in (block .. "\n---\n"):gmatch("(.-)\n%-%-%-\n") do
+    local fields = {}
+    for line in entry:gmatch("[^\n]+") do
+      local key, value = line:match("^([%w_]+):%s*(.-)%s*$")
+      ok(key, "not a field: " .. line)
+      fields[key] = value
+    end
+    for _, key in ipairs({ "name", "uri", "website", "description" }) do
+      ok(fields[key] and fields[key] ~= "", (fields.name or "an entry") .. " has no " .. key)
+    end
+    n = n + 1
+  end
+  local libs = 0
+  for _ in pairs(SRC) do libs = libs + 1 end
+  eq(n, libs, "entries")
+end)
+
+-- The page's table, held to where the test campaign installs each library.
+test("repository: a table puts each library in its space, as the test campaign does", "dm", function()
+  local section = assert(REPOSITORY:match("\n## Where each library goes\n(.-)\n## "), "no Where each library goes section")
+  local rows = {}
+  for first, second in section:gmatch("\n|([^|\n]+)|([^|\n]+)|") do
+    for lib in first:gmatch("[^,]+") do rows[trim(lib)] = trim(second) end
+  end
+  local folders = {}
+  for folder, libs in pairs(INSTALL) do
+    for _, lib in ipairs(libs) do
+      folders[lib] = folders[lib] or {}
+      table.insert(folders[lib], folder)
+    end
+  end
+  for lib in pairs(SRC) do
+    local row = rows[lib]
+    ok(row, lib .. " has no row")
+    local where = folders[lib]
+    if not where then
+      has(row, "Any space", lib)
+    elseif #where == 1 and where[1] == "Library/Storie/" then
+      has(row, "The DM space", lib)
+    elseif #where == 1 and where[1] == "Adventure/Library/Storie/" then
+      has(row, "The adventure space", lib)
+    end
+  end
+end)
+
+-- SilverBullet writes an installed or updated library to the name in its own
+-- frontmatter, at the root of the space the command runs in
+-- (plugs/configuration-manager/libraries.ts at 2.11.0), so Update All in a
+-- space that holds others writes their libraries again at its root.
+test("installing: each space's libraries are installed and updated from inside it", "dm", function()
+  for page, text in pairs({ ["Repositories/storie"] = REPOSITORY, ["Space Switcher"] = SRC["Space Switcher"] }) do
+    has(text, "`Library: Update All`", page)
+    has(text, "from inside", page)
+  end
 end)

@@ -1,14 +1,34 @@
 ---
 tags: meta/repository
 name: Repository/Storie
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Storie Library Repository
 Custom SilverBullet libraries — task management, a set of tools for running tabletop RPG campaigns, a switcher for servers with several spaces, and chapter tools for a wiki about a book or a series.
 
+They are written for SilverBullet 2.11.
+
 ## Installation
-Use the `Library: Install` command with the URL to this page.
+In each space you install into:
+
+1. Run `Library: Add Repository`, give it this page's address, `https://github.com/sstangle73/silverbullet-libraries/blob/main/Repositories/storie.md`, and keep the page name it suggests, `Repositories/storie`.
+2. Run `Library: Install` for each library that space needs (see *Where each library goes*), with the library's own address: its `uri` under *Contents*. Once the repository is added, the Libraries panel (`Libraries: Manager`) also lists these under **Available**, each with an **Install** button.
+
+## Updating
+Install and update each library from inside the space it belongs to, and never run `Library: Update All` in a space that holds others as folders, such as a campaign's DM space. SilverBullet writes a library, installed or updated, to the name in its own frontmatter, `Library/Storie/…`, at the root of the space you run the command in, so Update All there writes each folder's libraries again at the root, where they run beside the folders' copies, and leaves those copies as they were. **Update** on a library the Libraries panel finds in one of those folders does the same. Update the DM space's own libraries one at a time, and the others from inside their own spaces.
+
+## Where each library goes
+The campaign libraries expect a DM space that holds the others as folders: the adventure (`Adventure/`, unless you tell GM Kit otherwise), your notes on it, the book it adapts, and the players' space. Each of those is a space of its own as well.
+
+| Library | Space |
+|---|---|
+| GM Kit, GM Beyond | The DM space, the one that holds the others |
+| GM Book, GM Party, GM Bestiary, GM Maps, GM Sheets | The adventure space |
+| Chapter Navigation | Each space with chapters or scenes to page through, such as the adventure's and the book's |
+| Appearances | The book's space, where its chapters name the people and places in them |
+| Space Switcher | Every space. One that holds others as folders runs their copies, and needs none of its own |
+| RecurringTasks | Any space; it has nothing to do with the others |
 
 ## Contents
 ```#meta/library/remote

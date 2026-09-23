@@ -319,6 +319,8 @@ def build(pages=None, shuffle=False):
     g.SHUFFLED = shuffle
     g.SRC = to_lua(L, src_pages())
     g.INSTALL = to_lua(L, install_map())
+    # the query rewrite, for a test that loads a library no space installs
+    g.transpile = transpile
     repository = TEST.parent / "Repositories" / "storie.md"
     g.REPOSITORY = read_page(repository) if repository.exists() else None
     # For the harness's own tests: the names of a set of pages' blocks in

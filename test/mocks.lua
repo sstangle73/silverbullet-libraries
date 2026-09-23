@@ -625,8 +625,8 @@ function reset(layout)
   -- space is still there in the next. A library that caches the pages it
   -- found (GM Party, GM Bestiary, GM Maps) would otherwise answer the DM
   -- space with what it read in Adventure, and the two builds would differ.
-  gm, gmbook, spaceSwitcher, chapterNav, kb, gmb, party, bestiary, maps, sheets =
-    nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
+  gm, gmbook, spaceSwitcher, chapterNav, kb, gmb, party, bestiary, maps, sheets, recurringTasks =
+    nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
   for name, text in pairs(FIXTURES[layout]) do H.pages[name] = text end
   clearPlay(layout, H.pages)
   -- Each block a chunk of its own, in SilverBullet's order (run.py), so a

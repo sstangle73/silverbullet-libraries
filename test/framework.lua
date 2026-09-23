@@ -101,8 +101,6 @@ end
 -- passes them over; each comes off this list once it takes what it printed.
 TEMPORARILY_ALLOWED_TO_PRINT = {
   ["kit: top widget listener"] = true,
-  ["chapters: a failure hides the bar instead of breaking the page"] = true,
-  ["switcher: a failure hides the strip instead of breaking the page"] = true,
 }
 
 -- TEMPORARY, until the branches are merged: tests in files the harness

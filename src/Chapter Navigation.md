@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/Chapter Navigation"
 description: "Previous, contents and next links above and below every chapter page, read from the index, with an optional link to a companion page for the same chapter."
 author: "Steven Storie"
-version: "1.1.0"
+version: "1.1.1"
 ---
 
 # Chapter Navigation
@@ -28,7 +28,7 @@ A chapter is a page with `type: chapter` and its number in `chapter`:
     chapter: 3
     ---
 
-The bar links the chapters in the same folder, in order of `chapter`. The middle link goes to a `Contents` page in that folder, failing that to the folder's own page, and failing that to the page named after the top folder. It reads `book_title`, or the folder's name without one. A chapter with a `chapter_label`, such as `Prologue`, shows that instead of "Chapter 3".
+The bar links the chapters in the same folder, in order of `chapter`. The middle link goes to a `Contents` page in that folder, failing that to the folder's own page, and failing that to the page named after the top folder: a page of exactly that name, not one elsewhere whose path ends the same way. With none of them the title shows without a link, and so it does while the page can't be checked, offline for instance. It reads `book_title`, or the folder's name without one. A chapter with a `chapter_label`, such as `Prologue`, shows that instead of "Chapter 3".
 
 ## Companion pages
 
@@ -80,6 +80,10 @@ All optional. Set them with `config.set("chapterNav", { ... })` in a `space-lua`
 | `contents` | `Contents` | The name of the contents page in a book's folder |
 | `perType` | none | Per type, any of the settings above but the first three |
 
+## Changes in 1.1.1
+
+The contents link goes only to a page of exactly that name: a page elsewhere whose name merely ends the same way no longer takes it over.
+
 ## Changes in 1.1
 
 Types of its own, as above. A folder's own page now stands in as its contents page, and a page without a title falls back to the folder's name rather than its whole path.
@@ -111,19 +115,33 @@ local function siblings(folder, kind, typeField, numberField)
   ]]
 end
 
+-- Whether there is a page of exactly this name: true, false, or nil when the
+-- check itself failed, offline say. space.pageExists can't say on its own: it
+-- answers the way a link resolves, so a page whose path only ends in the name
+-- counts, and a link in a widget opens the name as written, an empty page. Its
+-- no costs nothing, and its yes is checked against the page itself.
+local function exists(name)
+  if not space.pageExists(name) then return false end
+  local ok, err = pcall(space.getPageMeta, name)
+  if ok then return true end
+  local why = tostring(err)
+  if why:find("Not found", 1, true) or why:find("isn't readable", 1, true) then return false end
+  return nil
+end
+
 -- The contents page for a folder: one named inside it, the folder's own page,
--- or failing those the page at the top of the tree.
+-- or failing those the page at the top of the tree. A page that can't be
+-- checked might be the one, so it ends the search with no link rather than a
+-- link further up.
 local function contentsPage(folder, kind)
-  local contents = folder .. "/" .. setting("contents", "Contents", kind)
-  if space.pageExists(contents) then
-    return contents
-  end
-  if space.pageExists(folder) then
-    return folder
-  end
+  local candidates = { folder .. "/" .. setting("contents", "Contents", kind), folder }
   local top = string.match(folder, "^[^/]+")
-  if top and space.pageExists(top) then
-    return top
+  if top and top ~= folder then table.insert(candidates, top) end
+  for _, name in ipairs(candidates) do
+    local found = exists(name)
+    if found ~= false then
+      return found and name or nil
+    end
   end
 end
 

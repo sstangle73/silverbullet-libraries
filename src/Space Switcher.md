@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/Space Switcher"
 description: "A strip across the top of every page that names the space you are in and links to your other spaces, for a server with several SilverBullet spaces."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.0.1"
 ---
 
 # Space Switcher
@@ -18,7 +18,7 @@ Every tab writes its name out, so its colour is never the only cue. The default 
 
 ## Setting it up
 
-Install this page in every space, and list the spaces in a `space-lua` block on each space's `CONFIG` page:
+Install this page in every space, from inside that space (see *Spaces inside spaces*), and list the spaces in a `space-lua` block on each space's `CONFIG` page:
 
     config.set("spaceSwitcher", {
       spaces = {
@@ -51,7 +51,13 @@ From a space that holds others as folders, a page inside one of those folders op
 
 A space runs only the `space-lua` inside it, so every space needs this page and its own settings. A space that holds others as folders runs their copies as well. Its copies of this page all define the same view, so it still draws one strip. Its copies of the settings all run too, and the last to load wins, so give every space the same list.
 
+Install and update each space's copy from inside that space. SilverBullet writes a library, installed or updated, to the name in its own frontmatter, at the root of the space you run the command in, so `Library: Update All` in a space that holds others would write their copies again at its root, and leave theirs as they were.
+
 A space that keeps to itself has a shorter list on purpose. Start its block with `-- priority: 1`: blocks load highest priority first, and a block without one counts as 0, so in the space that holds it, the full list loads later and replaces the short one. Give every space its `color` in that case: a default colour goes by place in the list, and the short list's places differ.
+
+## Changes in 1.0.1
+
+These docs say to install and update the page from inside each space it serves, never with *Library: Update All* from a space that holds others.
 
 ## Implementation
 
