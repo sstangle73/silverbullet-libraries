@@ -62,7 +62,7 @@ Any kind of page can hold a sheet. What `type` a character's page has is the cam
 
 ## The keys
 
-**Who they are:** `level`, the total character level; `class` and `subclass`, where a multiclassed `class` names each class with its level, `Wizard 3 / Fighter 2`; `species`, `background`, and `creature_size`, since SilverBullet keeps `size` for a page's size in bytes; and `player`.
+**Who they are:** `level`, the total character level; `class` and `subclass`, where a multiclassed `class` names each class with its level, `Wizard 3 / Fighter 2`; `species`, `background`, and `creature_size`, since SilverBullet keeps `size` for a page's size in bytes; and `player`. `retired: true` marks a character who has left the party: the sheet says *Retired* beside the level, in words, and GM Party counts them nowhere.
 
 **Scores and proficiencies:**
 
@@ -73,6 +73,8 @@ Any kind of page can hold a sheet. What `type` a character's page has is the cam
 | `skills` | Proficient skills: `[athletics, sleight_of_hand]`. A skill can be named as the sheet names it, too, `Sleight of Hand` |
 | `expertise` | Skills with Expertise |
 | `advantage` | What they roll with Advantage, which the sheet marks: `initiative`, a skill, or a saving throw as `str_save` |
+| `disadvantage` | What they roll with Disadvantage, named the same way, such as the `stealth` of someone in heavy armor. Where a page gives both for the same roll, they cancel, as the rules say |
+| `jack_of_all_trades` | `true` or `false`, where the sheet should not work out Jack of All Trades for itself; see below |
 
 Each of these, and `armor_training`, can be a list or a line of names with commas between them: `saves: str, con`. A name the sheet doesn't know, such as `perceptoin`, would leave that skill off without a word, so the page says so over the sheet, naming it. That line is for you: it never prints.
 
@@ -83,9 +85,19 @@ Each of these, and `armor_training`, can be a list or a line of names with comma
 | `pb` | The Proficiency Bonus for `level` |
 | `initiative` | The Dexterity modifier |
 | `str_save` to `cha_save` | The ability's modifier, plus `pb` if proficient |
-| A skill's own name, `athletics` to `survival` | Its ability's modifier, plus `pb` if proficient, or twice `pb` with Expertise |
-| `passive_perception`, `passive_insight`, `passive_investigation` | 10 plus the skill, and 5 more with Advantage on it |
+| A skill's own name, `athletics` to `survival` | Its ability's modifier, plus `pb` if proficient, or twice `pb` with Expertise; with neither, half `pb`, rounded down, for a character with Jack of All Trades |
+| `passive_perception`, `passive_insight`, `passive_investigation` | 10 plus the skill, 5 more with Advantage on it, and 5 less with Disadvantage |
 | `spell_dc`, `spell_attack` | 8 plus `pb` plus the spellcasting ability's modifier; `pb` plus that modifier |
+
+**Jack of All Trades**, a bard's from level 2, adds half the Proficiency Bonus, rounded down, to an ability check that uses a skill the character isn't proficient in and that doesn't use the bonus already: so to each skill without proficiency or Expertise, and to a passive score built on one, but never to initiative or a saving throw. The sheet counts it for a character whose `class` has Bard at level 2 or more, `Bard` at `level: 2` or `Monk 2 / Bard 2`, or whose `features`, `traits` or `feats` name *Jack of All Trades*. `jack_of_all_trades: true` or `false` settles it for a character those don't describe, and a number the page writes is shown as written, as always.
+
+With it, Tamsin, at level 3 with a Proficiency Bonus of +2, would gain 1 on the skills she lacks: Arcana, from Intelligence 10, +1 rather than +0, and passive Investigation 11 rather than 10. Her proficient Athletics stays +3, and her initiative and saves don't change.
+
+**A number written where the sum differs** is shown as written, and the page says so over the sheet, on one ⚠ line for them all:
+
+    ⚠ Initiative +6 as written; the sum is +4. Strength save +9 as written; the sum is +4.
+
+A number written for an item or a feature is meant to differ, and the line says by how much; one left behind when the character levelled shows up there too. The line is for you: it never prints and never reaches the players. A sum takes the other numbers as the sheet shows them, so a passive score is held to the Perception shown, written or not. A page imported from D&D Beyond, with a `ddb`, has no such line: its numbers are D&D Beyond's, with the items and features the sums don't know. Armor Class and Hit Points have no sum to hold them to, since they come from armor and Hit Point rolls.
 
 **Written as the rules give them:**
 
@@ -116,9 +128,9 @@ Quote any text in a list or `{...}` that holds a comma or a colon: `notes: "Vers
 
 The page, top to bottom: the name and level; the class, subclass, species and background; the six abilities with their saving throws; Armor Class, Hit Points, Hit Point Dice and death saves; initiative, speed, size, Proficiency Bonus and passive Perception; the skills beside the attacks, the second loadout and the resources; spellcasting and its slots; training and languages; and the names of the features and the equipment.
 
-On a screen narrower than the page it shrinks to fit, but on one 600px wide or less, such as a phone's, it keeps the size it is drawn at, so its labels stay readable, and scrolls sideways in its own frame.
+On a screen narrower than the page it shrinks to fit, but on one 600px wide or less, such as a phone's, it keeps the size it is drawn at, so its labels stay readable, and scrolls sideways in its own frame. There a tick box over it, *Fit to screen*, shrinks it to the screen's width after all, to see the whole page at once: the abilities, Armor Class and Hit Points stay readable at that size, the labels don't. Untick it to read them again. The box is on the page only, and a wider screen doesn't show it.
 
-**Nothing on it means anything by its colour.** A proficient save or skill has a filled circle, one with Expertise a filled diamond, one without an empty circle, and the skills' heading carries that key. Advantage is the word *ADV* beside the number. Armor training is a filled square or an empty one, with its name. The page is drawn in one ink and reads the same in grayscale.
+**Nothing on it means anything by its colour.** A proficient save or skill has a filled circle, one with Expertise a filled diamond, one without an empty circle, and the skills' heading carries that key. Advantage is the word *ADV* beside the number, and Disadvantage *DIS*; with both, neither shows, since they cancel. Armor training is a filled square or an empty one, with its name. The page is drawn in one ink and reads the same in grayscale.
 
 Whatever doesn't fit on the page is counted, "and 4 more", or cut short with an ellipsis, and is always in the text after it: every feature with its rules, every spell by level, with its details, all the equipment, and any attack, resource or proficiency the page had to cut short. So is any single value it cut short, such as a long subclass, or an Armor Class with a note: `ac: 12 (15 with mage armor)` draws as much as the shield holds, and the text gives all of it.
 
@@ -141,6 +153,14 @@ A sheet that can't be drawn, from a page that isn't there or whose frontmatter d
 It writes `Handouts/Tamsin Reed.pdf` in the space's folder: the sheet's two pages with the character written in, then plain pages for everything that outgrew a box, the features, traits and feats with their rules first. With no page named, it fills every page of `type: pc`, or of the type `--type` names. `--extras want:Want` writes a campaign's own key into the sheet's Backstory & Personality box.
 
 The sheet is Wizards of the Coast's, and its only terms are that you may print and photocopy it for personal use. So the script doesn't carry it: the first run fetches it from D&D Beyond into `~/.cache/gm-sheets`, and a filled copy is for your own table. **Keep `Handouts/` out of version control**, and out of anything you publish. It needs `pip install pypdf pyyaml`.
+
+## A tab behind its space
+
+A tab reads its libraries when it opens. If the space's GM Sheets changes after that, from another tab, a sync or `Library: Install`, the tab goes on running the one it read, and draws with it. `sheets.stale()` says so: nothing while the two agree, and otherwise
+
+    This tab runs GM Sheets 1.3.0, but the space has 1.4.0: reload it (System: Reload, Ctrl-Alt-R).
+
+It reads the `version` of every page named `Library/Storie/GM Sheets`, at any depth, from the index, and it never fails. GM Book asks before it builds. A sheet on the page shows a line over it, *⟳ Reload this tab*, with the two versions: on the page only, never in print or in the players' copies.
 
 ## Settings
 
@@ -165,6 +185,7 @@ The sheet is Wizards of the Coast's, and its only terms are that you may print a
 ```space-lua
 -- priority: 10
 sheets = sheets or {}
+sheets.version = "1.3.0"
 
 sheets.config = {
   extras = {},     -- more keys to show beside the class and species
@@ -209,6 +230,87 @@ local SKILLS = {
 }
 
 sheets.abilities, sheets.skills = ABILITIES, SKILLS
+
+------------------------------------------------------------------ this tab
+
+-- A version as a page writes it: "1.3.0", or the number YAML reads 2 as.
+local function versionText(v)
+  if type(v) == "number" then
+    if v == math.floor(v) then return string.format("%d", v) end
+    return tostring(v)
+  end
+  if type(v) ~= "string" then return nil end
+  local s = v:match("^%s*(.-)%s*$")
+  if s == "" then return nil end
+  return s
+end
+
+-- Versions in order, by the numbers in them: 1.9.0 before 1.10.0.
+local function versionLess(a, b)
+  local x, y = {}, {}
+  for n in a:gmatch("%d+") do x[#x + 1] = tonumber(n) end
+  for n in b:gmatch("%d+") do y[#y + 1] = tonumber(n) end
+  for i = 1, math.max(#x, #y) do
+    if (x[i] or -1) ~= (y[i] or -1) then return (x[i] or -1) < (y[i] or -1) end
+  end
+  return a < b
+end
+
+-- "a, b and c"
+local function andList(list)
+  local out = ""
+  for i, s in ipairs(list) do
+    if i == 1 then out = s
+    elseif i == #list then out = out .. " and " .. s
+    else out = out .. ", " .. s end
+  end
+  return out
+end
+
+-- The versions of GM Sheets the space holds other than the one this tab
+-- runs, older or newer: the frontmatter of every page named
+-- Library/Storie/GM Sheets, at any depth, as the index has it, lowest
+-- first. A sheet is drawn seldom enough to look each time.
+local function othersInSpace()
+  local own = "Library/Storie/GM Sheets"
+  local tail = "/" .. own
+  local pages = query[[
+    from p = index.pages()
+    where p.name == own or p.name:endsWith(tail)
+    order by p.name
+  ]]
+  local out, seen = {}, {}
+  for _, p in ipairs(pages) do
+    local v = versionText(p.version)
+    if v and v ~= sheets.version and not seen[v] then
+      seen[v] = true
+      out[#out + 1] = v
+    end
+  end
+  table.sort(out, versionLess)
+  return out
+end
+
+-- Nil while this tab runs the GM Sheets the space holds; else what to do. A
+-- tab reads its Lua when it opens, so a library updated since, from another
+-- tab or by a sync, is on disk and in the index but not running here. GM
+-- Book asks before it builds. It never fails: a look that can't be made
+-- says nothing.
+function sheets.stale()
+  local ok, others = pcall(othersInSpace)
+  if not ok or type(others) ~= "table" or #others == 0 then return nil end
+  return "This tab runs GM Sheets " .. sheets.version .. ", but the space has " ..
+    andList(others) .. ": reload it (System: Reload, Ctrl-Alt-R)."
+end
+
+-- The same, as a line for over a sheet on the page, in words; nil when
+-- this tab is current.
+local function staleLine()
+  local ok, others = pcall(othersInSpace)
+  if not ok or type(others) ~= "table" or #others == 0 then return nil end
+  return "⟳ Reload this tab: it runs GM Sheets " .. sheets.version .. ", and the space has " ..
+    andList(others) .. " (System: Reload, Ctrl-Alt-R)."
+end
 
 ------------------------------------------------------------------ the page
 
@@ -375,14 +477,73 @@ function sheets.proficiency(level)
   return 2 + math.floor((l - 1) / 4)
 end
 
+-- The level a character has in a class, named in lower case, "bard": the
+-- number beside it in a multiclassed line, "Monk 2 / Bard 3", or the
+-- character's level where it is the only class. Nil where the class isn't
+-- there, or its level isn't given.
+function sheets.classLevel(d, class)
+  if type(d.class) ~= "string" then return nil end
+  local parts = {}
+  for part in (d.class .. "/"):gmatch("([^/,]*)[/,]") do
+    local s = (part:gsub("^%s+", ""))
+    s = (s:gsub("%s+$", ""))
+    if s ~= "" then parts[#parts + 1] = s end
+  end
+  for _, part in ipairs(parts) do
+    local rest = part:lower():match("^" .. class .. "(.*)$")
+    if rest and not rest:match("^%a") then
+      local n = rest:match("(%d+)")
+      if n then return tonumber(n) end
+      if #parts == 1 then return whole(d.level) end
+      return nil
+    end
+  end
+  return nil
+end
+
+-- Whether the character has Jack of All Trades, a bard's from level 2: a
+-- page that says so, jack_of_all_trades true or false, is taken at its
+-- word; else a feature, trait or feat of that name, or Bard at level 2 or
+-- more in the class line, gives it.
+function sheets.jackOfAllTrades(d)
+  local said = d.jack_of_all_trades
+  if said == true or said == false then return said end
+  for _, what in ipairs({ "features", "traits", "feats" }) do
+    for _, e in ipairs(items(d[what])) do
+      local name = e
+      if type(e) == "table" then name = e.name end
+      if name ~= nil and key(name) == "jack_of_all_trades" then return true end
+    end
+  end
+  return (sheets.classLevel(d, "bard") or 0) >= 2
+end
+
+-- What a roll's Advantage and Disadvantage come to for one thing the sheet
+-- marks, a skill, "initiative" or a save, "str_save": "Adv", "Dis", or nil
+-- for neither, or both, which cancel.
+function sheets.rolls(v, k)
+  local adv = v.adv ~= nil and v.adv[k] == true
+  local dis = v.dis ~= nil and v.dis[k] == true
+  if adv and not dis then return "Adv" end
+  if dis and not adv then return "Dis" end
+  return nil
+end
+
 -- Every number the sheet shows, from the page: a number the page writes,
--- or else the SRD's sum for it.
+-- or else the SRD's sum for it. `sums` keeps the sum for each, written over
+-- or not, for the page to hold a written number to.
 function sheets.values(d)
   local v = {
     scores = {}, mods = {}, saves = {}, saveProf = {}, skills = {}, skillProf = {},
-    adv = set(d.advantage), level = whole(d.level),
+    adv = set(d.advantage), dis = set(d.disadvantage), level = whole(d.level),
+    sums = { saves = {}, skills = {}, passive = {} },
   }
-  v.pb = whole(d.pb) or sheets.proficiency(d.level)
+  v.sums.pb = sheets.proficiency(d.level)
+  v.pb = whole(d.pb) or v.sums.pb
+  -- Jack of All Trades: half the bonus, rounded down, on a check with a
+  -- skill that doesn't use it already; never initiative or a save
+  v.jack = sheets.jackOfAllTrades(d)
+  local half = v.jack and math.floor(v.pb / 2) or 0
   local saves, skills, expert = set(d.saves), set(d.skills), set(d.expertise)
   for _, a in ipairs(ABILITIES) do
     local score = whole(d[a.key])
@@ -390,24 +551,34 @@ function sheets.values(d)
     v.scores[a.key], v.mods[a.key] = score, m
     local prof = saves[a.key .. "_save"] == true
     v.saveProf[a.key] = prof
-    v.saves[a.key] = whole(d[a.key .. "_save"]) or (m and (m + (prof and v.pb or 0)))
+    v.sums.saves[a.key] = m and (m + (prof and v.pb or 0))
+    v.saves[a.key] = whole(d[a.key .. "_save"]) or v.sums.saves[a.key]
   end
   for _, s in ipairs(SKILLS) do
     local m = v.mods[s.ability]
     local p = expert[s.key] and 2 or (skills[s.key] and 1 or 0)
     v.skillProf[s.key] = p
-    v.skills[s.key] = whole(d[s.key]) or (m and (m + p * v.pb))
+    v.sums.skills[s.key] = m and (m + p * v.pb + (p == 0 and half or 0))
+    v.skills[s.key] = whole(d[s.key]) or v.sums.skills[s.key]
   end
-  v.initiative = whole(d.initiative) or v.mods.dex
+  v.sums.initiative = v.mods.dex
+  v.initiative = whole(d.initiative) or v.sums.initiative
+  -- a passive score is 10 plus the skill, 5 more with Advantage and 5 less
+  -- with Disadvantage, which cancel
   v.passive = {}
   for _, s in ipairs({ "perception", "insight", "investigation" }) do
     local skill = v.skills[s]
-    v.passive[s] = whole(d["passive_" .. s]) or (skill and (10 + skill + (v.adv[s] and 5 or 0)))
+    local rolls = sheets.rolls(v, s)
+    local edge = rolls == "Adv" and 5 or (rolls == "Dis" and -5 or 0)
+    v.sums.passive[s] = skill and (10 + skill + edge)
+    v.passive[s] = whole(d["passive_" .. s]) or v.sums.passive[s]
   end
   v.casting = abilityKey(d.spellcasting)
   local cm = v.casting and v.mods[v.casting]
-  v.spellDC = whole(d.spell_dc) or (cm and (8 + v.pb + cm))
-  v.spellAttack = whole(d.spell_attack) or (cm and (v.pb + cm))
+  v.sums.spellDC = cm and (8 + v.pb + cm)
+  v.sums.spellAttack = cm and (v.pb + cm)
+  v.spellDC = whole(d.spell_dc) or v.sums.spellDC
+  v.spellAttack = whole(d.spell_attack) or v.sums.spellAttack
   return v
 end
 
@@ -553,10 +724,10 @@ local SKILL = {}
 for _, s in ipairs(SKILLS) do SKILL[s.key] = true end
 
 -- What the page gives that the sheet can't use: names it doesn't know in
--- the saves, skills, Expertise, Advantage and armor training, which would
--- otherwise make nothing proficient without a word, and spells or slots in
--- a shape it can't read. For a line over the sheet on the page; never
--- printed.
+-- the saves, skills, Expertise, Advantage, Disadvantage and armor training,
+-- which would otherwise make nothing proficient without a word, and spells
+-- or slots in a shape it can't read. For a line over the sheet on the page;
+-- never printed.
 function sheets.problems(d)
   local out = {}
   local function save(k) return abilityKey((k:gsub("_saves?$", ""))) ~= nil end
@@ -566,6 +737,7 @@ function sheets.problems(d)
     { "skills", skill },
     { "expertise", skill },
     { "advantage", function(k) return k == "initiative" or skill(k) or save(k) end },
+    { "disadvantage", function(k) return k == "initiative" or skill(k) or save(k) end },
     { "armor_training", function(k) return k == "light" or k == "medium" or k == "heavy" or k == "shields" end },
   }
   for _, kind in ipairs(kinds) do
@@ -587,6 +759,37 @@ function sheets.problems(d)
   end
   local _, odd = slotCounts(d.slots)
   for _, o in ipairs(odd) do out[#out + 1] = o end
+  return out
+end
+
+-- The numbers the page writes where the sheet works one out too, and the
+-- two differ, each as a sentence: "Initiative +6 as written; the sum is
+-- +4." In the sheet's order: the Proficiency Bonus, initiative, the saves,
+-- the skills, the passives, and the spell save DC and attack bonus. The
+-- sheet shows what is written; this is for the DM, to catch a number left
+-- behind, such as a save not raised with the level. A page imported from D&D
+-- Beyond, with a ddb, has its numbers from there, where items and features
+-- the sums don't know add to them, so it gets none. Armor Class and Hit
+-- Points have no sum to hold them to.
+function sheets.differences(d, v)
+  v = v or sheets.values(d)
+  local out = {}
+  if d.ddb ~= nil then return out end
+  local function hold(label, written, sum, plain)
+    local w = whole(written)
+    if w == nil or sum == nil or w == sum then return end
+    local shown = plain and str or signed
+    out[#out + 1] = label .. " " .. shown(w) .. " as written; the sum is " .. shown(sum) .. "."
+  end
+  hold("Proficiency Bonus", d.pb, v.sums.pb)
+  hold("Initiative", d.initiative, v.sums.initiative)
+  for _, a in ipairs(ABILITIES) do hold(a.name .. " save", d[a.key .. "_save"], v.sums.saves[a.key]) end
+  for _, s in ipairs(SKILLS) do hold(s.name, d[s.key], v.sums.skills[s.key]) end
+  for _, s in ipairs({ "Perception", "Insight", "Investigation" }) do
+    hold("Passive " .. s, d["passive_" .. s:lower()], v.sums.passive[s:lower()], true)
+  end
+  hold("Spell save DC", d.spell_dc, v.sums.spellDC, true)
+  hold("Spell attack bonus", d.spell_attack, v.sums.spellAttack)
   return out
 end
 
@@ -838,10 +1041,14 @@ function sheets.svg(d, v, page)
     return shown, at
   end
 
-  -- the name and level
+  -- the name and level, and a retired character's word for it beside the
+  -- level, where the name gives it room
   local name = sheets.nameOf(page or "")
-  local nm, nsize = fit("Name", name, W - 96, 24, 14, true)
+  local retired = d.retired == true
+  local tag = retired and (textWidth("RETIRED", 9, true) + 0.6 * 7 + 10) or 0
+  local nm, nsize = fit("Name", name, W - 96 - tag, 24, 14, true)
   c.text(0, 24, nm, nsize, { bold = true })
+  if retired then c.label(W - 86, 24, "Retired", { anchor = "end", size = 9 }) end
   c.line(0, 31, W - 84, 31, { weight = 1.2 })
   c.box(W - 76, 0, 76, 36)
   c.label(W - 38, 10, "Level", { anchor = "middle" })
@@ -874,7 +1081,8 @@ function sheets.svg(d, v, page)
     c.text(x + tw / 2, y + 61.5, str(v.scores[a.key]), 10, { anchor = "middle" })
     c.mark(x + 7, y + 81, v.saveProf[a.key] and "filled" or "open")
     c.label(x + 14, y + 83.5, "Save")
-    if v.adv[a.key .. "_save"] then c.label(x + tw - 30, y + 83.5, "Adv", { anchor = "end" }) end
+    local saveRolls = sheets.rolls(v, a.key .. "_save")
+    if saveRolls then c.label(x + tw - 30, y + 83.5, saveRolls, { anchor = "end" }) end
     c.text(x + tw - 4, y + 84.5, signed(v.saves[a.key]), 11, { bold = true, anchor = "end" })
   end
 
@@ -933,11 +1141,11 @@ function sheets.svg(d, v, page)
   -- initiative, speed, size, Proficiency Bonus, passive Perception
   y = 240
   local strip = {
-    { "Initiative", signed(v.initiative), v.adv.initiative },
+    { "Initiative", signed(v.initiative), sheets.rolls(v, "initiative") },
     { "Speed", speedText(d.speed) },
     { "Size", str(d.creature_size) },
     { "Proficiency Bonus", signed(v.pb) },
-    { "Passive Perception", str(v.passive.perception), v.adv.perception },
+    { "Passive Perception", str(v.passive.perception), sheets.rolls(v, "perception") },
   }
   local pw = (W - gap * (#strip - 1)) / #strip
   for i, s in ipairs(strip) do
@@ -946,7 +1154,7 @@ function sheets.svg(d, v, page)
     c.label(px0 + 12, y + 16, s[1])
     local val, vsize = fit(s[1], s[2], pw * 0.42, 13, 8, true)
     c.text(px0 + pw - 12, y + 18, val, vsize, { bold = true, anchor = "end" })
-    if s[3] then c.label(px0 + pw - 12 - textWidth(val, vsize, true) - 4, y + 16, "Adv", { anchor = "end" }) end
+    if s[3] then c.label(px0 + pw - 12 - textWidth(val, vsize, true) - 4, y + 16, s[3], { anchor = "end" }) end
   end
 
   -- the skills, the key to their marks in the heading, and two passives
@@ -966,7 +1174,8 @@ function sheets.svg(d, v, page)
     c.text(19, sy, s.name, 9.5)
     local abbr = s.ability:sub(1, 1):upper() .. s.ability:sub(2)
     c.text(128, sy, abbr, 7, { faint = true })
-    if v.adv[s.key] then c.label(leftW - 34, sy - 0.5, "Adv", { anchor = "end" }) end
+    local skillRolls = sheets.rolls(v, s.key)
+    if skillRolls then c.label(leftW - 34, sy - 0.5, skillRolls, { anchor = "end" }) end
     c.text(leftW - 8, sy, signed(v.skills[s.key]), 10, { bold = true, anchor = "end" })
     sy = sy + 14.5
   end
@@ -1235,7 +1444,8 @@ function sheets.svg(d, v, page)
 
   local svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' .. px(W) .. '" height="' .. px(H) ..
     '" viewBox="0 0 ' .. px(W) .. " " .. px(H) .. '" style="display:block" role="img" aria-label="' ..
-    esc("Character sheet: " .. name) .. '" font-family="' .. FONT .. '" fill="' .. INK .. '">' ..
+    esc("Character sheet: " .. name .. (retired and " (retired)" or "")) .. '" font-family="' .. FONT ..
+    '" fill="' .. INK .. '">' ..
     table.concat(c.out) .. "</svg>"
   return svg, H, cut
 end
@@ -1496,9 +1706,18 @@ end
 
 ------------------------------------------------------------------ drawing one
 
+-- A line over a sheet on the page when this tab runs another GM Sheets than
+-- the space holds, as HTML; "" when it runs the same. The versions come from
+-- pages, so they are escaped like any text from one.
+local function staleNote()
+  local line = staleLine()
+  if not line then return "" end
+  return '<p class="gmsheets-stale">' .. esc(line) .. "</p>"
+end
+
 local function missing(text)
   return widget.new {
-    html = '<em class="gmsheets-missing">' .. esc(text) .. "</em>",
+    html = staleNote() .. '<em class="gmsheets-missing">' .. esc(text) .. "</em>",
     markdown = "*" .. safe(text) .. "*",
     display = "block",
   }
@@ -1515,7 +1734,7 @@ local function drawn(ref, printing)
   if not d then return nil, why end
   local v = sheets.values(d)
   local svg, _, cut = sheets.svg(d, v, page)
-  return { data = d, svg = svg, text = sheets.text(d, v, cut) }
+  return { data = d, values = v, svg = svg, text = sheets.text(d, v, cut) }
 end
 
 -- The Markdown face: the drawing in a block two columns wide, which GM
@@ -1533,7 +1752,10 @@ function sheets.draw(ref, opts)
   opts = opts or {}
   local s, why = drawn(ref)
   if not s then return missing(why) end
-  local html = '<div class="gmsheets">'
+  -- a tab behind its space says so first; like everything over the sheet,
+  -- on the page only, never in the Markdown face that prints and goes to
+  -- players
+  local html = '<div class="gmsheets">' .. staleNote()
   -- what the sheet leaves out because it can't read it, for the DM: on the
   -- page only, never in the Markdown face that prints and goes to players
   local problems = sheets.problems(s.data)
@@ -1541,6 +1763,17 @@ function sheets.draw(ref, opts)
     html = html .. '<p class="gmsheets-warn">' .. esc("⚠ Left off the sheet, since it can't read them: " ..
       table.concat(problems, "; ") .. ".") .. "</p>"
   end
+  -- a number written over a sum that differs from it, which the sheet shows
+  -- as written: for the DM alone, like the line above
+  local differences = sheets.differences(s.data, s.values)
+  if #differences > 0 then
+    html = html .. '<p class="gmsheets-warn gmsheets-written">' ..
+      esc("⚠ " .. table.concat(differences, " ")) .. "</p>"
+  end
+  -- on a phone, where the sheet keeps its size and scrolls, a tick to see
+  -- the whole page at once instead: the style alone does it, and only a
+  -- phone shows the tick
+  html = html .. '<label class="gmsheets-fit"><input type="checkbox"> Fit to screen</label>'
   html = html .. '<div class="gmsheets-page">' .. s.svg .. "</div>"
   if s.text ~= "" then
     html = html .. '<div class="gmsheets-text">' .. markdown.markdownToHtml(s.text) .. "</div>"
@@ -1593,10 +1826,29 @@ gmbook.printers.sheets = sheets.printed
 /* On a phone the sheet would shrink to half its size and its labels to
    three pixels. There it keeps the size it is drawn at, as on a wider
    screen, and scrolls sideways in its own frame. Printing is left as it
-   is. */
+   is. A tick in "Fit to screen", which only a phone shows, shrinks it to
+   the screen's width after all, to see the whole page at once: the
+   abilities, Armor Class and Hit Points stay readable. */
+.gmsheets-fit {
+  display: none;
+}
+
 @media screen and (max-width: 600px) {
   .gmsheets-page svg {
     max-width: none;
+  }
+
+  .gmsheets-fit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+  }
+
+  .gmsheets:has(.gmsheets-fit input:checked) .gmsheets-page svg {
+    max-width: 100%;
   }
 }
 
@@ -1606,6 +1858,12 @@ gmbook.printers.sheets = sheets.printed
 
 .gmsheets-warn {
   margin: 0 0 6px;
+}
+
+/* A tab behind its space: a line over the sheet, in words. */
+.gmsheets-stale {
+  margin: 0 0 6px;
+  font-weight: bold;
 }
 
 .gmsheets-missing::before {

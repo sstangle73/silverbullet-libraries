@@ -7,9 +7,11 @@
 local function unescape(s)
   return (s:gsub("&lt;", "<"):gsub("&gt;", ">"):gsub("&quot;", '"'):gsub("&amp;", "&"))
 end
+-- The visible text, less the note a number shows only while it has focus.
 local function live(w)
   assert(type(w.html) == "string", "a GM Party widget's html should be text")
-  return unescape((w.html:gsub("<[^>]*>", "")))
+  local shown = (w.html:gsub('<span[^>]- class="gmparty%-tip"[^>]*>.-</span>', ""))
+  return unescape((shown:gsub("<[^>]*>", "")))
 end
 local function attr(w, name)
   return unescape(w.html:match(" " .. name .. '="([^"]*)"') or "")

@@ -25,7 +25,7 @@ The page side needs nothing else. For print, GM Book 1.5 or later prints each of
 
 The most specific source wins:
 
-1. **Character pages.** Every page with `type: pc` is a member, at its own `level`. `away: true` sits a character out of tonight's fights and hand-outs.
+1. **Character pages.** Every page with `type: pc` is a member, at its own `level`. `away: true` sits a character out of tonight's fights and hand-outs. `retired: true` takes a character out of the party altogether.
 2. **A party page.** Before the characters exist, a page with `type: party` gives `characters` and `level`. Its `level` also stands in for a character page that has none. The count can't be called `size`: SilverBullet keeps that name for a page's size in bytes, and a page's own attributes win over its frontmatter.
 3. **The adventure's party.** With neither, as in an adventure space on its own, the party is the one the adventure is written for: five, unless the settings say otherwise.
 
@@ -38,6 +38,14 @@ A party page's frontmatter:
     ---
 
 Counts and story numbers follow everyone in the party. Fights and one-each hand-outs follow the characters here tonight.
+
+**Away and retired.** A character who is `away` misses tonight, and is still in the party: the story numbers and counts include them, since the camp still has room for them and the quiver still holds their arrow, and the summary lists them, marked away. Fights, one-each hand-outs and the party's level follow only the characters here. A character who is `retired` has left the party for good, and counts nowhere: not in the story numbers, counts, fights, hand-outs, level or DCs, as if the page were no character's. The summary names them on a line of their own, so a page marked retired by mistake is seen. When every character page is retired, the party page, or the adventure's party, stands in again, as it does before there are any.
+
+| On a `type: pc` page | Story numbers and counts | Fights, hand-outs, level and DCs | The summary |
+|---|---|---|---|
+| Neither | Counted | Counted | Listed |
+| `away: true` | Counted | Left out | Listed, marked away |
+| `retired: true` | Left out | Left out | Named as retired, and counted nowhere |
 
 **The party's level** is the average level of the characters here tonight, rounded to the nearest. It picks a fight's version and sets a DC. Before the character pages exist, it is the party page's `level`: change that when everyone levels up. In an adventure space on its own there is no level, so a fight shows every version as written, and a DC shows as written. `party.level()` gives it, or nil.
 
@@ -65,7 +73,7 @@ These work anywhere a sentence does, table cells included.
 
 `min` and `max` bound a count, `round = "down"` rounds a fraction down, and `example = false` leaves off the count for the adventure's party. A second name is the plural where adding an s won't do: `{"wolf", "wolves"}`. `cap = true` starts it with a capital.
 
-Hover over a number on the page to see its rule and what it prints.
+Hover over a number on the page to see its rule and what it prints. On a phone, which has no hover, tap it: the note shows in a box across the foot of the screen until you tap elsewhere. A number can take focus from the keyboard too, and shows its note under it while it has it.
 
 **A count that is an item's uses** can name the item, as a link in the adventure would: `item = "World/Items/Quiver"`. It changes nothing on the page or in print. GM Kit 2.3 or later reads it: when the party finds the item there, its uses start at this count for the party at that moment.
 
@@ -198,7 +206,7 @@ A check the party can meet at any level can keep its odds as they grow. `party.d
 | `party.dc(15)` | 15 | 16 | 17 | 18 | 19 |
 | `party.dc(20)` | 20 | 21 | 22 | 23 | 24 |
 
-On the page it shows your party's DC, 17 at level 9, and in print the DC as written, 15. A book that uses it says once, with its rules, that its DCs rise with the proficiency bonus. With no party level, as in an adventure space on its own, it shows the DC as written. Hover over it to see both.
+On the page it shows your party's DC, 17 at level 9, and in print the DC as written, 15. A book that uses it says once, with its rules, that its DCs rise with the proficiency bonus. With no party level, as in an adventure space on its own, it shows the DC as written. Hover over it, or tap it on a phone, to see both.
 
 A rung of a check can be written the same way, `**${party.dc(15)}**`, and GM Kit 3.7 or later reads it as the 15 rung and shows the party's DC when it asks how high they rolled. `party.dcRise()` is how far this party's DCs rise, and `party.dcRise(9)` how far they rise at level 9.
 
@@ -210,11 +218,19 @@ The 2024 encounter rules: choose a difficulty, look up the XP budget per charact
 
 ## How it prints
 
-On the page each of these is a widget: HTML with its tooltip, and the same text as its Markdown face. SilverBullet draws a table from the Markdown faces of the expressions in it, and its Copy button and Baked Sections use them too, so all of those get your party's numbers. GM Kit 2.2 puts the Markdown face into the copies it publishes, so players see their own party's numbers. A hint from `party.each` has an empty Markdown face, so it never reaches them. A fight's Markdown face is the fight as printed.
+On the page each of these is a widget: HTML with its note, as a tooltip and as the box a tap shows, and the same text, without the note, as its Markdown face. SilverBullet draws a table from the Markdown faces of the expressions in it, and its Copy button and Baked Sections use them too, so all of those get your party's numbers. GM Kit 2.2 puts the Markdown face into the copies it publishes, so players see their own party's numbers. A hint from `party.each` has an empty Markdown face, so it never reaches them. A fight's Markdown face is the fight as printed.
 
 GM Book 1.5 evaluates each expression with `party` standing for `party.printed`, which gives the rule, the adventure's number, nothing for a hint, the fight for the adventure's party, every version of a fight in versions, and a DC as written. The party it knows is the one the adventure is written for, whoever is playing tonight: `party.get()` is that party, `party.level()` gives nil, as in an adventure space on its own, so GM Book names a page that prints it, `party.dcRise()` gives 0, and `party.summary()` a line saying who the adventure is written for. This library puts `party.printed` in `gmbook.printers`, where GM Book looks for it.
 
 Baked Sections alone couldn't do this: they bake whole blocks, never a number in the middle of a sentence.
+
+## A tab behind its space
+
+A tab reads its libraries when it opens. If the space's GM Party changes after that, from another tab, a sync or `Library: Install`, the tab goes on running the one it read. `party.stale()` says so: nothing while the two agree, and otherwise
+
+    This tab runs GM Party 1.4.0, but the space has 1.5.0: reload it (System: Reload, Ctrl-Alt-R).
+
+It reads the `version` of every page named `Library/Storie/GM Party`, at any depth, from the index, so a copy in a space the DM space holds counts too, and it never fails. GM Book asks before it builds. A fight on the page shows a line over its box, *⟳ Reload this tab*, with the two versions; it is HTML, so it never prints and never reaches the players' copies.
 
 ## Settings
 
@@ -261,6 +277,7 @@ A count can name the item whose uses it is, and `party.value` gives the number b
 ```space-lua
 -- priority: 10
 party = party or {}
+party.version = "1.4.0"
 
 party.config = {
   book     = 5,  -- the size of the party the adventure is written for
@@ -366,6 +383,81 @@ local function num(v)
   return tonumber(v)
 end
 
+------------------------------------------------------------------ this tab
+
+-- A version as a page writes it: "1.4.0", or the number YAML reads 2 as.
+local function versionText(v)
+  if type(v) == "number" then
+    if v == math.floor(v) then return string.format("%d", v) end
+    return tostring(v)
+  end
+  if type(v) ~= "string" then return nil end
+  local s = v:match("^%s*(.-)%s*$")
+  if s == "" then return nil end
+  return s
+end
+
+-- Versions in order, by the numbers in them: 1.9.0 before 1.10.0.
+local function versionLess(a, b)
+  local x, y = {}, {}
+  for n in a:gmatch("%d+") do x[#x + 1] = tonumber(n) end
+  for n in b:gmatch("%d+") do y[#y + 1] = tonumber(n) end
+  for i = 1, math.max(#x, #y) do
+    if (x[i] or -1) ~= (y[i] or -1) then return (x[i] or -1) < (y[i] or -1) end
+  end
+  return a < b
+end
+
+-- The versions of GM Party the space holds other than the one this tab
+-- runs, older or newer: the frontmatter of every page named
+-- Library/Storie/GM Party, at any depth, as the index has it, lowest first.
+-- Read at most every two seconds, as the party is, since every fight on a
+-- page asks.
+local staleCache
+local function othersInSpace()
+  local now = os.time()
+  if staleCache and now - staleCache.at < 2 then return staleCache.value end
+  local own = "Library/Storie/GM Party"
+  local tail = "/" .. own
+  local pages = query[[
+    from p = index.pages()
+    where p.name == own or p.name:endsWith(tail)
+    order by p.name
+  ]]
+  local out, seen = {}, {}
+  for _, p in ipairs(pages) do
+    local v = versionText(p.version)
+    if v and v ~= party.version and not seen[v] then
+      seen[v] = true
+      out[#out + 1] = v
+    end
+  end
+  table.sort(out, versionLess)
+  staleCache = { at = now, value = out }
+  return out
+end
+
+-- Nil while this tab runs the GM Party the space holds; else what to do. A
+-- tab reads its Lua when it opens, so a library updated since, from another
+-- tab or by a sync, is on disk and in the index but not running here. GM
+-- Book asks before it builds. It never fails: a look that can't be made
+-- says nothing.
+function party.stale()
+  local ok, others = pcall(othersInSpace)
+  if not ok or type(others) ~= "table" or #others == 0 then return nil end
+  return "This tab runs GM Party " .. party.version .. ", but the space has " ..
+    andList(others) .. ": reload it (System: Reload, Ctrl-Alt-R)."
+end
+
+-- The same, as a line over a widget on the page: HTML, so never in print
+-- nor in the Markdown face. "" when this tab is current.
+local function staleNote()
+  local ok, others = pcall(othersInSpace)
+  if not ok or type(others) ~= "table" or #others == 0 then return "" end
+  return dom.div { class = "gmparty-stale", __rawText = "⟳ Reload this tab: it runs GM Party " ..
+    party.version .. ", and the space has " .. andList(others) .. " (System: Reload, Ctrl-Alt-R)." }.outerHTML
+end
+
 ------------------------------------------------------------------ the party
 
 -- The party, from the most specific source there is: the character pages
@@ -373,6 +465,8 @@ end
 -- and level), then the party the adventure is written for. Read again at most
 -- every two seconds, since every number on a page asks for it. A page's own
 -- size, in bytes, would shadow a frontmatter "size", hence "characters".
+-- A retired character (retired: true) is in none of it, as if its page were
+-- no character's; `retired` lists them, for the summary to name.
 function party.get()
   local now = os.time()
   if party.cached and now - party.cached.at < 2 then return party.cached.value end
@@ -381,9 +475,17 @@ function party.get()
     where p.type == "pc" or p.type == "party"
     order by p.name
   ]]
-  local pcs, home = {}, nil
+  local pcs, home, retired = {}, nil, {}
   for _, p in ipairs(pages) do
-    if p.type == "pc" then pcs[#pcs + 1] = p elseif not home then home = p end
+    if p.type == "pc" then
+      if p.retired == true then
+        retired[#retired + 1] = { name = p.name:match("([^/]+)$") or p.name, page = p.name }
+      else
+        pcs[#pcs + 1] = p
+      end
+    elseif not home then
+      home = p
+    end
   end
   local level = home and num(home.level) or nil
   local members, source = {}, "book"
@@ -411,15 +513,17 @@ function party.get()
   end
   local value = {
     size = #members, members = members, here = here, source = source,
-    page = home and home.name or nil,
+    page = home and home.name or nil, retired = retired,
   }
   party.cached = { at = now, value = value }
   return value
 end
 
--- Forget the party read last, so the next number reads the pages again.
+-- Forget the party read last, and whether this tab is behind its space, so
+-- the next number reads the pages again.
 function party.refresh()
   party.cached = nil
+  staleCache = nil
 end
 
 -- The average of some levels, rounded to the nearest: the party's level,
@@ -459,15 +563,24 @@ local function levelWhence(p)
   return "as written"
 end
 
--- A value on the page: the HTML with its tooltip, and the same text as the
+-- A value on the page: the HTML with its note, and the same text as the
 -- Markdown face, which is what a table, Copy, Baked Sections and GM Kit's
 -- publishing use. A hint passes "" as its Markdown, so it stays on the page.
 -- The HTML goes as text, not an element: SilverBullet shares one result
 -- between identical expressions on a page, and an element can only be in
 -- one place, so the second copy would take it from the first.
+--
+-- The note is the value's tooltip, for a mouse, and a box of its own that
+-- shows while the value has focus, since a phone shows no tooltip: the value
+-- takes focus from a tap or the keyboard, and the style shows the box. A
+-- screen reader has the tooltip, so the box is hidden from it.
 local function face(live, note, class, markdown)
   return widget.new {
-    html = dom.span { class = class or "gmparty-n", title = note, __rawText = live }.outerHTML,
+    html = dom.span {
+      class = class or "gmparty-n", title = note, tabindex = "0",
+      dom.span { __rawText = live },
+      dom.span { class = "gmparty-tip", ["aria-hidden"] = "true", __rawText = note },
+    }.outerHTML,
     markdown = markdown or live,
     display = "inline",
   }
@@ -1321,8 +1434,11 @@ function party.fightLive(spec)
   else
     parts = liveVersions(spec, versions, p)
   end
-  -- As text, like face(): identical fights on a page share one result.
-  return widget.new { html = dom.div(parts).outerHTML, markdown = party.fightPrint(spec), display = "block" }
+  -- As text, like face(): identical fights on a page share one result. A
+  -- tab behind its space says so over the fight, on the page alone.
+  return widget.new {
+    html = staleNote() .. dom.div(parts).outerHTML, markdown = party.fightPrint(spec), display = "block",
+  }
 end
 
 local function checkFight(spec)
@@ -1467,6 +1583,13 @@ function party.summary()
   if #p.here < p.size then
     lines[#lines + 1] = capital(party.word(#p.here)) .. " here tonight."
   end
+  -- a retired character counts nowhere, but is named, so a page marked
+  -- retired by mistake is seen
+  if p.retired and #p.retired > 0 then
+    local names = {}
+    for _, r in ipairs(p.retired) do names[#names + 1] = "[[" .. r.page .. "|" .. r.name .. "]]" end
+    lines[#lines + 1] = "Retired, and counted nowhere: " .. table.concat(names, ", ") .. "."
+  end
   if known and #levels > 0 then
     lines[#lines + 1] = "A fight for them can spend " .. party.digits(party.budget(levels, "low")) ..
       " XP at Low, " .. party.digits(party.budget(levels, "moderate")) .. " at Moderate, or " ..
@@ -1500,6 +1623,85 @@ end
 .gmparty-each::before {
   content: "▸ ";
   font-style: normal;
+}
+
+/* A number's note: its rule and what it prints. A mouse has it as the
+   number's tooltip, but a phone shows no tooltip, so a tap on the number,
+   which gives it focus, shows the note in a box of its own; so does the
+   keyboard. It stays until focus moves on. */
+.gmparty-n,
+.gmparty-each {
+  position: relative;
+}
+
+.gmparty-n:focus,
+.gmparty-each:focus {
+  outline: none;
+}
+
+.gmparty-n:focus-visible,
+.gmparty-each:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.gmparty-tip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  width: max-content;
+  max-width: min(24em, calc(100vw - 32px));
+  padding: 6px 8px;
+  border: 1px solid var(--modal-border-color, #d8dce1);
+  border-radius: 4px;
+  background: var(--modal-background-color, #fff);
+  color: var(--root-color, inherit);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 0.85em;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  cursor: auto;
+}
+
+.gmparty-n:focus > .gmparty-tip,
+.gmparty-each:focus > .gmparty-tip {
+  display: block;
+}
+
+/* A touch screen with no hover, where a tap may not give a span focus:
+   the tap's hover shows the note as well. */
+@media (hover: none) {
+  .gmparty-n:hover > .gmparty-tip,
+  .gmparty-each:hover > .gmparty-tip {
+    display: block;
+  }
+}
+
+/* On a phone the box sits across the foot of the screen, inside a 16px
+   margin, rather than under the number, where it could run off the edge. */
+@media screen and (max-width: 600px) {
+  .gmparty-tip {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 16px;
+    width: auto;
+    max-width: none;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+}
+
+/* A tab behind its space: a line over what it draws, in words. */
+.gmparty-stale {
+  font-weight: bold;
+  margin-bottom: 4px;
 }
 
 .gmparty-fight {

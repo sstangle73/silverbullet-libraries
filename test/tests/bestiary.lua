@@ -271,3 +271,71 @@ test("bestiary: Scene 3 links to the pages instead of saying what to run", "adve
   has(scene, "[creepers](<../../World/Monsters/Creeper>)")
   has(FIXTURES.adventure["Campaign/Act I/Scene 1"], "[crow](<../../World/Monsters/Crow>)")
 end)
+
+------------------------------------------------------------------ a tab behind its space
+
+local OWN = "Library/Storie/GM Bestiary"
+
+-- The library's page as the space holds it, at another version.
+local function bestiaryAt(name, version)
+  H.pages[name] = (SRC["GM Bestiary"]:gsub('\nversion: "[^"]*"\n', '\nversion: "' .. version .. '"\n', 1))
+  bestiary.refresh()
+end
+
+test("bestiary: the version this tab runs is its page's", "adventure", function()
+  local written = SRC["GM Bestiary"]:match('^%-%-%-\n.-\nversion: "([^"]+)"\n.-%-%-%-\n')
+  ok(written, "a version in GM Bestiary's frontmatter")
+  eq(bestiary.version, written)
+  eq(bestiary.stale(), nil, "a space that holds the same says nothing")
+  hasnt(bestiary.ref(STRANGLER).html, "Reload this tab")
+end)
+
+test("bestiary: a tab behind its space says so over a reference, on the page alone", "adventure", function()
+  bestiaryAt(OWN, "1.3.0")
+  eq(bestiary.stale(), "This tab runs GM Bestiary " .. bestiary.version .. ", but the space has 1.3.0: " ..
+    "reload it (System: Reload, Ctrl-Alt-R).")
+  local w = bestiary.ref(STRANGLER)
+  ok(w.html:find('<span class="gmbestiary-stale">⟳ Reload this tab: it runs GM Bestiary ' .. bestiary.version ..
+    ", and the space has 1.3.0 (System: Reload, Ctrl-Alt-R).</span>", 1, true) == 1, "first: " .. w.html:sub(1, 90))
+  has(w.html, '<span class="gmbestiary-ref">', "the reference after it")
+  eq(w.markdown, "[Vine Blight](https://www.dndbeyond.com/monsters/5195252-vine-blight) — Monster Manual, *Blights*",
+    "never in the Markdown face, which tables and the players' copies take")
+  eq(bestiary.printed.ref(STRANGLER), "Vine Blight — Monster Manual, *Blights*", "nor in print")
+  -- over the message for a page that isn't there, too
+  local gone = bestiary.ref("World/Monsters/Nothing")
+  has(gone.html, "gmbestiary-stale")
+  eq(gone.markdown, "*No creature page for World/Monsters/Nothing.*")
+  -- a line of its own over the reference, which sits in a sentence
+  local style = SRC["GM Bestiary"]:match("```space%-style\n(.-)\n```")
+  has(style:match("\n%.gmbestiary%-stale%s*(%b{})") or "", "display: block;")
+  -- what a fight prints for its creatures is as it was
+  has(party.fightPrint { "The old orchard", level = 1, { 1, "strangler", cr = "1/2", page = STRANGLER } },
+    "**The creatures.** Strangler — Monster Manual, *Blights* (vine blight).")
+end)
+
+test("bestiary: every copy of the library in the space counts, at any depth", "dm", function()
+  ok(H.pages["Adventure/" .. OWN], "GM Bestiary where install.json puts it")
+  eq(bestiary.stale(), nil)
+  bestiaryAt("Author/" .. OWN, "1.10.0")
+  bestiaryAt("Adventure/" .. OWN, "1.9.0")
+  has(bestiary.stale(), "but the space has 1.9.0 and 1.10.0:", "lowest first")
+  -- a version is a page's text: the line sets it as text, never HTML
+  bestiaryAt("Author/" .. OWN, "<b>2</b>")
+  has(bestiary.ref(STRANGLER).html, "&lt;b&gt;2&lt;/b&gt;")
+  hasnt(bestiary.ref(STRANGLER).html, "<b>")
+end)
+
+test("bestiary: whether the tab is behind is read again after a refresh, and a failed look says nothing", "adventure", function()
+  eq(bestiary.stale(), nil)
+  H.pages[OWN] = (SRC["GM Bestiary"]:gsub('\nversion: "[^"]*"\n', '\nversion: "1.3.0"\n', 1))
+  bestiary.refresh()
+  has(bestiary.stale(), "1.3.0")
+  local real = index.pages
+  index.pages = function() error("index gone") end
+  local good, err = pcall(function()
+    bestiary.refresh()
+    eq(bestiary.stale(), nil)
+  end)
+  index.pages = real
+  if not good then error(err, 0) end
+end)

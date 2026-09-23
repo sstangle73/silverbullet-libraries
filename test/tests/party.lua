@@ -66,10 +66,16 @@ local function unescape(s)
 end
 
 -- A party widget's HTML is text, so identical expressions on a page don't
--- fight over one element: its visible text, and one of its attributes.
+-- fight over one element: its visible text, less the note a number shows
+-- only while it has focus, and one of its attributes.
 local function live(w)
   assert(type(w.html) == "string", "a GM Party widget's html should be text")
-  return unescape((w.html:gsub("<[^>]*>", "")))
+  local shown = (w.html:gsub('<span[^>]- class="gmparty%-tip"[^>]*>.-</span>', ""))
+  return unescape((shown:gsub("<[^>]*>", "")))
+end
+-- The note a number shows while it has focus, as text.
+local function tip(w)
+  return unescape(w.html:match('<span[^>]- class="gmparty%-tip"[^>]*>(.-)</span>') or "")
 end
 local function attr(w, name)
   return unescape(w.html:match(" " .. name .. '="([^"]*)"') or "")
@@ -137,7 +143,43 @@ test("party: widgets hand SilverBullet HTML text, which it parses afresh for eac
   for _, w in ipairs({ party.n(), party.N(), party.count { "wick" }, party.each(5, "find"), party.fight(BARROW) }) do
     eq(type(w.html), "string")
   end
-  has(party.n().html, '<span class="gmparty-n" title="The party')
+  has(party.n().html, '<span class="gmparty-n" tabindex="0" title="The party')
+end)
+
+-- A phone has no hover and never shows a tooltip, so a number's note was
+-- out of reach there: the title was the only place it lived.
+test("party: a number's note shows on a tap or from the keyboard, not only on hover", "dm", function()
+  useParty(6, 9)
+  for _, w in ipairs({ party.n(), party.N(1), party.count { "wick", plus = 1 }, party.dc(15), party.each(5, "find") }) do
+    has(w.html, ' tabindex="0"', "the number takes focus, from a tap or the keyboard")
+    ok(tip(w) ~= "", "a box for the note: " .. w.html)
+    eq(tip(w), attr(w, "title"), "the same note as the tooltip a mouse shows")
+    has(w.html, '<span aria-hidden="true" class="gmparty-tip">', "a screen reader has the tooltip, not the box as well")
+  end
+  eq(tip(party.n()), "The party's size: six for this party of six, counted from the character pages. Prints as “five”.")
+  eq(live(party.n()), "six", "the box isn't part of the number")
+  eq(party.n().markdown, "six", "nor of what tables, Copy and the players' copies get")
+  local style = SRC["GM Party"]:match("```space%-style\n(.-)\n```")
+  local box = style:match("\n%.gmparty%-tip%s*(%b{})")
+  ok(box, "a rule for the note's box")
+  has(box, "display: none;", "hidden until the number has focus")
+  has(box, "position: absolute;", "over the text, not pushing it aside")
+  has(box, "max-width: min(24em, calc(100vw - 32px));", "never wider than the screen")
+  local shown = style:match("%.gmparty%-n:focus > %.gmparty%-tip,%s*%.gmparty%-each:focus > %.gmparty%-tip%s*(%b{})")
+  ok(shown, "the box shows while the number has focus")
+  has(shown, "display: block;")
+  local touch = style:match("@media %(hover: none%)%s*(%b{})")
+  ok(touch and touch:find(".gmparty-n:hover > .gmparty-tip", 1, true), "and on a tap's hover, where a tap gives no focus")
+  -- at 375px the box sits across the foot of the screen inside a 16px margin
+  local phone = style:match("@media screen and %(max%-width: 600px%)%s*(%b{})")
+  ok(phone, "a rule for a phone")
+  local fixed = phone:match("%.gmparty%-tip%s*(%b{})")
+  ok(fixed, "for the note's box")
+  for _, want in ipairs({ "position: fixed;", "left: 16px;", "right: 16px;", "bottom: 16px;", "max-width: none;" }) do
+    has(fixed, want)
+  end
+  has(style:match("\n%.gmparty%-n:focus%-visible,%s*%.gmparty%-each:focus%-visible%s*(%b{})") or "", "outline:",
+    "the keyboard's focus is seen")
 end)
 
 test("party: character pages count, at their levels, with who is away", "dm", function()
@@ -547,4 +589,145 @@ test("party: the rules tables print for a rules page", "adventure", function()
   local xp = party.xpTable().markdown
   has(xp, "| CR | XP | CR | XP |\n|---|---|---|---|\n| 0 | 0 or 10 | 14 | 11,500 |")
   has(xp, "| 13 | 10,000 | 30 | 155,000 |")
+end)
+
+------------------------------------------------------------------ retired
+
+test("party: a retired character counts nowhere, where one away still counts in the story", "dm", function()
+  H.pages["Party/Ann"] = pcPage(3)
+  H.pages["Party/Ben"] = pcPage(9, "retired: true\n")
+  H.pages["Party/Cal"] = pcPage(2, "away: true\n")
+  party.refresh()
+  local p = party.get()
+  eq(p.source, "characters")
+  eq(p.size, 2, "Ann, and Cal, who is away: not Ben")
+  eq(#p.here, 1, "Ann")
+  eq(list(names(p.members)), "Ann | Cal")
+  eq(list(names(p.retired)), "Ben")
+  -- the story numbers and counts: Cal is in them, Ben isn't
+  eq(live(party.n()), "two")
+  eq(live(party.count { "arrow", plus = 1 }), "three arrows")
+  eq(party.value(1), 3)
+  -- the hand-outs, the level, the DCs and the fights: Ann alone
+  eq(live(party.each(3, "find")), "One here: use the first find.")
+  eq(party.level(), 3, "Ben's level 9 is in no average")
+  eq(live(party.dc(15)), "15")
+  has(live(party.fight(BARROW)), "One here at level 3:")
+  -- the summary names him, apart
+  local md = party.summary().markdown
+  has(md, "**Two characters:** [[Party/Ann|Ann]] (3), [[Party/Cal|Cal]] (2), away.")
+  has(md, "Retired, and counted nowhere: [[Party/Ben|Ben]].")
+  has(md, "A fight for them can spend 150 XP at Low, 225 at Moderate, or 400 at High.")
+  hasnt(md, "At level", "no DC rise from Ben's level")
+  -- print never knew the table's party
+  eq(party.printed.n(), "five")
+end)
+
+test("party: with every character retired, the party page stands in again", "dm", function()
+  H.pages["Party/Ann"] = pcPage(7, "retired: true\n")
+  H.pages["Party/Ben"] = pcPage(8, "retired: true\n")
+  party.refresh()
+  local p = party.get()
+  eq(p.source, "party", "as before there were character pages")
+  eq(p.size, 5)
+  eq(party.level(), 1, "The Party's level, not theirs")
+  local md = party.summary().markdown
+  has(md, "**Five characters, level 1,** from `characters` and `level` on [[The Party]]")
+  has(md, "Retired, and counted nowhere: [[Party/Ann|Ann]], [[Party/Ben|Ben]].")
+  -- only true retires a character, as only true sits one out
+  H.pages["Party/Ann"] = pcPage(7, "retired: false\n")
+  party.refresh()
+  eq(party.get().size, 1)
+  eq(list(names(party.get().retired)), "Ben")
+end)
+
+test("party: with no one retired the summary says nothing of it", "dm", function()
+  useParty(4, 2)
+  hasnt(party.summary().markdown, "Retired")
+  eq(#party.get().retired, 0)
+end)
+
+------------------------------------------------------------------ a tab behind its space
+
+local OWN = "Library/Storie/GM Party"
+
+-- The library's page as the space holds it, at another version.
+local function atVersion(page, version)
+  H.pages[page] = (SRC["GM Party"]:gsub('\nversion: "[^"]*"\n', '\nversion: "' .. version .. '"\n', 1))
+  party.refresh()
+end
+
+test("party: the version this tab runs is its page's", "adventure", function()
+  local page = SRC["GM Party"]:match('^%-%-%-\n.-\nversion: "([^"]+)"\n.-%-%-%-\n')
+  ok(page, "a version in GM Party's frontmatter")
+  eq(party.version, page)
+  eq(party.stale(), nil, "a space that holds the same says nothing")
+  hasnt(party.fight(BARROW).html, "Reload this tab")
+end)
+
+test("party: a tab behind its space says so, and how to catch up", "adventure", function()
+  atVersion(OWN, "1.5.0")
+  eq(party.stale(), "This tab runs GM Party " .. party.version .. ", but the space has 1.5.0: " ..
+    "reload it (System: Reload, Ctrl-Alt-R).")
+  -- a fight says so over its box, on the page alone
+  local w = party.fight(BARROW)
+  ok(w.html:find('<div class="gmparty-stale">', 1, true) == 1, "first, over the fight: " .. w.html:sub(1, 80))
+  has(live(w), "⟳ Reload this tab: it runs GM Party " .. party.version .. ", and the space has 1.5.0 " ..
+    "(System: Reload, Ctrl-Alt-R).")
+  eq(w.markdown, party.fightPrint(BARROW), "never in the Markdown face, which tables and the players' copies take")
+  eq(party.printed.fight(BARROW), party.fightPrint(BARROW), "nor in print")
+  hasnt(party.n().html, "Reload", "a number in a sentence stays as it is")
+  -- an older copy is a different one as well: whichever way, the tab and the space disagree
+  atVersion(OWN, "1.3.0")
+  has(party.stale(), "but the space has 1.3.0:")
+end)
+
+test("party: every copy of the library in the space counts, at any depth, and nothing else", "dm", function()
+  local installed = "Adventure/" .. OWN
+  ok(H.pages[installed], "GM Party where install.json puts it")
+  eq(party.stale(), nil)
+  atVersion("Author/" .. OWN, "1.10.0")
+  atVersion("Old/Spaces/Library/Storie/GM Party", "1.9.0")
+  atVersion("Player/Library/Storie/GM Party", "1.10.0")
+  has(party.stale(), "but the space has 1.9.0 and 1.10.0:", "each version once, lowest first")
+  -- a page whose name only looks like it
+  for _, name in ipairs({ "Author/" .. OWN, "Old/Spaces/Library/Storie/GM Party", "Player/" .. OWN }) do
+    H.pages[name] = nil
+  end
+  atVersion("MyLibrary/Storie/GM Party", "9.0.0")
+  atVersion(OWN .. " Notes", "9.0.0")
+  atVersion("Library/Storie/GM Party/Old", "9.0.0")
+  eq(party.stale(), nil, "only a page named for the library, after a slash or as the whole name")
+  -- a copy that gives no version can't be held to this one
+  H.pages[installed] = (SRC["GM Party"]:gsub('\nversion: "[^"]*"\n', "\n", 1))
+  party.refresh()
+  eq(party.stale(), nil)
+end)
+
+test("party: whether the tab is behind is read at most every two seconds", "adventure", function()
+  withClock(function(clock)
+    party.refresh()
+    eq(party.stale(), nil)
+    H.pages[OWN] = (SRC["GM Party"]:gsub('\nversion: "[^"]*"\n', '\nversion: "1.5.0"\n', 1))
+    clock.now = clock.now + 1
+    eq(party.stale(), nil, "kept for two seconds")
+    clock.now = clock.now + 1
+    has(party.stale(), "1.5.0", "then read again")
+    H.pages[OWN] = SRC["GM Party"]
+    party.refresh()
+    eq(party.stale(), nil, "and at once after a refresh")
+  end)
+end)
+
+test("party: a look at the index that fails says nothing, and the fight still draws", "adventure", function()
+  local real = index.pages
+  index.pages = function() error("index gone") end
+  local good, err = pcall(function()
+    party.refresh()
+    eq(party.stale(), nil)
+  end)
+  index.pages = real
+  if not good then error(err, 0) end
+  party.refresh()
+  hasnt(party.fight(BARROW).html, "Reload this tab")
 end)

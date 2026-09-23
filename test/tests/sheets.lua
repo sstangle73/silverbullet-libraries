@@ -793,3 +793,290 @@ test("sheets: the drawn page never runs past its height, however long the lists"
   end
   has(svg, "more, after this page")
 end)
+
+------------------------------------------------------------------ a tab behind its space
+
+local SHEETS = "Library/Storie/GM Sheets"
+
+-- The library's page as the space holds it, at another version.
+local function sheetsAt(name, version)
+  H.pages[name] = (SRC["GM Sheets"]:gsub('\nversion: "[^"]*"\n', '\nversion: "' .. version .. '"\n', 1))
+end
+
+test("sheets: the version this tab runs is its page's", "dm", function()
+  local written = SRC["GM Sheets"]:match('^%-%-%-\n.-\nversion: "([^"]+)"\n.-%-%-%-\n')
+  ok(written, "a version in GM Sheets' frontmatter")
+  eq(sheets.version, written)
+  eq(sheets.stale(), nil, "a space that holds the same says nothing")
+  page(TAMSIN, RANGER)
+  hasnt(sheets.draw().html, "Reload this tab")
+end)
+
+test("sheets: a tab behind its space says so over the sheet, on the page alone", "dm", function()
+  sheetsAt("Adventure/" .. SHEETS, "1.4.0")
+  eq(sheets.stale(), "This tab runs GM Sheets " .. sheets.version .. ", but the space has 1.4.0: " ..
+    "reload it (System: Reload, Ctrl-Alt-R).")
+  page(TAMSIN, RANGER)
+  local w = sheets.draw()
+  has(w.html, '<div class="gmsheets"><p class="gmsheets-stale">⟳ Reload this tab: it runs GM Sheets ' ..
+    sheets.version .. ", and the space has 1.4.0 (System: Reload, Ctrl-Alt-R).</p>", "first, over the sheet")
+  hasnt(w.markdown, "Reload", "never in the Markdown face, which prints and goes to the players")
+  hasnt(sheets.printed.draw(), "Reload", "nor in print")
+  -- over a sheet that can't be drawn as well
+  local gone = sheets.draw("Party/Nobody")
+  has(gone.html, '<p class="gmsheets-stale">')
+  eq(gone.markdown, "*No page Party/Nobody.*")
+  -- another copy, at any depth, and a version is a page's text, never HTML
+  sheetsAt("Old/Library/Storie/GM Sheets", "<b>2</b>")
+  has(sheets.stale(), "but the space has 1.4.0 and <b>2</b>:")
+  has(sheets.draw().html, "the space has 1.4.0 and &lt;b&gt;2&lt;/b&gt; (System")
+  hasnt(sheets.draw().html, "<b>2")
+end)
+
+test("sheets: a look at the index that fails says nothing, and the sheet still draws", "dm", function()
+  page(TAMSIN, RANGER)
+  local real = index.pages
+  index.pages = function() error("index gone") end
+  local good, err = pcall(function()
+    eq(sheets.stale(), nil)
+    local w = sheets.draw()
+    ok(svgOf(w.html), "drawn")
+    hasnt(w.html, "Reload this tab")
+  end)
+  index.pages = real
+  if not good then error(err, 0) end
+end)
+
+------------------------------------------------------------------ Jack of All Trades, and Disadvantage
+
+-- A level 5 bard: Proficiency Bonus +3, so Jack of All Trades is +1.
+local BARD = [==[---
+type: pc
+level: 5
+class: Bard
+str: 8
+dex: 14
+con: 12
+int: 10
+wis: 13
+cha: 16
+saves: [dex, cha]
+skills: [deception, performance, persuasion]
+expertise: [persuasion]
+history: 5
+spellcasting: cha
+---
+
+# Wren Hollow
+]==]
+
+test("sheets: Jack of All Trades adds half the bonus to a skill without proficiency, and nothing else", "dm", function()
+  page("Party/Wren Hollow", BARD)
+  local v = sheets.values(sheets.read("Party/Wren Hollow"))
+  eq(v.pb, 3)
+  eq(v.jack, true, "a bard at level 5")
+  -- skills without proficiency: the modifier and 1, half of +3 rounded down
+  eq(v.skills.athletics, 0, "Strength -1, and 1")
+  eq(v.skills.arcana, 1, "Intelligence +0, and 1")
+  eq(v.skills.stealth, 3, "Dexterity +2, and 1")
+  eq(v.skills.perception, 2, "Wisdom +1, and 1")
+  -- a skill that uses the bonus already has no more of it
+  eq(v.skills.deception, 6, "proficient: +3 and +3")
+  eq(v.skills.performance, 6)
+  eq(v.skills.persuasion, 9, "Expertise: +3 and +6")
+  eq(v.skills.history, 5, "a number the page writes still wins")
+  -- a passive score built on a skill has it through the skill
+  eq(v.passive.perception, 12, "10 and Perception's +2")
+  eq(v.passive.insight, 12)
+  eq(v.passive.investigation, 11, "10 and Investigation's +1")
+  -- not initiative, not a saving throw
+  eq(v.initiative, 2, "Dexterity alone")
+  eq(v.saves.str, -1)
+  eq(v.saves.wis, 1)
+  eq(v.saves.dex, 5, "proficient: +2 and +3")
+  eq(v.spellDC, 14, "8, +3 and Charisma's +3")
+  -- the sheet draws those numbers
+  local t = texts(svgOf(sheets.draw("Party/Wren Hollow").html))
+  has(t, "Arcana | Int | +1")
+  has(t, "Persuasion | Cha | +9")
+  has(t, "Passive Investigation | 11")
+  -- and without it, as before
+  page("Party/Wren Hollow", (BARD:gsub("level: 5", "level: 5\njack_of_all_trades: false")))
+  v = sheets.values(sheets.read("Party/Wren Hollow"))
+  eq(v.jack, false)
+  eq(v.skills.arcana, 0)
+  eq(v.passive.investigation, 10)
+  -- half of an odd bonus rounds down: +5 at level 13 gives 2
+  page("Party/Wren Hollow", (BARD:gsub("level: 5", "level: 13")))
+  eq(sheets.values(sheets.read("Party/Wren Hollow")).skills.arcana, 2)
+end)
+
+test("sheets: who has Jack of All Trades", "dm", function()
+  local function jack(extra)
+    return sheets.jackOfAllTrades(yaml.parse(extra))
+  end
+  eq(jack("class: Bard\nlevel: 1"), false, "a bard gains it at level 2")
+  eq(jack("class: Bard\nlevel: 2"), true)
+  eq(jack("class: bard\nlevel: 9"), true, "however it is capitalised")
+  eq(jack("class: Monk 2 / Bard 2 / Warlock 1\nlevel: 5"), true, "multiclassed, from the bard's own level")
+  eq(jack("class: Fighter 3 / Bard 1\nlevel: 4"), false, "a level of bard is not enough, whatever the total")
+  eq(jack("class: Bard 3, Fighter 2\nlevel: 5"), true)
+  eq(jack("class: Bard (College of Lore) 6\nlevel: 6"), true)
+  eq(jack("class: Barbarian\nlevel: 9"), false)
+  eq(jack("class: Bardic Scholar\nlevel: 9"), false, "only a class that is Bard")
+  eq(jack("class: Bard / Fighter\nlevel: 9"), false, "a bard's level not given")
+  eq(jack("class: Fighter\nlevel: 7\nfeatures:\n  - {name: Jack of All Trades, text: Half the bonus.}"), true,
+    "a feature of that name")
+  eq(jack("class: Rogue\nlevel: 3\nfeats: [jack-of-all-trades]"), true, "a feat, named any sensible way")
+  eq(jack("class: Wizard\nlevel: 3\njack_of_all_trades: true"), true, "the page's word")
+  eq(jack("class: Bard\nlevel: 5\njack_of_all_trades: false"), false, "either way")
+  eq(jack("class: Wizard\nlevel: 3"), false)
+  eq(sheets.classLevel(yaml.parse("class: Monk 2 / Bard 3"), "bard"), 3)
+  eq(sheets.classLevel(yaml.parse("class: Bard\nlevel: 4"), "bard"), 4)
+  eq(sheets.classLevel(yaml.parse("class: Bard"), "bard"), nil, "no level")
+  eq(sheets.classLevel(yaml.parse("class: Wizard 3"), "bard"), nil)
+end)
+
+test("sheets: a passive score is 5 less with Disadvantage, and Advantage cancels it", "dm", function()
+  -- Tamsin's Perception is +4, and she has Advantage on it: 19
+  page(TAMSIN, (RANGER:gsub("advantage: %[perception%]", "advantage: [perception]\ndisadvantage: [perception]")))
+  local v = sheets.values(sheets.read(TAMSIN))
+  eq(v.passive.perception, 14, "both: 10 and +4")
+  page(TAMSIN, (RANGER:gsub("advantage: %[perception%]", "disadvantage: [perception]")))
+  eq(sheets.values(sheets.read(TAMSIN)).passive.perception, 9, "Disadvantage alone: 10, +4 and -5")
+  -- the shapes Advantage takes: a line of names, a skill's own name
+  page(TAMSIN, (RANGER:gsub("advantage: %[perception%]", "disadvantage: Insight, investigation")))
+  v = sheets.values(sheets.read(TAMSIN))
+  eq(v.passive.insight, 7, "10, Insight's +2 and -5")
+  eq(v.passive.investigation, 5, "10, Investigation's +0 and -5")
+  eq(v.passive.perception, 14, "no Advantage left, none lost")
+  -- a passive score the page writes still wins
+  page(TAMSIN, (RANGER:gsub("advantage: %[perception%]", "disadvantage: [perception]\npassive_perception: 15")))
+  eq(sheets.values(sheets.read(TAMSIN)).passive.perception, 15)
+end)
+
+-- How many times the drawing sets a word in its labels.
+local function marks(svg, word)
+  return count(svg, ">" .. word .. "</text>")
+end
+
+test("sheets: Disadvantage is the word DIS beside the number, and a name it doesn't know is named", "dm", function()
+  page(TAMSIN, RANGER)
+  local svg = svgOf(sheets.draw().html)
+  eq(marks(svg, "ADV"), 2, "Perception's, and passive Perception's")
+  eq(marks(svg, "DIS"), 0)
+  page(TAMSIN, (RANGER:gsub("advantage: %[perception%]", "advantage: [perception]\ndisadvantage: [stealth, initiative, str_save]")))
+  local w = sheets.draw()
+  svg = svgOf(w.html)
+  eq(marks(svg, "DIS"), 3, "Stealth, initiative and the Strength save")
+  eq(marks(svg, "ADV"), 2)
+  eq(warning(w), nil, "every name read")
+  -- both on one roll: neither shows, as neither applies
+  page(TAMSIN, (RANGER:gsub("advantage: %[perception%]", "advantage: [perception]\ndisadvantage: [perception]")))
+  svg = svgOf(sheets.draw().html)
+  eq(marks(svg, "ADV"), 0)
+  eq(marks(svg, "DIS"), 0)
+  has(texts(svg), "PASSIVE PERCEPTION | 14")
+  -- a name it can't read is named over the sheet, as one in advantage is
+  page(TAMSIN, (RANGER:gsub("advantage: %[perception%]", "disadvantage: [stealth checks]")))
+  eq(warning(sheets.draw()), "⚠ Left off the sheet, since it can't read them: disadvantage stealth checks.")
+end)
+
+------------------------------------------------------------------ retired
+
+test("sheets: a retired character's sheet says so beside the level, in words", "dm", function()
+  page(TAMSIN, (RANGER:gsub("type: pc\n", "type: pc\nretired: true\n")))
+  local w = sheets.draw()
+  local svg = svgOf(w.html)
+  has(texts(svg), "Tamsin Reed | RETIRED | LEVEL | 3 | Ranger")
+  has(svg, 'aria-label="Character sheet: Tamsin Reed (retired)"')
+  has(svgOf(sheets.printed.draw()), ">RETIRED</text>", "the drawing is the same in print")
+  -- a name long enough to reach it is set smaller, clear of it
+  local long = "Bartholomew Aldous Fitzwilliam Montgomery-Hargreaves the Third"
+  page("Party/" .. long, (RANGER:gsub("type: pc\n", "type: pc\nretired: true\n")))
+  svg = svgOf(sheets.draw("Party/" .. long).html)
+  local size, first = svg:match('<text[^>]-font%-size="([%d.]+)"[^>]*>([^<]*)</text>')
+  eq(first, long)
+  local x = tonumber(svg:match('<text x="([%d.]+)" y="24" font%-size="9" font%-weight="bold" text%-anchor="end" letter%-spacing="0.6">RETIRED</text>'))
+  ok(x, "RETIRED set right of the name, before the level")
+  local retiredLeft = x - sheets.textWidth("RETIRED", 9, true) - 0.6 * 7
+  ok(sheets.textWidth(first, tonumber(size), true) < retiredLeft,
+    "the name ends before RETIRED starts: " .. sheets.textWidth(first, tonumber(size), true) .. " < " .. retiredLeft)
+  -- only true retires a character
+  page(TAMSIN, (RANGER:gsub("type: pc\n", "type: pc\nretired: false\n")))
+  hasnt(texts(svgOf(sheets.draw().html)), "RETIRED")
+  page(TAMSIN, RANGER)
+  hasnt(texts(svgOf(sheets.draw().html)), "RETIRED")
+end)
+
+------------------------------------------------------------------ numbers written over the sums
+
+-- The line over a drawn sheet naming the numbers written over a sum that
+-- differs, or nil.
+local function written(w)
+  return w.html:match('<p class="gmsheets%-warn gmsheets%-written">(.-)</p>')
+end
+
+test("sheets: a number written where the sum differs is named over the sheet, and never printed", "dm", function()
+  -- Tamsin at level 3, with a Proficiency Bonus of +3 written over her +2
+  page(TAMSIN, (RANGER:gsub("hp: 28", "hp: 28\ninitiative: 5\nstr_save: 9\narcana: 4\npassive_perception: 11\n" ..
+    "spell_dc: 15\npb: 3\nathletics: 4\nstealth: 6")))
+  local w = sheets.draw()
+  eq(written(w), "⚠ Proficiency Bonus +3 as written; the sum is +2. " ..
+    "Initiative +5 as written; the sum is +3. " ..
+    "Strength save +9 as written; the sum is +4. " ..
+    "Arcana +4 as written; the sum is +0. " ..
+    "Passive Perception 11 as written; the sum is 20. " ..
+    "Spell save DC 15 as written; the sum is 13.",
+    "each sum with the other numbers as shown: the +3 written, Perception's +5 and Advantage's 5")
+  local v = sheets.values(sheets.read(TAMSIN))
+  eq(v.initiative, 5, "the sheet shows what is written")
+  eq(v.sums.initiative, 3)
+  -- Athletics +4 and Stealth +6, written too, are their sums with the +3: nothing said
+  hasnt(written(w), "Athletics")
+  hasnt(written(w), "Stealth")
+  ok(w.html:find("gmsheets-written", 1, true) < w.html:find("<svg", 1, true), "over the sheet")
+  hasnt(w.markdown, "as written", "never in the Markdown face, which prints and goes to the players")
+  hasnt(sheets.printed.draw(), "as written")
+  eq(warning(w), nil, "a line of its own, apart from what the sheet can't read")
+end)
+
+test("sheets: numbers that agree with the sums, or come from D&D Beyond, have no such line", "dm", function()
+  page(TAMSIN, RANGER)
+  eq(written(sheets.draw()), nil, "nothing written over a sum")
+  page(TAMSIN, (RANGER:gsub("hp: 28", "hp: 28\ninitiative: 3\ndex_save: 5\nsurvival: 6\npassive_insight: 12\nspell_attack: 4")))
+  eq(written(sheets.draw()), nil, "each written as its sum")
+  page(TAMSIN, (RANGER:gsub("hp: 28", "hp: 28\ninitiative: 6\nddb: 1002")))
+  eq(written(sheets.draw()), nil, "D&D Beyond's numbers, with what the sums don't know")
+  eq(list(sheets.differences(sheets.read(TAMSIN))), "")
+end)
+
+test("sheets: a written number is held to the sum with Jack of All Trades and Disadvantage in it", "dm", function()
+  -- the bard's Arcana is +1 with Jack of All Trades: a +0 written is a point short
+  page("Party/Wren Hollow", (BARD:gsub("history: 5", "arcana: 0\nhistory: 5\npassive_perception: 12\ndisadvantage: [perception]")))
+  eq(list(sheets.differences(sheets.read("Party/Wren Hollow"))),
+    "Arcana +0 as written; the sum is +1. | History +5 as written; the sum is +1. | " ..
+    "Passive Perception 12 as written; the sum is 7.")
+end)
+
+------------------------------------------------------------------ fit to screen
+
+-- On a phone the sheet keeps its drawn size and scrolls; a tick box there
+-- shrinks it to the screen for the whole page at once, by style alone.
+test("sheets: on a phone, a tick in Fit to screen shows the whole page at once", "dm", function()
+  page(TAMSIN, RANGER)
+  local w = sheets.draw()
+  has(w.html, '<label class="gmsheets-fit"><input type="checkbox"> Fit to screen</label><div class="gmsheets-page"><svg ',
+    "a tick box over the drawing, which a tap works with no Lua")
+  hasnt(w.markdown, "Fit to screen", "on the page only")
+  hasnt(sheets.printed.draw(), "<input")
+  local style = SRC["GM Sheets"]:match("```space%-style\n(.-)\n```")
+  has(style:match("\n%.gmsheets%-fit%s*(%b{})") or "", "display: none;", "no box on a wider screen, where the sheet fits")
+  local phone = style:match("@media screen and %(max%-width: 600px%)%s*(%b{})")
+  ok(phone, "a rule for a phone")
+  has(phone:match("%.gmsheets%-fit%s*(%b{})") or "", "display: inline-flex;", "the box shows on a phone")
+  local fit = phone:match("%.gmsheets:has%(%.gmsheets%-fit input:checked%) %.gmsheets%-page svg%s*(%b{})")
+  ok(fit, "ticked, the sheet it sits over")
+  has(fit, "max-width: 100%;", "shrinks to the screen's width")
+  ok(phone:find(".gmsheets-page svg {\n    max-width: none;", 1, true), "and unticked keeps its size")
+end)

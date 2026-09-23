@@ -83,6 +83,14 @@ A fight that gives it any of those is fine. One that gives it another is flagged
 
 The reference on the page is a widget: HTML with the compendium link, and a Markdown face with the same link, so a table, Copy, Baked Sections and GM Kit's publishing all keep it. GM Book 1.6.3 or later evaluates each expression with `bestiary` standing for `bestiary.printed`, which gives the citation without the URL. This library puts `bestiary.printed` in `gmbook.printers`, where GM Book looks for it, and sets `party.creatureRef`, where GM Party looks.
 
+## A tab behind its space
+
+A tab reads its libraries when it opens. If the space's GM Bestiary changes after that, from another tab, a sync or `Library: Install`, the tab goes on running the one it read. `bestiary.stale()` says so: nothing while the two agree, and otherwise
+
+    This tab runs GM Bestiary 1.2.0, but the space has 1.3.0: reload it (System: Reload, Ctrl-Alt-R).
+
+It reads the `version` of every page named `Library/Storie/GM Bestiary`, at any depth, from the index, and it never fails. GM Book asks before it builds. A reference on the page shows a line of its own over it, *⟳ Reload this tab*, with the two versions: on the page only, never in print or in the players' copies.
+
 ## Changes in 1.2
 
 **CRs are compared by value**, so a page's `cr: 0.125` agrees with a fight's `"1/8"`, and a warning writes a CR as the rules do. A `ddb` that is D&D Beyond's number for a monster links to its page there; anything else that isn't a web address gets no link, and a ⚠ on the page says so. A creature's reference drawn on the page while the book builds is drawn for that page, not the one being printed.
@@ -96,6 +104,7 @@ A creature page's `cr` can list several CRs, for a creature with a stat block fo
 ```space-lua
 -- priority: 10
 bestiary = bestiary or {}
+bestiary.version = "1.2.0"
 
 bestiary.config = {
   type      = "monster",              -- the page type that describes a creature
@@ -117,6 +126,92 @@ end
 
 local function capital(s)
   return s:sub(1, 1):upper() .. s:sub(2)
+end
+
+------------------------------------------------------------------ this tab
+
+-- A version as a page writes it: "1.2.0", or the number YAML reads 2 as.
+local function versionText(v)
+  if type(v) == "number" then
+    if v == math.floor(v) then return string.format("%d", v) end
+    return tostring(v)
+  end
+  if type(v) ~= "string" then return nil end
+  local s = v:match("^%s*(.-)%s*$")
+  if s == "" then return nil end
+  return s
+end
+
+-- Versions in order, by the numbers in them: 1.9.0 before 1.10.0.
+local function versionLess(a, b)
+  local x, y = {}, {}
+  for n in a:gmatch("%d+") do x[#x + 1] = tonumber(n) end
+  for n in b:gmatch("%d+") do y[#y + 1] = tonumber(n) end
+  for i = 1, math.max(#x, #y) do
+    if (x[i] or -1) ~= (y[i] or -1) then return (x[i] or -1) < (y[i] or -1) end
+  end
+  return a < b
+end
+
+-- "a, b and c"
+local function andList(list)
+  local out = ""
+  for i, s in ipairs(list) do
+    if i == 1 then out = s
+    elseif i == #list then out = out .. " and " .. s
+    else out = out .. ", " .. s end
+  end
+  return out
+end
+
+-- The versions of GM Bestiary the space holds other than the one this tab
+-- runs, older or newer: the frontmatter of every page named
+-- Library/Storie/GM Bestiary, at any depth, as the index has it, lowest
+-- first. Read at most every two seconds, as the creature pages are.
+local staleCache
+local function othersInSpace()
+  local now = os.time()
+  if staleCache and now - staleCache.at < 2 then return staleCache.value end
+  local own = "Library/Storie/GM Bestiary"
+  local tail = "/" .. own
+  local pages = query[[
+    from p = index.pages()
+    where p.name == own or p.name:endsWith(tail)
+    order by p.name
+  ]]
+  local out, seen = {}, {}
+  for _, p in ipairs(pages) do
+    local v = versionText(p.version)
+    if v and v ~= bestiary.version and not seen[v] then
+      seen[v] = true
+      out[#out + 1] = v
+    end
+  end
+  table.sort(out, versionLess)
+  staleCache = { at = now, value = out }
+  return out
+end
+
+-- Nil while this tab runs the GM Bestiary the space holds; else what to do.
+-- A tab reads its Lua when it opens, so a library updated since, from
+-- another tab or by a sync, is on disk and in the index but not running
+-- here. GM Book asks before it builds. It never fails: a look that can't be
+-- made says nothing.
+function bestiary.stale()
+  local ok, others = pcall(othersInSpace)
+  if not ok or type(others) ~= "table" or #others == 0 then return nil end
+  return "This tab runs GM Bestiary " .. bestiary.version .. ", but the space has " ..
+    andList(others) .. ": reload it (System: Reload, Ctrl-Alt-R)."
+end
+
+-- The same, as a line over a reference on the page: HTML, so never in print
+-- nor in the Markdown face. The reference sits in a sentence's place, so the
+-- line is a block of its own above it. "" when this tab is current.
+local function staleNote()
+  local ok, others = pcall(othersInSpace)
+  if not ok or type(others) ~= "table" or #others == 0 then return "" end
+  return dom.span { class = "gmbestiary-stale", __rawText = "⟳ Reload this tab: it runs GM Bestiary " ..
+    bestiary.version .. ", and the space has " .. andList(others) .. " (System: Reload, Ctrl-Alt-R)." }.outerHTML
 end
 
 ------------------------------------------------------------------ the pages
@@ -153,9 +248,11 @@ function bestiary.all()
   return value
 end
 
--- Forget the pages read last, so the next reference reads them again.
+-- Forget the pages read last, and whether this tab is behind its space, so
+-- the next reference reads them again.
 function bestiary.refresh()
   bestiary.cached = nil
+  staleCache = nil
 end
 
 -- The creature page a path names, or nil. A path written for the
@@ -279,7 +376,7 @@ end
 local function missing(ref)
   local text = "No creature page for " .. tostring(ref) .. "."
   return widget.new {
-    html = dom.em { class = "gmbestiary-missing", __rawText = text }.outerHTML,
+    html = staleNote() .. dom.em { class = "gmbestiary-missing", __rawText = text }.outerHTML,
     markdown = "*" .. text .. "*",
     display = "inline",
   }
@@ -291,7 +388,8 @@ function bestiary.ref(ref)
   local c = bestiary.creature(ref or bestiary.here())
   if not c then return missing(ref or bestiary.here()) end
   local html, markdown = forms(c)
-  return widget.new { html = html, markdown = markdown, display = "inline" }
+  -- a tab behind its space says so over the reference, on the page alone
+  return widget.new { html = staleNote() .. html, markdown = markdown, display = "inline" }
 end
 
 ------------------------------------------------------------------ in print
@@ -387,5 +485,11 @@ end
 .gmbestiary-missing::before {
   content: "⚠ ";
   font-style: normal;
+}
+
+/* A tab behind its space: a line of its own over the reference, in words. */
+.gmbestiary-stale {
+  display: block;
+  font-weight: bold;
 }
 ```
