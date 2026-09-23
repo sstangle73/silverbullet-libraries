@@ -6,8 +6,8 @@ local REVEALED = count(FIXTURES.dm["State/Revealed"], "\n- [[")
 
 test("kit: registers commands, header buttons and a top widget", "dm", function()
   for _, c in ipairs({ "GM: Session Table", "GM: Reveal Page", "GM: Unreveal Page", "GM: Hide Page",
-      "GM: Publish to Players", "GM: Mark Met", "GM: Mark Dead", "GM: Mark Visited",
-      "GM: Log Decision", "GM: Next Session" }) do
+      "GM: Publish to Players", "GM: Preview Publish", "GM: Mark Met", "GM: Mark Dead", "GM: Mark Visited",
+      "GM: Log Decision", "GM: Next Session", "GM: Draft Recap", "GM: Publish Recap" }) do
     ok(H.commands[c], "missing command " .. c)
   end
   eq(H.commands["GM: Hide Page"].hide, true, "the old name stays out of the palette")
@@ -21,7 +21,7 @@ test("kit: registers commands, header buttons and a top widget", "dm", function(
                          "button runs a missing command " .. b.command) end
     icons[b.icon] = b.priority
   end
-  for _, icon in ipairs({ "clipboard", "edit-3", "send", "printer" }) do
+  for _, icon in ipairs({ "clipboard", "edit-3", "eye", "send", "printer" }) do
     ok(icons[icon], "no " .. icon .. " button")
     ok(icons[icon] < 1 and icons[icon] > 0, icon .. " should sit after the built-in buttons")
   end

@@ -28,11 +28,11 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 
 **The GM bar.** In the DM space, every adventure page gets a bar across the top. It shows whether the players can see the page, with buttons to reveal it, or part of it, or take it back: ◉ revealed and published, ◉ revealed but not published yet, ◔ revealed in part, ○ hidden, or ⊘ never published, for a map or a page whose name is DM-only. Once a page is published it says when the players' copy has fallen behind: "◔ 1 part not published yet", "◔ Whole page not published yet", or "◐ Changed since publishing", for a page saved since or a part taken back since. A person adds *Mark met* and *Mark dead…*, a faction adds *Mark met*, a place adds *Mark visited*, an item adds *Mark found*, and a scene adds *Mark planned* and *Mark started*, then *Mark finished*. Once something is recorded, the bar says when, with the session linked to its log: "✓ Met in session 3", and a button takes the mark off again for one recorded by mistake. An item with uses shows how many are left, with buttons to use one and to refund one. A page that hands out an item, or shows its rules, gets a row for that item as well: see *Items*. A page that sets checks gets a row of them, with *Log a roll…*: see *Rolls*.
 
-**A session's own notes.** A page in `Sessions/` gets a bar of its own instead: the scene before, the scene the session is on, and the scene after. See *Scenes*.
+**A session's own notes.** A page in `Sessions/` gets a bar of its own instead: the scene before, the scene the session is on, and the scene after. See *Scenes*. A session's recap draft gets one that says whether the players have it, with the button that sends it: see *The players' recap*.
 
-**The header.** Four buttons: the session table, *Log a decision*, *Log a roll* and *Publish to players*.
+**The header.** Five buttons: the session table, *Log a decision*, *Log a roll*, *Preview publishing* (an eye) and *Publish to players*.
 
-**Notifications.** Marking, unmarking, revealing, unrevealing, logging a roll and starting a session each come with *Undo*. A reveal also offers *Publish now*. *Undo* takes back what its own action did and nothing else, so a mark, a use, a decision or a reveal made since stays made: undoing the reveal of one part leaves a part revealed after it. It only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
+**Notifications.** Marking, unmarking, revealing, unrevealing, logging a roll and starting a session each come with *Undo*. A reveal also offers *Publish now* and *Preview*, and a publish *Open report*. *Undo* takes back what its own action did and nothing else, so a mark, a use, a decision or a reveal made since stays made: undoing the reveal of one part leaves a part revealed after it. It only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
 
 **Taking a page back.** *Unreveal* takes a page off the revealed list and deletes the copy the players were sent, so a page revealed or published by mistake is gone from the Player space at once. *Undo* puts both back, and so does revealing it and publishing again. A page that isn't revealed but that the players still have a copy of, say one hidden before 2.4, shows ◐ on its bar, with *Delete their copy*.
 
@@ -59,13 +59,26 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 | `GM: Reveal Page` | | Adds an adventure page to the revealed list |
 | `GM: Reveal Part` | | Adds one section of a page to the revealed list |
 | `GM: Unreveal Page` | | Takes a page back: off the revealed list, and the players' copy deleted |
-| `GM: Publish to Players` | | Copies every revealed page into the Player space, leaving out its DM-only text, and names the pages it keeps back: one whose name is DM-only, or whose copy would be empty or still holds a DM-only mark |
+| `GM: Publish to Players` | | Copies every revealed page into the Player space, leaving out its DM-only text, and names the pages it keeps back: one whose name is DM-only, or whose copy would be empty or still holds a DM-only mark. Keeps a report of what it did |
+| `GM: Preview Publish` | | Works out what publishing would send, and shows it on a page of its own without sending anything |
 | `GM: Log Decision` | `Ctrl-Alt-d` | Appends to this session's log |
 | `GM: Log Roll` | `Ctrl-Alt-k` | Logs a roll against one of the page's checks, with the words of every rung it reached, into this session's log |
 | `GM: Unlog Roll` | | Takes a roll off again, for one logged by mistake |
 | `GM: Next Session` | | Increments the session counter |
+| `GM: Draft Recap` | | Drafts the players' recap of a session from what GM Kit recorded in it, naming only what they may know |
+| `GM: Publish Recap` | | Sends a recap draft to the players, as `Player/Sessions/Session N` |
 
 On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a list of people and factions, with the ones already met at the bottom. The other marks work the same way, and so do reveal and unreveal on any adventure page; off one, `GM: Unreveal Page` lists what the players can see or still have. `GM: Hide Page`, its name before 2.4, still works. Found, use and refund also act at once on a page with a row for just one item. The scene marks work like the rest: on a scene page they mark that scene, and anywhere else they ask which. Publishing and starting a session ask first.
+
+## A tab that is behind
+
+A tab runs the Lua it loaded, and only *System: Reload* (`Ctrl-Alt-R`) runs the space's Lua again. Install a newer GM Kit, from this tab or on another device, and the tab indexes the new page at once while it still runs the old code, which could write the play state in a shape the new code doesn't read, or without a fix the new code makes. So a tab that is behind writes nothing. Every mark and unmark, use and refund, reveal and unreveal, publish and preview, roll, decision, recap and new session, and every *Undo*, stops before it asks anything, with a warning and a *Reload* button:
+
+    This tab runs GM Kit 3.8.0, but the space has 3.9.0: reload it (System: Reload, Ctrl-Alt-R) first.
+
+The bar says so first, with *Reload* beside it: "⟳ Reload this tab: GM Kit 3.9.0 is installed, this tab runs 3.8.0".
+
+GM Kit finds its own page in the index by the end of its name, `Library/Storie/GM Kit`, so a copy in a space held as a folder counts as well, and a tab is behind when any copy's `version` differs from its own. `gm.version` is the version the tab runs, and `gm.stale()` says what to do, or gives `nil` while the tab is current. It is one question to the index, and never an error: an index it can't read says nothing. A button of your own that writes through GM Kit's own functions, `gm.write` or `gm.patch` say, can ask `gm.refuse()` first, which gives `true`, with the warning, on a tab that is behind.
 
 ## Items
 
@@ -174,20 +187,56 @@ Players rarely learn all of a page at once. They meet the Warden and see a tall 
 
 - `State/Revealed`: a link for each revealed adventure page, `[[Adventure/World/People/Mara]]`, or for each part of one, `[[Adventure/World/People/Mara#Who They Are]]`
 - `State/Published`: what each players' copy was made from when it was last published, the page or its parts as the revealed list had them, and when the page had last been saved: `[[Adventure/World/People/Mara#Who They Are]], saved 2026-09-22 19:40:12 UTC`. Publishing writes it; a bar reads it
+- `State/Publish Preview`: what publishing would do, as the last preview found it (`gm.config.previewPage`)
+- `State/Publish Report`: what the last five publishes did (`gm.config.publishReportPage`)
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
 - `State/Items/<name>`: found, the uses left of those found, and where, with a log
 - `State/Scenes/<act>/<scene>`: planned, started and finished, with a log; the act comes too, so scenes numbered alike in two acts stay apart
 - A page's rolls, on its own play state: `roll_wisdom_perception: 15`, the lowest number of the highest band reached, or `passed` or `failed` for a DC, with `roll_wisdom_perception_session`, the session that reached it, and `roll_wisdom_perception_where: the_bank`, the section the check sits in (`top` above any heading), so a check added later, above it or anywhere, keeps clear of its rolls. Another check of that name takes `roll_wisdom_perception_2`, and a second in the same section is `the_bank_2`. A roll logged before 3.8 has no `_where` and is read by its check's place among the page's checks of that name, until the next roll on the page pins it to its section
 - Each log line names its session and links to it
 - `Sessions/Session N`: the scenes under `## Scenes`, the rolls under `## Rolls`, the decisions under `## Decisions`, one line each, and a roll's rungs under its line
+- `Sessions/Session N Recap`: the draft of the players' recap of the session, `type: recap-draft` and `session: N`, yours to edit
+- `Player/Sessions/Session N`: the recap as the players have it, `type: recap` and nothing else in its frontmatter
 
 **When SilverBullet rewrites the links.** Renaming a page rewrites the links to it, the revealed list's among them, and the `subject` of its play state, which stays where it was: GM Kit finds a page's record by its subject when the page's own path has none, so a page renamed or moved after it was marked keeps what the party did. A Lua write that makes a page of the same name as an adventure page, a play state in `State/` or a copy in `Player/`, can make SilverBullet 2.11 rewrite bare `[[Name]]` links elsewhere to a full path, and with `linkWriteFormat: shortest-suffix` it can write an entry of the revealed list without its adventure folder, `[[World/People/Mara]]`. GM Kit reads such an entry as the adventure page whose path ends that way, and writes it back in full the next time the list changes.
 
 ## Players' own notes
 
-Publishing writes into `Player/` and **replaces** what is there, except `Player/Notes/`, which it never touches. It deletes nothing without asking. A copy that no revealed page makes any more, of a page renamed, deleted or unrevealed since it was published, is listed, and publishing asks before it deletes them, with *Undo*; kept, they are named in the report. The Player space's own `index`, `CONFIG`, `Notes/` and `Library/` are never among them. The copy of a page you unreveal goes at once.
+Publishing writes into `Player/` and **replaces** what is there, except `Player/Notes/` and `Player/Sessions/`, where the recaps are, which it never touches. It deletes nothing without asking. A copy that no revealed page makes any more, of a page renamed, deleted or unrevealed since it was published, is listed, and publishing asks before it deletes them, with *Undo*; kept, they are named in the report. The Player space's own `index`, `CONFIG`, `Notes/` and `Library/` are never among them, and nor is anything in its `Sessions/`, where the sessions' recaps are. The copy of a page you unreveal goes at once.
 
 A players' copy keeps only the frontmatter keys in `gm.config.publishKeys`, `type` and `tags` by default. Everything else there is the DM's: an NPC's `role` or `faction`, a page's `status`, its `book_order`.
+
+## Before and after publishing
+
+**A preview.** `GM: Preview Publish`, the eye beside *Publish* in the header, *Preview publishing* on the revealed list or *Preview* on a reveal's notification works out every players' copy exactly as publishing would, and sends nothing. It writes what it found on `State/Publish Preview` (`gm.config.previewPage`), and opens it:
+
+- **New copies**, each with what it is made of: the whole page, its name only, or the parts revealed;
+- **Changed copies**, each with the lines that change, *−* for a line that goes and *+* for one that comes, counted in words beside them, up to eight lines a copy and each cut near a hundred characters; a blank line that comes or goes isn't counted;
+- **Unchanged** copies;
+- what is **kept back**, and why: DM-only marks left once the DM-only text is out, a name that is DM-only, or a copy that would be empty;
+- the **embeds left out**, what is **revealed but no longer there**, the pages **only for the DM**, and the **copies no revealed page makes any more**, which publishing asks before it deletes.
+
+Every space-lua block in the space runs and every `${...}` on a page shown is worked out, so nothing a page says is let loose on the preview: the lines it quotes, a copy's changes and the embeds left out, sit in fenced code whose fence is longer than any run of backticks in them, where nothing runs, links or counts as a DM-only mark, and a name it can't link is escaped. The report quotes the same way.
+
+*Publish now* at its top publishes, and asks first as ever; *Preview again* works it out afresh.
+
+**A report.** A notification is gone in seconds, so publishing also keeps a report on `State/Publish Report` (`gm.config.publishReportPage`), newest first: when and in which session, how many copies were new, updated and unchanged, which pages went, what was kept back and why, the embeds left out, and the copies no revealed page makes any more, deleted or kept. It keeps the last five publishes. A publish that sent, deleted and kept back nothing adds nothing, and nor does one that sent nothing and kept back just what the one before it did. The publish's notification has *Open report*.
+
+## The players' recap
+
+**Drafting it.** After a session, `GM: Draft Recap` drafts a recap of it for the players from what GM Kit recorded in it, and opens it. On a session's log or its recap it drafts that session's; anywhere else it asks which, the one being played first. The draft is a page of yours beside the log, `Sessions/Session 3 Recap`, with `type: recap-draft` and `session: 3`, and holds, under a heading each, only where there is something:
+
+- **Met**: the people and factions marked met in the session;
+- **Visited**: the places marked visited;
+- **Found**: the items marked found, with the uses they have left, "5 of 6 wicks left";
+- **Rolls**: each roll logged, with the words of every rung it reached, as the log has them;
+- **Decisions**: the decisions logged, in your words.
+
+**Only what the players may know.** It keeps to the adventure's own words where the records give them, and names only what the players may know. A page they have a copy of is a link to that copy, which works once the recap is theirs; a page revealed but not published yet is its name, in words; and a page not revealed, only for the DM or whose name is DM-only is left out, and the notification counts those. A link in a rung's words or a decision goes the same way. A roll goes without the scene it was rolled in, and a roll that reached nothing new, or was taken back later in the log, doesn't go at all; nor does what a roll owes, since when a rung comes back is yours to know. DM-only text never goes in: each line is read with the code publishing uses, and a line that still holds a DM-only mark after that is left out whole, and counted. Nor does anything it quotes run, in your space or the players': a `${` in a name, a rung's words or a decision goes in as `$\{`, and a line that would open fenced code, a space-lua block above all, has its first backtick escaped.
+
+**Publishing it.** Edit the draft as you like, then *Publish recap* on its bar, or `GM: Publish Recap`, which takes the draft you are on, or the only one there is, or asks. It asks first, then copies the draft to `Player/Sessions/Session 3` with nothing in its frontmatter but `type: recap`, its links made to go from there, a link to anything else of yours as its words, and its live values printed as a published page's are. *Undo* takes it back again, or puts back the recap the players had. A draft that holds a DM-only mark isn't published: the notification names the marks, and the bar says so. The bar also says whether the players have the recap as it stands: "○ Not published yet", "◉ Published to players", or "◐ Changed since publishing", with *Publish again*.
+
+Drafting again asks before it replaces a draft you may have edited, and *Undo* puts that back. The players' `Sessions/` folder is theirs and the recaps': publishing the adventure's pages never writes there, so an adventure page under `Sessions/` isn't published, and never offers to delete anything in it. `gm.config.recapFolder` names that folder for both, `Sessions/`, and `recapType` and `recapDraftType` are the recap's types.
 
 ## DM-only text
 
@@ -355,6 +404,9 @@ Buttons: the GM bar, the header buttons, pickers, and *Undo*. Marking someone me
 ```space-lua
 -- priority: 10
 gm = gm or {}
+-- The version this code is, as the page's frontmatter says: gm.stale()
+-- holds it to the copies of GM Kit the space has.
+gm.version = "3.8.0"
 
 gm.config = {
   sessionPage     = "Session Table",
@@ -363,6 +415,10 @@ gm.config = {
   revealedPage    = "State/Revealed",
   -- What each players' copy was made from, written as it is published.
   publishedPage   = "State/Published",
+  -- What publishing would do now, written by GM: Preview Publish, and
+  -- what the last few publishes did, written by each one.
+  previewPage     = "State/Publish Preview",
+  publishReportPage = "State/Publish Report",
   adventureFolder = "Adventure/",
   playerFolder    = "Player/",
   playerNotes     = "Notes/",
@@ -370,6 +426,12 @@ gm.config = {
   dmWord          = "dm",
   sceneType       = "scene",
   sessionType     = "session",
+  -- A session's recap for the players: the DM drafts it on a page of
+  -- recapDraftType beside the session's log, and publishing it makes a
+  -- page of recapType in this folder of the players' space.
+  recapFolder     = "Sessions/",
+  recapType       = "recap",
+  recapDraftType  = "recap-draft",
   -- Page types whose page itself holds what only the DM may see, so they
   -- are never revealed or published: GM Maps keeps a map's creatures, and
   -- everything hidden on it, in the map block on its page.
@@ -1113,6 +1175,78 @@ function gm.notify(message, actions, kind)
   editor.flashNotification(message, kind or "info", options)
 end
 
+------------------------------------------------------------ a stale tab
+-- A tab runs the Lua it loaded until System: Reload runs the space's Lua
+-- again, but it indexes a page the moment the page changes: a newer GM Kit
+-- installed since, from this tab or another, is in the index while this
+-- tab still runs the old one. What the old code writes may be in a shape
+-- the new one doesn't read, or miss a fix, so GM Kit writes nothing until
+-- the tab is reloaded.
+
+-- GM Kit's own page, found by the end of its name: a space that holds
+-- another as a folder can hold a copy in each.
+local LIBRARY = "Library/Storie/GM Kit"
+
+-- The version of a copy of GM Kit in the space that isn't the version this
+-- tab runs, the first such copy by name, or nil. One question to the
+-- index, and nil on any error, so the check can never stop what it guards.
+local function installedVersion()
+  local ok, found = pcall(function()
+    local own, tail = LIBRARY, "/" .. LIBRARY
+    local rows = query[[
+      from p = index.pages()
+      where p.name == own or p.name:endsWith(tail)
+      order by p.name
+      select { name = p.name, version = p.version }
+    ]]
+    for _, row in ipairs(rows) do
+      local v = row.version
+      if type(v) == "number" then
+        v = v == math.floor(v) and string.format("%d", v) or tostring(v)
+      end
+      if type(v) == "string" and v ~= "" and v ~= gm.version then return v end
+    end
+    return nil
+  end)
+  if ok then return found end
+  return nil
+end
+
+-- What a bar says of a stale tab, with a glyph and the words.
+local function reloadNote(v)
+  return "⟳ Reload this tab: GM Kit " .. v .. " is installed, this tab runs " .. tostring(gm.version)
+end
+
+-- System: Reload, which runs the space's Lua again: what a stale tab
+-- offers, since a phone has no Ctrl-Alt-R.
+local function reloadTab()
+  editor.invokeCommand("System: Reload")
+end
+
+-- nil while this tab runs the GM Kit the space has, else what to do about
+-- it. Never raises an error.
+function gm.stale()
+  local ok, why = pcall(function()
+    local v = installedVersion()
+    if not v then return nil end
+    return "This tab runs GM Kit " .. gm.version .. ", but the space has " .. v ..
+           ": reload it (System: Reload, Ctrl-Alt-R) first."
+  end)
+  if ok then return why end
+  return nil
+end
+
+-- Whether an action has to stop because this tab is stale: it says so, in
+-- a warning with a button to reload. Every write GM Kit makes for the DM
+-- asks first, before any picker or prompt, so a stale tab neither asks
+-- anything nor writes anything.
+function gm.refuse()
+  local why = gm.stale()
+  if not why then return false end
+  gm.notify(why, { { name = "Reload", run = reloadTab } }, "warning")
+  return true
+end
+
 function gm.name(page)
   return page:match("([^/]+)$") or page
 end
@@ -1212,6 +1346,7 @@ function gm.writeRevealed(list)
       "Publishing copies each of them into `" .. gm.config.playerFolder .. "`.", "",
     '${widgets.commandButton("Reveal a page…", "GM: Reveal Page")} ' ..
       '${widgets.commandButton("Unreveal a page…", "GM: Unreveal Page")} ' ..
+      '${widgets.commandButton("Preview publishing", "GM: Preview Publish")} ' ..
       '${widgets.commandButton("Publish to players", "GM: Publish to Players")}', "",
   }
   for _, n in ipairs(list) do lines[#lines + 1] = "- [[" .. entryEncode(n) .. "]]" end
@@ -1814,11 +1949,11 @@ end
 
 -- Where publishing puts a page, or nil for the pages it skips: anything but an
 -- adventure page, so never a space's index, CONFIG or libraries, and never
--- the players' Notes.
+-- the players' Notes, nor the folder their sessions' recaps are in.
 function gm.playerCopy(page)
   if not gm.isAdventurePage(page) then return nil end
   local rel = page:sub(#gm.config.adventureFolder + 1)
-  if rel:startsWith(gm.config.playerNotes) then return nil end
+  if rel:startsWith(gm.config.playerNotes) or rel:startsWith(gm.config.recapFolder) then return nil end
   return gm.config.playerFolder .. rel
 end
 
@@ -2221,6 +2356,7 @@ end
 -- Records a mark. extra can add state fields, replace the log entry, and
 -- add a note to the notification, as finding an item does for its uses.
 function gm.mark(page, mark, detail, extra)
+  if gm.refuse() then return false end
   extra = extra or {}
   local m, s = gm.marks[mark], gm.currentSession()
   local name, state = gm.name(page), gm.readState(page, true)
@@ -2264,6 +2400,7 @@ function gm.mark(page, mark, detail, extra)
   for k in pairs(fields) do keys[#keys + 1] = k end
   table.sort(keys)
   actions[#actions + 1] = { name = "Undo", run = function()
+    if gm.refuse() then return end
     gm.revert(path, before, keys, { line }, created)
     gm.unlogged(logged)
     if revealed then gm.undoReveals(page, listed, shown) end
@@ -2280,6 +2417,7 @@ end
 -- keeps both lines. An item's uses go with its find, so finding it again
 -- counts them afresh from the page that hands it out.
 function gm.unmark(page, mark)
+  if gm.refuse() then return false end
   local m, s = gm.marks[mark], gm.currentSession()
   local name, path = gm.name(page), (gm.stateFor(page, true))
   if gm.readState(page, true)[m.field] ~= m.value then
@@ -2302,6 +2440,7 @@ function gm.unmark(page, mark)
     ((mark == "found" and was ~= "") and ", and its uses with it" or "") ..
     (alsoFinished and ", and its finish with it" or "") .. ".", {
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       -- the cleared fields come back as they were, and only this line goes;
       -- a record deleted since comes back whole, as it was before the unmark
       if not gm.revert(path, before, m.clears, { line }) then gm.write(path, before) end
@@ -2314,6 +2453,7 @@ function gm.unmark(page, mark)
 end
 
 function gm.markDead(page)
+  if gm.refuse() then return false end
   local state = gm.readState(page, true)
   if state.status == "dead" then return gm.mark(page, "dead") end
   local how = editor.prompt("How did " .. gm.name(page) .. " die? (optional)", "")
@@ -2460,6 +2600,7 @@ end
 -- on: `from`, if that page hands it out; else the one page that does, or the
 -- one picked when several do. Nothing handing it out, it has no uses.
 function gm.markFound(item, from)
+  if gm.refuse() then return false end
   if gm.readState(item, true).found == "true" then return gm.mark(item, "found") end
   local choices = {}
   if from then
@@ -2515,6 +2656,7 @@ end
 
 -- Spends one of an item's uses (delta -1) or refunds one (+1), with Undo.
 function gm.spend(item, delta)
+  if gm.refuse() then return false end
   local name, state = gm.name(item), gm.readState(item, true)
   local uses, top = tonumber(state.uses), tonumber(state.uses_found)
   if state.found ~= "true" or not uses then
@@ -2540,6 +2682,7 @@ function gm.spend(item, delta)
   gm.refresh()
   gm.notify(name .. ": " .. what .. ". " .. gm.usesText(gm.readState(item, true), true) .. ".", {
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       -- one use back the other way, counted from what is left now, so a use
       -- or refund made since this one stays made
       if not gm.exists(path) then return end
@@ -3342,6 +3485,7 @@ end
 -- calls late, not lost, and the roll missed, is logged as owed, with when
 -- it comes back.
 function gm.recordRoll(page, check, pick)
+  if gm.refuse() then return false end
   local s = gm.currentSession()
   local path = (gm.stateFor(page, true))
   local before = gm.exists(path) and gm.read(path) or nil
@@ -3404,6 +3548,7 @@ function gm.recordRoll(page, check, pick)
     { name = "Open log", run = function() editor.navigate(logged.log) end },
     -- Undo takes back this roll and nothing logged since
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       gm.revert(path, before, keys, { line }, created)
       rollUnlogged(logged)
       gm.refresh()
@@ -3417,6 +3562,7 @@ end
 -- or failed for a DC; else the thing found, for a table of finds, and how
 -- high they rolled; then who, where there is anyone to ask about.
 function gm.logCheck(page, check)
+  if gm.refuse() then return false end
   local state = gm.readState(page, true)
   local pick = {}
   local rise = check.rise or 0
@@ -3491,6 +3637,7 @@ end
 -- who. It goes into the session's log alone, since there is no check for
 -- the page's play state to keep.
 function gm.logOtherRoll(page)
+  if gm.refuse() then return false end
   local options = {}
   for i, skill in ipairs(gm.skills) do options[i] = { name = skill, orderId = i } end
   for _, ability in ipairs(gm.abilities) do
@@ -3514,6 +3661,7 @@ function gm.logOtherRoll(page)
   gm.notify(what .. ": logged to session " .. s .. ".", {
     { name = "Open log", run = function() editor.navigate(logged.log) end },
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       rollUnlogged(logged)
       gm.refresh()
       gm.notify("Undone: " .. what .. " is no longer logged")
@@ -3525,6 +3673,7 @@ end
 -- Logs a roll: which of the page's checks, then how it went. A page that
 -- sets none goes straight to a roll it doesn't set.
 function gm.logRoll(page)
+  if gm.refuse() then return false end
   page = page or gm.rollPage()
   local checks = page and gm.checks(page) or {}
   if #checks == 0 then return gm.logOtherRoll(page) end
@@ -3567,6 +3716,7 @@ end
 -- Undo. Both logs keep what they said and add that it was taken back, the
 -- way an unmark's do, so a later roll counts afresh.
 function gm.unlogRoll(page, check, row)
+  if gm.refuse() then return false end
   local path, s = (gm.stateFor(page, true)), gm.currentSession()
   local label = check.name .. (row and (", " .. row.name) or "")
   local before = gm.exists(path) and gm.read(path) or nil
@@ -3590,6 +3740,7 @@ function gm.unlogRoll(page, check, row)
   gm.refresh()
   gm.notify(label .. ": no longer logged.", {
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       if not gm.revert(path, before, keys, { line }) then gm.write(path, before) end
       rollUnlogged(logged)
       gm.refresh()
@@ -3601,6 +3752,7 @@ end
 
 -- Asks which of a page's rolls was logged by mistake, and takes it off.
 function gm.pickUnlog(page)
+  if gm.refuse() then return false end
   local state = gm.readState(page, true)
   local rolled = rolledOn(gm.checks(page), state)
   if #rolled == 0 then
@@ -3702,6 +3854,7 @@ local function privateNote(page)
 end
 
 function gm.reveal(page)
+  if gm.refuse() then return false end
   if gm.isPrivate(page) then
     gm.notify(privateNote(page), nil, "warning")
     return false
@@ -3719,7 +3872,9 @@ function gm.reveal(page)
   gm.refresh()
   gm.notify("Revealed " .. gm.name(page) .. ". The players see it once you publish.", {
     { name = "Publish now", run = function() gm.publish() end },
+    { name = "Preview", run = function() gm.previewPublish() end },
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       gm.undoReveals(page, before, after)
       gm.refresh()
     end },
@@ -3729,6 +3884,7 @@ end
 
 -- Asks which part of a page to reveal, of those not revealed yet.
 function gm.pickPart(page)
+  if gm.refuse() then return nil end
   local now = gm.revealedPart(page)
   if now == true then
     gm.notify(gm.name(page) .. " is revealed whole already")
@@ -3752,6 +3908,7 @@ end
 -- Publishing then sends the players the page's title and the parts
 -- revealed, and nothing that says there is more.
 function gm.revealPart(page, part)
+  if gm.refuse() then return false end
   if gm.isPrivate(page) then
     gm.notify(privateNote(page), nil, "warning")
     return false
@@ -3778,7 +3935,9 @@ function gm.revealPart(page, part)
   gm.refresh()
   gm.notify("Revealed “" .. part .. "” of " .. gm.name(page) .. ". The players see it once you publish.", {
     { name = "Publish now", run = function() gm.publish() end },
+    { name = "Preview", run = function() gm.previewPublish() end },
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       gm.undoReveals(page, before, after)
       gm.refresh()
     end },
@@ -3801,6 +3960,7 @@ end
 -- Takes a page back from the players: off the revealed list, and the copy
 -- they were sent deleted. Undo puts both back.
 function gm.unreveal(page)
+  if gm.refuse() then return false end
   local name, copy = gm.name(page), gm.playerCopy(page)
   local copyText = copy and gm.exists(copy) and space.readPage(copy) or nil
   local entries = gm.revealEntries(page)
@@ -3827,6 +3987,7 @@ function gm.unreveal(page)
   end
   gm.notify(message, {
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       if listed then gm.undoReveals(page, entries, {}) end
       if copyText then gm.write(copy, copyText) end
       gm.refresh()
@@ -3857,63 +4018,23 @@ local function expressionRanges(text)
   return out
 end
 
--- A players' copy without links to pages the players won't have. `shown`
--- holds each adventure page this publish sends: true for the whole page,
--- or the names of the parts sent. A link to any other adventure page, one
--- hidden, private, kept back or gone, becomes its label, and a wiki link
--- without one the name it shows, since the prose shows that anyway; an
--- embed of such a page, or of a section the players don't get, goes, and
--- is named in `dropped`. Links to other sites, within the page, or to
--- pages outside the adventure stay, and so do code and ${...} expressions.
--- `cache` keeps what each wiki link resolved to, over one publish.
-function gm.unlink(text, page, shown, dropped, cache)
-  if not text:find("[[", 1, true) and not text:find("](", 1, true) then return text end
-  cache = cache or {}
-  local prefix = gm.config.adventureFolder
-  local function resolve(ref)
-    if cache[ref] == nil then
-      local found = gm.resolve(ref)
-      if not found and ref:startsWith(prefix) then found = ref end
-      cache[ref] = found or false
-    end
-    return cache[ref] or nil
-  end
-  local function wiki(bang, inner)
-    local ref, alias = inner:match("^(.-)|(.*)$")
-    ref = ref or inner
-    local name, section = ref:match("^(.-)#(.*)$")
-    name = name or ref
-    if name == "" then return nil end
-    local to = resolve(name)
-    if not to or not gm.isAdventurePage(to) then return nil end
-    local sent = shown[to]
-    if bang == "!" then
-      if sent == true or (sent and (not section or table.includes(sent, section))) then return nil end
-      dropped[#dropped + 1] = "![[" .. inner .. "]] in " .. page
-      return ""
-    end
-    if sent then return nil end
-    return alias or gm.name(to)
-  end
-  local function markdownLink(bang, label, paren)
-    if bang == "!" then return nil end
-    local body = paren:sub(2, -2)
-    local url = body:match("^%s*<(.-)>") or body:match("^%s*(%S*)")
-    if url == "" or url:find("^%a[%w+%.%-]*:") or url:find("^//") or url:find("^#") then return nil end
-    url = (url:gsub("%%(%x%x)", function(h)
-      local n = tonumber(h, 16)
-      if n and n >= 32 and n < 127 then return string.char(n) end
-    end))
-    local to = linkTarget(page, url)
-    if not to then return nil end
-    to = (to:gsub("#.*$", ""))
-    if not gm.isAdventurePage(to) or shown[to] then return nil end
-    return label
-  end
-  local function relink(s)
-    s = (s:gsub("(!?)%[%[([^%]\n]-)%]%]", wiki))
-    return (s:gsub("(!?)%[([^%]\n]*)%](%b())", markdownLink))
-  end
+-- The page a Markdown link's (...) names, its %XX codes read, or nil for a
+-- link to another site, within the page, or to nothing.
+local function pageUrl(paren)
+  local body = paren:sub(2, -2)
+  local url = body:match("^%s*<(.-)>") or body:match("^%s*(%S*)")
+  if url == "" or url:find("^%a[%w+%.%-]*:") or url:find("^//") or url:find("^#") then return nil end
+  return (url:gsub("%%(%x%x)", function(h)
+    local n = tonumber(h, 16)
+    if n and n >= 32 and n < 127 then return string.char(n) end
+  end))
+end
+
+-- A text with `relink` run over its prose: every line outside fenced code,
+-- and in each line whatever isn't inline code or a ${...} expression. A
+-- line that held something and is left with nothing, an embed that went,
+-- goes too, and so does a blank line next to it.
+local function relinkProse(text, relink)
   local exprs = expressionRanges(text)
   local out, pos, fence, cut = {}, 1, nil, false
   for line in (text .. "\n"):gmatch("([^\n]*)\n") do
@@ -3970,12 +4091,67 @@ function gm.unlink(text, page, shown, dropped, cache)
   return table.concat(out, "\n")
 end
 
+-- A players' copy without links to pages the players won't have. `shown`
+-- holds each adventure page this publish sends: true for the whole page,
+-- or the names of the parts sent. A link to any other adventure page, one
+-- hidden, private, kept back or gone, becomes its label, and a wiki link
+-- without one the name it shows, since the prose shows that anyway; an
+-- embed of such a page, or of a section the players don't get, goes, and
+-- is named in `dropped`. Links to other sites, within the page, or to
+-- pages outside the adventure stay, and so do code and ${...} expressions.
+-- `cache` keeps what each wiki link resolved to, over one publish.
+function gm.unlink(text, page, shown, dropped, cache)
+  if not text:find("[[", 1, true) and not text:find("](", 1, true) then return text end
+  cache = cache or {}
+  local prefix = gm.config.adventureFolder
+  local function resolve(ref)
+    if cache[ref] == nil then
+      local found = gm.resolve(ref)
+      if not found and ref:startsWith(prefix) then found = ref end
+      cache[ref] = found or false
+    end
+    return cache[ref] or nil
+  end
+  local function wiki(bang, inner)
+    local ref, alias = inner:match("^(.-)|(.*)$")
+    ref = ref or inner
+    local name, section = ref:match("^(.-)#(.*)$")
+    name = name or ref
+    if name == "" then return nil end
+    local to = resolve(name)
+    if not to or not gm.isAdventurePage(to) then return nil end
+    local sent = shown[to]
+    if bang == "!" then
+      if sent == true or (sent and (not section or table.includes(sent, section))) then return nil end
+      dropped[#dropped + 1] = "![[" .. inner .. "]] in " .. page
+      return ""
+    end
+    if sent then return nil end
+    return alias or gm.name(to)
+  end
+  local function markdownLink(bang, label, paren)
+    if bang == "!" then return nil end
+    local url = pageUrl(paren)
+    if not url then return nil end
+    local to = linkTarget(page, url)
+    if not to then return nil end
+    to = (to:gsub("#.*$", ""))
+    if not gm.isAdventurePage(to) or shown[to] then return nil end
+    return label
+  end
+  return relinkProse(text, function(s)
+    s = (s:gsub("(!?)%[%[([^%]\n]-)%]%]", wiki))
+    return (s:gsub("(!?)%[([^%]\n]*)%](%b())", markdownLink))
+  end)
+end
+
 -- The players' copies that no revealed page makes any more: a page renamed,
 -- deleted or unrevealed since it was published. SilverBullet 2.11 has no
 -- rename event, and its rename rewrites the revealed list, so publishing
 -- writes the new copy and nothing else sees the old one. The Player space's
--- own index, CONFIG, Notes and libraries are never among them, nor a
--- private page's copy, which publishing names with how to take it back.
+-- own index, CONFIG, Notes and libraries are never among them, nor the
+-- sessions' recaps in its recapFolder, which no adventure page makes, nor
+-- a private page's copy, which publishing names with how to take it back.
 -- `of` is gm.reveals()'s second value.
 function gm.orphanCopies(of)
   local folder, notes, prefix = gm.config.playerFolder, gm.config.playerNotes, gm.config.adventureFolder
@@ -3989,7 +4165,7 @@ function gm.orphanCopies(of)
   for _, copy in ipairs(names) do
     local rel = copy:sub(#folder + 1)
     if rel ~= "index" and rel ~= "CONFIG" and not rel:startsWith(notes)
-        and not rel:startsWith("Library/") then
+        and not rel:startsWith("Library/") and not rel:startsWith(gm.config.recapFolder) then
       local page = prefix .. rel
       if not private[page] and (not of[page] or not gm.exists(page)) and gm.exists(copy) then
         out[#out + 1] = copy
@@ -3999,15 +4175,28 @@ function gm.orphanCopies(of)
   return out
 end
 
-function gm.publish()
-  local pages, missing, private = {}, {}, {}
+-- Everything a publish would do, worked out before anything is written:
+-- each players' copy as it would go, and what is kept back and why. It
+-- writes nothing, so the preview (gm.previewPublish) shows exactly what
+-- Publish then sends. `copies` are { page, copy, text }; `kept` the pages
+-- kept back, { page, why }; `private` the private pages on the revealed
+-- list; `leaked` the private pages the players still have a copy of;
+-- `named` the pages whose name is DM-only that they have a copy of;
+-- `dropped` the embeds left out, "![[...]] in <page>"; `missing` what is
+-- revealed but no longer there, pages and parts; `orphans` the copies no
+-- revealed page makes any more; and `of`, gm.reveals()'s second value.
+function gm.publishPlan()
+  local plan = { copies = {}, kept = {}, private = {}, leaked = {}, named = {},
+                 dropped = {}, missing = {}, orphans = {} }
+  local pages = {}
   local order, of = gm.reveals()
+  plan.of = of
   for _, page in ipairs(order) do
     if gm.playerCopy(page) then
       if not gm.exists(page) then
-        missing[#missing + 1] = page
+        plan.missing[#plan.missing + 1] = page
       elseif gm.isPrivate(page) then
-        private[#private + 1] = page
+        plan.private[#plan.private + 1] = page
       else
         pages[#pages + 1] = page
       end
@@ -4016,81 +4205,484 @@ function gm.publish()
   -- A private page is never published. One on the list, from before GM Kit
   -- refused them, is named. One the players still have a copy of, on the
   -- list or not, is named with how to take it back from its own bar.
-  local seen, leaked = {}, {}
-  for _, page in ipairs(private) do seen[page] = true end
+  local seen = {}
+  for _, page in ipairs(plan.private) do seen[page] = true end
   for page in pairs(gm.privatePages()) do seen[page] = true end
   local all = {}
   for page in pairs(seen) do all[#all + 1] = page end
   table.sort(all)
   for _, page in ipairs(all) do
     local copy = gm.playerCopy(page)
-    if copy and gm.exists(copy) then leaked[#leaked + 1] = page end
-  end
-  local held = ""
-  if #private > 0 then
-    held = " Left out, as only the DM may see them: " .. table.concat(private, ", ") .. "."
-  end
-  if #leaked > 0 then
-    held = held .. " The players still have a copy of " .. table.concat(leaked, ", ") ..
-           ", sent before such pages were kept to the DM: take it back with" ..
-           " Delete their copy on its bar."
+    if copy and gm.exists(copy) then plan.leaked[#plan.leaked + 1] = page end
   end
   -- Every copy is made before anything is written, so one that can't go is
   -- named and the rest go without it. Kept back: a page that hides its
   -- name, since its copy would sit at a path that names it; a copy with
   -- nothing in it; and a copy that still holds a DM-only mark once its
   -- DM-only text is out, since what the mark hides may not be out with it.
-  local copies, kept, named = {}, {}, {}
   for _, page in ipairs(pages) do
     local raw = space.readPage(page)
     if gm.hidesName(page, raw) then
-      kept[#kept + 1] = page .. " hides its name in DM-only text"
-      if gm.exists(gm.playerCopy(page)) then named[#named + 1] = page end
+      plan.kept[#plan.kept + 1] = { page = page, why = "hides its name in DM-only text" }
+      if gm.exists(gm.playerCopy(page)) then plan.named[#plan.named + 1] = page end
     else
-      local text = gm.print(gm.copyText(page, raw, of[page], missing), page)
+      local text = gm.print(gm.copyText(page, raw, of[page], plan.missing), page)
       local marks = gm.dmMarks(text)
       local _, body = gm.splitFrontmatter(text)
       if #marks > 0 then
-        kept[#kept + 1] = page .. " still has DM-only marks (" .. table.concat(marks, ", ") .. ")"
+        plan.kept[#plan.kept + 1] = { page = page,
+          why = "still has DM-only marks (" .. table.concat(marks, ", ") .. ")" }
       elseif not (body or text):find("%S") then
-        kept[#kept + 1] = page .. " would be empty"
+        plan.kept[#plan.kept + 1] = { page = page, why = "would be empty" }
       else
-        copies[#copies + 1] = { page = page, copy = gm.playerCopy(page), text = text }
+        plan.copies[#plan.copies + 1] = { page = page, copy = gm.playerCopy(page), text = text }
       end
     end
-  end
-  if #kept > 0 then
-    held = held .. " Kept back: " .. table.concat(kept, "; ") .. "."
   end
   -- A link to a page the players won't have becomes its label, since
   -- following it would open an empty page that names it, and an embed of
   -- one goes.
-  local shown, dropped, cache = {}, {}, {}
-  for _, c in ipairs(copies) do shown[c.page] = of[c.page] end
-  for _, c in ipairs(copies) do c.text = gm.unlink(c.text, c.page, shown, dropped, cache) end
-  if #dropped > 0 then
-    held = held .. " Embeds left out, as the players don't have what they show: " ..
-           table.concat(dropped, ", ") .. "."
+  local shown, cache = {}, {}
+  for _, c in ipairs(plan.copies) do shown[c.page] = of[c.page] end
+  for _, c in ipairs(plan.copies) do
+    c.text = gm.unlink(c.text, c.page, shown, plan.dropped, cache)
   end
-  if #named > 0 then
-    held = held .. " The players still have a copy of " .. table.concat(named, ", ") ..
+  plan.orphans = gm.orphanCopies(of)
+  return plan
+end
+
+-- What a publish's notification says of its plan: what it leaves out and
+-- why, and what is revealed but no longer there.
+local function planNotes(plan)
+  local held = ""
+  if #plan.private > 0 then
+    held = " Left out, as only the DM may see them: " .. table.concat(plan.private, ", ") .. "."
+  end
+  if #plan.leaked > 0 then
+    held = held .. " The players still have a copy of " .. table.concat(plan.leaked, ", ") ..
+           ", sent before such pages were kept to the DM: take it back with" ..
+           " Delete their copy on its bar."
+  end
+  if #plan.kept > 0 then
+    local kept = {}
+    for i, k in ipairs(plan.kept) do kept[i] = k.page .. " " .. k.why end
+    held = held .. " Kept back: " .. table.concat(kept, "; ") .. "."
+  end
+  if #plan.dropped > 0 then
+    held = held .. " Embeds left out, as the players don't have what they show: " ..
+           table.concat(plan.dropped, ", ") .. "."
+  end
+  if #plan.named > 0 then
+    held = held .. " The players still have a copy of " .. table.concat(plan.named, ", ") ..
            ", which gives them its name: take it back with Delete their copy on its bar."
   end
   local gone = ""
-  if #missing > 0 then
-    gone = " Revealed but no longer there: " .. table.concat(missing, ", ") .. "."
+  if #plan.missing > 0 then
+    gone = " Revealed but no longer there: " .. table.concat(plan.missing, ", ") .. "."
   end
-  local orphans = gm.orphanCopies(of)
+  return held, gone
+end
+
+-- The time, to the second, as GM Kit's own pages give it.
+local function now()
+  return os.date("!%Y-%m-%d %H:%M:%S") .. " UTC"
+end
+
+-- A page as a link on GM Kit's own pages.
+local function pageLink(page)
+  return "[[" .. page .. "]]"
+end
+
+-- A line cut at a space near n characters, and saying so.
+local function cutLine(line, n)
+  line = (line:gsub("%s+$", ""))
+  if #line <= n then return line end
+  local at, i = nil, 1
+  while true do
+    local space = line:find(" ", i, true)
+    if not space or space > n then break end
+    at, i = space, space + 1
+  end
+  if not at then return line end
+  return line:sub(1, at - 1) .. " …"
+end
+
+-- Lines quoted from pages as a fenced code block of their own, a blank line
+-- either side and its fences at the start of the line, where every reader
+-- of Markdown agrees it is one. Every space-lua block in the space runs,
+-- and every ${...} on a page shown, so what a page quotes must never be read
+-- as either: in fenced code none of it runs, links, or counts as a DM-only
+-- mark, and its fence, longer than any run of backticks in the lines, can't
+-- be closed by one of them.
+local function fenced(lines)
+  local run = 2
+  for _, l in ipairs(lines) do
+    for ticks in l:gmatch("`+") do
+      if #ticks > run then run = #ticks end
+    end
+  end
+  local fence = string.rep("`", run + 1)
+  local out = { "", fence }
+  for _, l in ipairs(lines) do out[#out + 1] = l end
+  out[#out + 1] = fence
+  out[#out + 1] = ""
+  return out
+end
+
+-- Lines with no two blank ones together, and none at either end.
+local function tidy(lines)
+  local out = {}
+  for _, l in ipairs(lines) do
+    if l ~= "" or (#out > 0 and out[#out] ~= "") then out[#out + 1] = l end
+  end
+  while out[#out] == "" do out[#out] = nil end
+  return out
+end
+
+-- A name, a page's or a part's, as words on a page of GM Kit's own: each
+-- character that could begin a link, code, a tag, an HTML comment or a
+-- live value is escaped, so the name shows as written and nothing in it
+-- runs.
+local function plain(s)
+  return (s:gsub("[\\`*_{}%[%]<>#!$|~]", "\\%0"))
+end
+
+-- The lines that change between the copy the players have and the one that
+-- would replace it, in page order, each as { sign, line }: "−" for a line
+-- that goes, "+" for one that comes. What the two share at the start and at
+-- the end is set aside, and what is left is matched line by line where it
+-- is short enough, or else set against each other as two lists.
+local function lineChanges(old, new)
+  local a, b = {}, {}
+  for line in (old .. "\n"):gmatch("([^\n]*)\n") do a[#a + 1] = line end
+  for line in (new .. "\n"):gmatch("([^\n]*)\n") do b[#b + 1] = line end
+  local s = 1
+  while s <= #a and s <= #b and a[s] == b[s] do s = s + 1 end
+  local ea, eb = #a, #b
+  while ea >= s and eb >= s and a[ea] == b[eb] do ea, eb = ea - 1, eb - 1 end
+  local n, m, out = ea - s + 1, eb - s + 1, {}
+  if n * m <= 2500 then
+    -- run[i][j]: how many lines the two share, in order, from a's i-th and
+    -- b's j-th line of what is left on
+    local run = {}
+    for i = n + 1, 1, -1 do
+      run[i] = {}
+      for j = m + 1, 1, -1 do
+        if i > n or j > m then
+          run[i][j] = 0
+        elseif a[s + i - 1] == b[s + j - 1] then
+          run[i][j] = run[i + 1][j + 1] + 1
+        else
+          run[i][j] = math.max(run[i + 1][j], run[i][j + 1])
+        end
+      end
+    end
+    local i, j = 1, 1
+    while i <= n or j <= m do
+      if i <= n and j <= m and a[s + i - 1] == b[s + j - 1] then
+        i, j = i + 1, j + 1
+      elseif i <= n and (j > m or run[i + 1][j] >= run[i][j + 1]) then
+        out[#out + 1] = { "−", a[s + i - 1] }
+        i = i + 1
+      else
+        out[#out + 1] = { "+", b[s + j - 1] }
+        j = j + 1
+      end
+    end
+  else
+    local inOld, inNew = {}, {}
+    for i = s, ea do inOld[a[i]] = (inOld[a[i]] or 0) + 1 end
+    for j = s, eb do inNew[b[j]] = (inNew[b[j]] or 0) + 1 end
+    for i = s, ea do
+      if (inNew[a[i]] or 0) > 0 then inNew[a[i]] = inNew[a[i]] - 1
+      else out[#out + 1] = { "−", a[i] } end
+    end
+    for j = s, eb do
+      if (inOld[b[j]] or 0) > 0 then inOld[b[j]] = inOld[b[j]] - 1
+      else out[#out + 1] = { "+", b[j] } end
+    end
+  end
+  -- a blank line that comes or goes changes nothing the players read
+  local read = {}
+  for _, c in ipairs(out) do
+    if c[2]:find("%S") then read[#read + 1] = c end
+  end
+  return read
+end
+
+-- "1 line removed, 2 added", in words beside the signs.
+local function changeCount(changes)
+  local gone, came = 0, 0
+  for _, c in ipairs(changes) do
+    if c[1] == "+" then came = came + 1 else gone = gone + 1 end
+  end
+  local out = {}
+  if gone > 0 then out[#out + 1] = int(gone) .. (gone == 1 and " line" or " lines") .. " removed" end
+  if came > 0 then
+    out[#out + 1] = int(came) .. (gone > 0 and "" or (came == 1 and " line" or " lines")) .. " added"
+  end
+  if #out == 0 then return "only its blank lines, or the order of its lines" end
+  return table.concat(out, ", ")
+end
+
+-- How many of a copy's changed lines the preview shows, and how long each.
+local DIFF_LINES, DIFF_WIDTH = 8, 100
+
+-- What a copy is made of: the whole page, its name, or the parts revealed.
+local function madeOf(page, reveal)
+  if reveal == true then return "the whole page" end
+  local name, parts = gm.parts(page).name, {}
+  for _, n in ipairs(reveal) do
+    if n ~= name then parts[#parts + 1] = plain(n) end
+  end
+  if #parts == 0 then return "its name only" end
+  return partNames(parts)
+end
+
+-- An embed left out, "![[...]] in <page>", as its embed and its page.
+local function droppedParts(d)
+  local embed, page = d:match("^(!%[%[[^%]]*%]%]) in (.*)$")
+  return embed or d, page
+end
+
+-- The lines of the plan's pages that go unsent, as lists for a page of
+-- GM Kit's own: what is kept back and why, what is no longer there, and
+-- what only the DM may see; and the embeds left out, by the page they are
+-- on, as { page, embeds }, to quote in fenced code.
+local function heldLines(plan)
+  local kept, embeds, gone, private = {}, {}, {}, {}
+  local named = {}
+  for _, p in ipairs(plan.named) do named[p] = true end
+  for _, k in ipairs(plan.kept) do
+    kept[#kept + 1] = "- " .. pageLink(k.page) .. " " .. k.why ..
+      (named[k.page] and (". The players still have a copy of it, which gives them its name: " ..
+        "take it back with *Delete their copy* on its bar") or "")
+  end
+  local on = {}
+  for _, d in ipairs(plan.dropped) do
+    local embed, page = droppedParts(d)
+    local key = page or ""
+    if not on[key] then
+      on[key] = { page = page, embeds = {} }
+      embeds[#embeds + 1] = on[key]
+    end
+    local list = on[key].embeds
+    list[#list + 1] = embed
+  end
+  for _, m in ipairs(plan.missing) do
+    local page, part = entryParts(m)
+    if part and gm.exists(page) then
+      gone[#gone + 1] = "- " .. pageLink(page) .. ": “" .. plain(part) .. "” isn't one of its parts any more"
+    else
+      gone[#gone + 1] = "- " .. plain(m)
+    end
+  end
+  for _, p in ipairs(plan.private) do
+    private[#private + 1] = "- " .. pageLink(p) .. " is left out: only the DM may see it"
+  end
+  for _, p in ipairs(plan.leaked) do
+    private[#private + 1] = "- The players still have a copy of " .. pageLink(p) ..
+      ", sent before such pages were kept to the DM: take it back with *Delete their copy* on its bar"
+  end
+  return kept, embeds, gone, private
+end
+
+-- The preview: what publishing would send now, a copy at a time, and all
+-- that it wouldn't, on a page of GM Kit's own, with a button to publish.
+local function previewText(plan, new, changed, same)
+  local out = {
+    "---", "type: state", "---", "",
+    "# Publish preview", "",
+    "What publishing would do, worked out " .. now() .. " in session " ..
+      int(gm.currentSession()) .. ". Nothing has been sent: the players' copies are as they were.", "",
+    '${widgets.commandButton("Publish now", "GM: Publish to Players")} ' ..
+      '${widgets.commandButton("Preview again", "GM: Preview Publish")}',
+  }
+  local function section(heading, lines, after)
+    lines = tidy(lines)
+    if #lines == 0 then return end
+    out[#out + 1] = ""
+    out[#out + 1] = "## " .. heading
+    out[#out + 1] = ""
+    for _, l in ipairs(lines) do out[#out + 1] = l end
+    if after then
+      out[#out + 1] = ""
+      out[#out + 1] = after
+    end
+  end
+  local lines = {}
+  for _, c in ipairs(new) do
+    lines[#lines + 1] = "- " .. pageLink(c.page) .. ": " .. madeOf(c.page, plan.of[c.page])
+  end
+  section("New copies", lines)
+  lines = {}
+  for _, c in ipairs(changed) do
+    local changes = lineChanges(c.old, c.text)
+    lines[#lines + 1] = "- " .. pageLink(c.page) .. ": " .. changeCount(changes)
+    local quoted = {}
+    for i, x in ipairs(changes) do
+      if i > DIFF_LINES then
+        quoted[#quoted + 1] = "… and " .. int(#changes - DIFF_LINES) .. " more"
+        break
+      end
+      quoted[#quoted + 1] = x[1] .. " " .. cutLine(x[2], DIFF_WIDTH)
+    end
+    if #quoted > 0 then
+      for _, l in ipairs(fenced(quoted)) do lines[#lines + 1] = l end
+    end
+  end
+  section("Changed copies", lines)
+  lines = {}
+  for _, c in ipairs(same) do lines[#lines + 1] = "- " .. pageLink(c.page) end
+  section("Unchanged", lines)
+  local kept, embeds, gone, private = heldLines(plan)
+  section("Kept back", kept, "The players keep what they have of these until each is put right.")
+  lines = {}
+  for _, g in ipairs(embeds) do
+    lines[#lines + 1] = "- In " .. (g.page and pageLink(g.page) or "a copy") .. ":"
+    for _, l in ipairs(fenced(g.embeds)) do lines[#lines + 1] = l end
+  end
+  section("Embeds left out", lines, "The players don't have what these show.")
+  section("Revealed but no longer there", gone)
+  section("Only for the DM", private)
+  lines = {}
+  for _, copy in ipairs(plan.orphans) do lines[#lines + 1] = "- " .. pageLink(copy) end
+  section("Copies no revealed page makes any more", lines,
+    "Renamed, deleted or unrevealed since they were published: publishing asks before it deletes them.")
+  if #plan.copies + #plan.kept + #plan.missing + #plan.private + #plan.leaked + #plan.orphans == 0 then
+    out[#out + 1] = ""
+    out[#out + 1] = "Nothing is revealed yet, so there is nothing to publish."
+  end
+  return table.concat(out, "\n") .. "\n"
+end
+
+-- Shows what publishing would do, on the page gm.config.previewPage, and
+-- sends nothing: each copy it would make, new, changed with the lines that
+-- change, or unchanged; what it keeps back and why; the embeds it leaves
+-- out; and the copies no revealed page makes any more, which it would
+-- offer to delete. The page has a button that publishes.
+function gm.previewPublish()
+  if gm.refuse() then return false end
+  local plan = gm.publishPlan()
+  local new, changed, same = {}, {}, {}
+  for _, c in ipairs(plan.copies) do
+    if not gm.exists(c.copy) then
+      new[#new + 1] = c
+    else
+      local old = space.readPage(c.copy)
+      if old == c.text then
+        same[#same + 1] = c
+      else
+        c.old = old
+        changed[#changed + 1] = c
+      end
+    end
+  end
+  local page = gm.config.previewPage
+  gm.write(page, previewText(plan, new, changed, same))
+  gm.refresh()
+  editor.navigate(page)
+  local held = #plan.kept > 0 and (", " .. int(#plan.kept) .. " kept back") or ""
+  local lapsed = #plan.orphans > 0 and (", " .. int(#plan.orphans) ..
+    (#plan.orphans == 1 and " copy" or " copies") .. " to delete") or ""
+  gm.notify("Preview: " .. int(#new) .. " new, " .. int(#changed) .. " changed, " ..
+    int(#same) .. " unchanged" .. held .. lapsed .. ". Nothing has been sent.", {
+    { name = "Publish now", run = function() gm.publish() end },
+  })
+  return true
+end
+
+-- How many publishes the report keeps, newest first.
+local REPORTS = 5
+
+-- Adds a publish to the lasting report, gm.config.publishReportPage, newest
+-- first, so what it said outlives its notification: when, what was sent,
+-- and what was kept back and why. `done` holds the pages whose copies were
+-- added, updated and left the same, and the copies no revealed page makes
+-- any more that were removed or left. A publish that sent, deleted and
+-- held back nothing has nothing to report, and one that sent and deleted
+-- nothing, and says just what the last one said of what it held back, adds
+-- nothing to it. Gives whether there is a report of it.
+local function publishReport(plan, done, headline)
+  local items = {}
+  local function list(pages)
+    local out = {}
+    for i, p in ipairs(pages) do out[i] = pageLink(p) end
+    return table.concat(out, ", ")
+  end
+  if #done.added > 0 then items[#items + 1] = "- New: " .. list(done.added) end
+  if #done.updated > 0 then items[#items + 1] = "- Updated: " .. list(done.updated) end
+  local kept, embeds, gone, private = heldLines(plan)
+  for _, l in ipairs(kept) do items[#items + 1] = "- Kept back: " .. l:sub(3) end
+  for _, g in ipairs(embeds) do
+    items[#items + 1] = "- Embeds left out, in " .. (g.page and pageLink(g.page) or "a copy") .. ":"
+    for _, l in ipairs(fenced(g.embeds)) do items[#items + 1] = l end
+  end
+  for _, l in ipairs(gone) do items[#items + 1] = "- Revealed but no longer there: " .. l:sub(3) end
+  for _, l in ipairs(private) do items[#items + 1] = l end
+  for _, c in ipairs(done.removed) do
+    items[#items + 1] = "- Deleted, as no revealed page makes it any more: " .. plain(c)
+  end
+  for _, c in ipairs(done.left) do
+    items[#items + 1] = "- Kept, though no revealed page makes it any more: " .. pageLink(c)
+  end
+  if #items == 0 then return false end
+  local body = headline .. "\n\n" .. table.concat(tidy(items), "\n")
+  -- the publishes before it, as the page has them
+  local path = gm.config.publishReportPage
+  local earlier = {}
+  if gm.exists(path) then
+    local current
+    for line in (space.readPage(path) .. "\n"):gmatch("([^\n]*)\n") do
+      if line:sub(1, 3) == "## " then
+        current = { line }
+        earlier[#earlier + 1] = current
+      elseif current then
+        current[#current + 1] = line
+      end
+    end
+  end
+  if earlier[1] and #done.added + #done.updated + #done.removed == 0 then
+    local last = {}
+    for i = 3, #earlier[1] do last[#last + 1] = earlier[1][i] end
+    if (table.concat(last, "\n"):gsub("%s+$", "")) == body then return true end
+  end
+  local entries = { "## " .. now() .. ", session " .. int(gm.currentSession()) .. "\n\n" .. body }
+  for i = 1, math.min(#earlier, REPORTS - 1) do
+    entries[#entries + 1] = (table.concat(earlier[i], "\n"):gsub("%s+$", ""))
+  end
+  gm.write(path, table.concat({
+    "---", "type: state", "---", "",
+    "# Publish report", "",
+    "What GM Kit's last publishes did, newest first: when, what went to the players, " ..
+      "and what was kept back and why.", "",
+    '${widgets.commandButton("Preview publishing", "GM: Preview Publish")} ' ..
+      '${widgets.commandButton("Publish to players", "GM: Publish to Players")}',
+  }, "\n") .. "\n\n" .. table.concat(entries, "\n\n") .. "\n")
+  return true
+end
+
+-- Opens the report, from a publish's notification.
+local function openReport()
+  return { name = "Open report", run = function() editor.navigate(gm.config.publishReportPage) end }
+end
+
+function gm.publish()
+  if gm.refuse() then return false end
+  local plan = gm.publishPlan()
+  local held, gone = planNotes(plan)
+  local copies, orphans, of = plan.copies, plan.orphans, plan.of
+  local done = { added = {}, updated = {}, same = {}, removed = {}, left = {} }
   if #copies == 0 and #orphans == 0 then
     if held ~= "" or gone ~= "" then
-      gm.notify("Nothing to publish." .. gone .. held, nil, "warning")
+      local reported = publishReport(plan, done, "Nothing to publish.")
+      gm.notify("Nothing to publish." .. gone .. held, reported and { openReport() } or nil, "warning")
     else
       gm.notify("Nothing is revealed yet, so there is nothing to publish", nil, "warning")
     end
     return false
   end
   local folder = gm.config.playerFolder
-  local added, updated, same = 0, 0, 0
   if #copies > 0 then
     if not editor.confirm("Publish " .. #copies ..
         (#copies == 1 and " revealed page" or " revealed pages") ..
@@ -4101,12 +4693,12 @@ function gm.publish()
     for _, c in ipairs(copies) do
       if not gm.exists(c.copy) then
         gm.write(c.copy, c.text)
-        added = added + 1
+        done.added[#done.added + 1] = c.page
       elseif space.readPage(c.copy) ~= c.text then
         gm.write(c.copy, c.text)
-        updated = updated + 1
+        done.updated[#done.updated + 1] = c.page
       else
-        same = same + 1
+        done.same[#done.same + 1] = c.page
       end
     end
   end
@@ -4120,10 +4712,12 @@ function gm.publish()
       for _, copy in ipairs(orphans) do
         removed[#removed + 1] = { copy = copy, text = space.readPage(copy) }
         space.deletePage(copy)
+        done.removed[#done.removed + 1] = copy
       end
     else
       left = " The players still have copies no revealed page makes any more: " ..
              table.concat(orphans, ", ") .. "."
+      done.left = orphans
     end
   end
   -- What each copy was made from, so a bar can say when one falls behind.
@@ -4145,27 +4739,32 @@ function gm.publish()
   end
   for _, page in ipairs(lapsed) do record[page] = nil end
   gm.writePublished(record)
+  local message = #copies > 0 and ("Published to players: " .. #done.added .. " new, " .. #done.updated ..
+                  " updated, " .. #done.same .. " unchanged.") or "Nothing to publish."
+  local reported = publishReport(plan, done, message)
   gm.refresh()
-  local message = #copies > 0 and ("Published to players: " .. added .. " new, " .. updated ..
-                  " updated, " .. same .. " unchanged.") or "Nothing to publish."
-  local actions
+  local actions = {}
+  if reported then actions[#actions + 1] = openReport() end
   if #removed > 0 then
     local names = {}
     for i, r in ipairs(removed) do names[i] = r.copy end
     message = message .. " Deleted the copies no revealed page makes any more: " ..
               table.concat(names, ", ") .. "."
-    actions = { { name = "Undo", run = function()
+    actions[#actions + 1] = { name = "Undo", run = function()
+      if gm.refuse() then return end
       for _, r in ipairs(removed) do gm.write(r.copy, r.text) end
       gm.refresh()
       gm.notify("Undone: the players have " .. table.concat(names, ", ") .. " back")
-    end } }
+    end }
   end
   message = message .. gone .. held .. left
-  gm.notify(message, actions, (gone ~= "" or held ~= "" or left ~= "") and "warning" or "info")
+  gm.notify(message, #actions > 0 and actions or nil,
+            (gone ~= "" or held ~= "" or left ~= "") and "warning" or "info")
   return true
 end
 
 function gm.logDecision()
+  if gm.refuse() then return false end
   local s = gm.currentSession()
   local what = editor.prompt("What did they decide? (session " .. s .. ")")
   what = what and what:match("^%s*(.-)%s*$") or ""
@@ -4180,6 +4779,7 @@ function gm.logDecision()
 end
 
 function gm.nextSession()
+  if gm.refuse() then return false end
   local page, n = gm.config.sessionPage, gm.currentSession()
   if not editor.confirm("Start session " .. (n + 1) .. "? From now on, marks and " ..
       "decisions are recorded against it.") then
@@ -4189,12 +4789,535 @@ function gm.nextSession()
   gm.refresh()
   gm.notify("Now session " .. (n + 1), {
     { name = "Undo", run = function()
+      if gm.refuse() then return end
       gm.patch(page, "session", n)
       gm.refresh()
       gm.notify("Back to session " .. n)
     end },
   })
   return true
+end
+
+------------------------------------------------------------ the players' recap
+-- A session's recap for the players, drafted from what GM Kit recorded in
+-- it: who the party met, where it went, what it found, what its rolls
+-- turned up and what it decided. The DM edits the draft, a page of their
+-- own beside the session's log, and publishes it into the players' space.
+
+-- Where a session's recap goes: the DM's draft, beside the session's log,
+-- and the players' copy, in their own space.
+function gm.recapDraftPage(n)
+  return gm.config.sessionsFolder .. "Session " .. int(n) .. " Recap"
+end
+
+function gm.recapPage(n)
+  return gm.config.playerFolder .. gm.config.recapFolder .. "Session " .. int(n)
+end
+
+-- The session a recap draft is of: its frontmatter's `session`, or the
+-- number in its name. nil when neither says.
+local function recapSession(draft, text)
+  local n = num(gm.frontmatter(text or "").session)
+  return n or num((draft:match("Session (%d+) Recap$")))
+end
+
+-- The path from one page's folder to another page, for a Markdown link:
+-- from "Sessions/Session 3 Recap" to "Player/World/People/Mara" it is
+-- "../Player/World/People/Mara".
+local function relPath(from, to)
+  local a, b = {}, {}
+  for seg in (from:match("^(.*)/[^/]*$") or ""):gmatch("[^/]+") do a[#a + 1] = seg end
+  for seg in to:gmatch("[^/]+") do b[#b + 1] = seg end
+  local i = 1
+  while i <= #a and i < #b and a[i] == b[i] do i = i + 1 end
+  local out = {}
+  for _ = i, #a do out[#out + 1] = ".." end
+  for j = i, #b do out[#out + 1] = b[j] end
+  return table.concat(out, "/")
+end
+
+-- A recap's links, made to work from `to`, the page the text is going to,
+-- as `from`, where it is now, has them. A link to one of the players' own
+-- pages goes there by a path from `to`, and so does a link to an adventure
+-- page they have a copy of, to its copy. A link to any other page of this
+-- space goes in as its words, since the players have no such page, and an
+-- embed of one goes. Links to other sites and within the page stay, and so
+-- do code and ${...} expressions.
+local function recapLinks(text, from, to)
+  if not text:find("[[", 1, true) and not text:find("](", 1, true) then return text end
+  local players, found = gm.config.playerFolder, {}
+  -- the players' page a page of this space is, or nil
+  local function theirs(target)
+    if found[target] == nil then
+      local copy = false
+      if target:startsWith(players) then
+        copy = gm.exists(target) and target
+      elseif gm.isAdventurePage(target) and gm.exists(target) and not gm.isPrivate(target)
+          and not gm.hidesName(target) then
+        local c = gm.playerCopy(target)
+        copy = c and gm.exists(c) and c or false
+      end
+      found[target] = copy
+    end
+    return found[target] or nil
+  end
+  local function link(label, target)
+    return "[" .. label .. "](<" .. relPath(to, target) .. ">)"
+  end
+  local function wiki(bang, inner)
+    local ref, alias = inner:match("^(.-)|(.*)$")
+    ref = ref or inner
+    local name = ref:match("^(.-)#") or ref
+    if name == "" then return nil end
+    if bang == "!" then return "" end
+    local target = name
+    if not name:startsWith(players) then target = gm.resolve(name) or name end
+    local copy = theirs(target)
+    local label = alias or gm.name(name)
+    return copy and link(label, copy) or label
+  end
+  local function markdownLink(bang, label, paren)
+    local url = pageUrl(paren)
+    if not url then return nil end
+    local target = linkTarget(from, url)
+    if not target then return nil end
+    target = (target:gsub("#.*$", ""))
+    if bang == "!" then
+      if target:startsWith(players) then return "![" .. label .. "](<" .. relPath(to, target) .. ">)" end
+      return ""
+    end
+    local copy = theirs(target)
+    return copy and link(label, copy) or label
+  end
+  -- Markdown links first: a wiki link becomes one that already goes from
+  -- `to`, which mustn't be read again as if it went from `from`
+  return relinkProse(text, function(s)
+    s = (s:gsub("(!?)%[([^%]\n]*)%](%b())", markdownLink))
+    return (s:gsub("(!?)%[%[([^%]\n]-)%]%]", wiki))
+  end)
+end
+
+-- What GM Kit recorded of the party in session n: the people and factions
+-- met, the places visited and the items found in it, each an adventure
+-- page with its play state, in the adventure's order.
+local function recapMarks(n)
+  gm.freshStates()
+  local want = int(n)
+  local out = { met = {}, visited = {}, found = {} }
+  for _, page in ipairs(gm.adventurePages()) do
+    local folder = page:match("/(People)/") or page:match("/(Factions)/")
+      or page:match("/(Places)/") or page:match("/(Items)/")
+    if folder then
+      local state = gm.readState(page)
+      for mark, list in pairs(out) do
+        local m = gm.marks[mark]
+        if state[m.field] == m.value and state[m.session] == want then
+          list[#list + 1] = { page = page, state = state }
+        end
+      end
+    end
+  end
+  return out
+end
+
+-- Words the recap quotes, made inert: a ${ in them can't start a live
+-- value, and a line of them can't open fenced code, a space-lua block
+-- above all, so nothing quoted runs, in the DM's space or the players'.
+local function inert(s)
+  s = (s:gsub("%${", "$\\{"))
+  if s:match("^%s*[`~][`~][`~]") then s = "\\" .. (s:match("^%s*(.*)$")) end
+  return s
+end
+
+-- How the recap names an adventure page, or nil where the players may not
+-- know its name: a link to their copy when they have one; for a page
+-- revealed but not published yet, the name its copy will show, as words;
+-- and nothing for a page not revealed, only for the DM, or whose name is
+-- DM-only. `of` is gm.reveals()'s second value, `to` the draft.
+local function recapName(page, of, to)
+  if gm.isPrivate(page) or gm.hidesName(page) then return nil end
+  local copy = gm.playerCopy(page)
+  local has = copy and gm.exists(copy)
+  if not has and not of[page] then return nil end
+  local name = inert(gm.parts(page).name)
+  if not has then return name end
+  return "[" .. (name:gsub("[%[%]]", "\\%0")) .. "](<" .. relPath(to, copy) .. ">)"
+end
+
+-- A `## heading` section of a session's log as its list: each item's line,
+-- and the lines indented under it.
+local function logItems(text, heading)
+  local items, inside, current = {}, false, nil
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    if line:match("^#+%s") then
+      inside = line:match("^##%s+(.-)%s*$") == heading
+      current = nil
+    elseif inside then
+      local top = line:match("^[%-%*]%s+(.*)$")
+      local sub = line:match("^%s+[%-%*]%s+(.*)$")
+      if top then
+        current = { text = top, subs = {} }
+        items[#items + 1] = current
+      elseif sub and current then
+        current.subs[#current.subs + 1] = sub
+      end
+    end
+  end
+  return items
+end
+
+-- The rolls a session's log records, for its recap, each with the words
+-- of the rungs it reached as the log has them. The scene it was rolled in
+-- is left off, since the players may have no such page; a roll that
+-- reached nothing new goes, and so does one taken back later in the log;
+-- and what is owed, when it comes back, is the DM's to know.
+local function recapRolls(items)
+  local out = {}
+  for _, it in ipairs(items) do
+    local text = it.text:match("^%[%[[^%]]*%]%] · (.*)$") or it.text
+    local taken = text:match("^(.-): not rolled after all$")
+    if taken then
+      for i = #out, 1, -1 do
+        local t = out[i].text
+        local after = t:sub(#taken + 1, #taken + 1)
+        if t:sub(1, #taken) == taken and (after == "," or after == ":") then
+          table.remove(out, i)
+          break
+        end
+      end
+    elseif not text:find(": nothing new$") and not text:find(": nothing from this check") then
+      local subs = {}
+      for _, s in ipairs(it.subs) do
+        if not s:find("^Owed:") then subs[#subs + 1] = s end
+      end
+      out[#out + 1] = { text = text, subs = subs }
+    end
+  end
+  return out
+end
+
+-- A line of the recap as the players may read it: its DM-only text out and
+-- its links made theirs. nil when nothing is left, or when a DM-only mark
+-- the scanner couldn't take out is left, which fails closed: `held` counts
+-- those lines.
+local function recapLine(text, from, to, held)
+  local line = gm.stripSecrets(text)
+  line = (line:match("^%s*(.-)%s*$"))
+  if line == "" then return nil end
+  line = inert(recapLinks(line, from, to))
+  if not line:find("%S") then return nil end
+  if #gm.dmMarks(line) > 0 then
+    held.lines = held.lines + 1
+    return nil
+  end
+  return line
+end
+
+-- The players' recap of session n, drafted from what GM Kit recorded in
+-- it, in the adventure's own words where the records give them, and naming
+-- only what the players may know. Gives the draft, how many things each of
+-- its sections holds, and what it left out: `lines` that still had a
+-- DM-only mark, and `names` the players may not know.
+function gm.recapText(n)
+  local draft = gm.recapDraftPage(n)
+  local log = gm.config.sessionsFolder .. "Session " .. int(n)
+  local _, of = gm.reveals()
+  local marks = recapMarks(n)
+  local held = { lines = 0, names = 0 }
+  local counts = {}
+  local out = { "---", "type: " .. gm.config.recapDraftType, "session: " .. int(n), "---", "",
+                "# Session " .. int(n) }
+  local function section(heading, lines, items)
+    counts[#counts + 1] = { heading = heading, n = items }
+    if #lines == 0 then return end
+    out[#out + 1] = ""
+    out[#out + 1] = "## " .. heading
+    out[#out + 1] = ""
+    for _, l in ipairs(lines) do out[#out + 1] = l end
+  end
+  local function named(list, heading, extra)
+    local lines = {}
+    for _, x in ipairs(list) do
+      local name = recapName(x.page, of, draft)
+      if name then
+        lines[#lines + 1] = "- " .. name .. (extra and extra(x.state) or "")
+      else
+        held.names = held.names + 1
+      end
+    end
+    section(heading, lines, #lines)
+  end
+  named(marks.met, "Met")
+  named(marks.visited, "Visited")
+  named(marks.found, "Found", function(state)
+    local uses = gm.usesText(state, true)
+    return uses ~= "" and (": " .. uses) or ""
+  end)
+  -- the log as it stands, saved first if it is open
+  local text = gm.exists(log) and gm.read(log) or ""
+  local rolls, rolled = {}, 0
+  for _, r in ipairs(recapRolls(logItems(text, "Rolls"))) do
+    local top = recapLine(r.text, log, draft, held)
+    local subs = {}
+    for _, s in ipairs(r.subs) do
+      local line = recapLine(s, log, draft, held)
+      if line then subs[#subs + 1] = "  - " .. line end
+    end
+    -- a roll whose words all went, as the DM's, goes with them
+    if top and (#r.subs == 0 or #subs > 0) then
+      rolls[#rolls + 1] = "- " .. top
+      for _, s in ipairs(subs) do rolls[#rolls + 1] = s end
+      rolled = rolled + 1
+    end
+  end
+  section("Rolls", rolls, rolled)
+  local decisions, decided = {}, 0
+  for _, d in ipairs(logItems(text, "Decisions")) do
+    local top = recapLine(d.text, log, draft, held)
+    if top then
+      decisions[#decisions + 1] = "- " .. top
+      for _, s in ipairs(d.subs) do
+        local line = recapLine(s, log, draft, held)
+        if line then decisions[#decisions + 1] = "  - " .. line end
+      end
+      decided = decided + 1
+    end
+  end
+  section("Decisions", decisions, decided)
+  return table.concat(out, "\n") .. "\n", counts, held
+end
+
+-- "2 met, 1 visited, 3 rolls", of what the draft holds.
+local function recapCounts(counts)
+  local words = { Met = "met", Visited = "visited", Found = "found", Rolls = "roll", Decisions = "decision" }
+  local out = {}
+  for _, c in ipairs(counts) do
+    if c.n > 0 then
+      local w = words[c.heading]
+      if c.heading == "Rolls" or c.heading == "Decisions" then
+        w = w .. (c.n == 1 and "" or "s")
+      end
+      out[#out + 1] = int(c.n) .. " " .. w
+    end
+  end
+  return table.concat(out, ", ")
+end
+
+-- Drafts the players' recap of session n, the one being played unless
+-- told, on a page of the DM's beside the session's log, and opens it. The
+-- DM edits it, then publishes it (gm.publishRecap). A draft already there
+-- is replaced only when the DM says so, and Undo puts it back.
+function gm.draftRecap(n)
+  if gm.refuse() then return false end
+  n = n or gm.currentSession()
+  local draft = gm.recapDraftPage(n)
+  local text, counts, held = gm.recapText(n)
+  -- fail closed: nothing that holds a DM-only mark goes into a draft
+  local marks = gm.dmMarks(text)
+  if #marks > 0 then
+    gm.notify("The recap of session " .. int(n) .. " isn't drafted: it would hold DM-only marks (" ..
+      table.concat(marks, ", ") .. ").", nil, "warning")
+    return false
+  end
+  local before = gm.exists(draft) and gm.read(draft) or nil
+  if before == text then
+    editor.navigate(draft)
+    gm.notify("The recap of session " .. int(n) .. " is drafted already, and nothing recorded since changes it.")
+    return false
+  end
+  if before and not editor.confirm("Draft the recap of session " .. int(n) .. " afresh? It replaces " ..
+      draft .. ", and any change you made to it.") then
+    return false
+  end
+  gm.write(draft, text)
+  gm.refresh()
+  editor.navigate(draft)
+  local said = recapCounts(counts)
+  local message = said ~= "" and
+    ("Drafted the players' recap of session " .. int(n) .. ": " .. said .. ". Edit it, then publish it from its bar.")
+    or ("Drafted the players' recap of session " .. int(n) .. ", with nothing in it: GM Kit recorded nothing " ..
+        "the players may know in it. Write it yourself, then publish it from its bar.")
+  if held.names > 0 then
+    message = message .. " Left unnamed: " .. int(held.names) ..
+      (held.names == 1 and " page" or " pages") .. " the players may not know by name."
+  end
+  if held.lines > 0 then
+    message = message .. " Left out: " .. int(held.lines) ..
+      (held.lines == 1 and " line" or " lines") .. " with a DM-only mark."
+  end
+  gm.notify(message, {
+    { name = "Undo", run = function()
+      if gm.refuse() then return end
+      if before then
+        gm.write(draft, before)
+      elseif gm.exists(draft) then
+        space.deletePage(draft)
+      end
+      gm.refresh()
+      gm.notify("Undone: " .. (before and "the draft is as it was" or "the draft is gone"))
+    end },
+  })
+  return true
+end
+
+-- The players' copy of a recap draft, and where it goes: its body under
+-- frontmatter that says only that it is a recap, its live values printed
+-- as a published page's are, and its links made to work from there.
+function gm.recapCopy(draft, text)
+  text = text or space.readPage(draft)
+  local n = recapSession(draft, text)
+  if not n then return nil, nil end
+  local copy = gm.recapPage(n)
+  local _, body = gm.splitFrontmatter(text)
+  body = recapLinks(gm.print(body or text, draft), draft, copy)
+  body = (body:gsub("^%s+", ""))
+  body = (body:gsub("%s+$", ""))
+  return "---\ntype: " .. gm.config.recapType .. "\n---\n\n" .. body .. "\n", copy
+end
+
+-- The DM-only marks a recap draft holds, and any its players' copy would,
+-- once its live values print: publishing sends neither.
+local function recapHeld(text, copyText)
+  local _, body = gm.splitFrontmatter(text)
+  local marks = gm.dmMarks(body or text)
+  for _, m in ipairs(gm.dmMarks(copyText)) do
+    if not table.includes(marks, m) then marks[#marks + 1] = m end
+  end
+  return marks
+end
+
+-- Publishes a recap draft to the players, with Undo. It refuses a draft
+-- that still holds a DM-only mark, or anything the players' copy would
+-- hold one of, rather than send it: the DM takes it out first.
+function gm.publishRecap(draft)
+  if gm.refuse() then return false end
+  if not draft or not gm.exists(draft) then
+    gm.notify("There is no recap draft to publish: GM: Draft Recap drafts one.", nil, "warning")
+    return false
+  end
+  local text = gm.read(draft)
+  local copyText, copy = gm.recapCopy(draft, text)
+  if not copyText then
+    gm.notify(gm.name(draft) .. " doesn't say which session it is the recap of: give it `session:` " ..
+      "in its frontmatter.", nil, "warning")
+    return false
+  end
+  local marks = recapHeld(text, copyText)
+  if #marks > 0 then
+    gm.notify("Not published: the recap still has DM-only marks (" .. table.concat(marks, ", ") ..
+      "). Take them out of " .. draft .. ", then publish it.", nil, "warning")
+    return false
+  end
+  local n = recapSession(draft, text)
+  local before = gm.exists(copy) and space.readPage(copy) or nil
+  if before == copyText then
+    gm.notify("The players have this recap already, as it stands, at " .. copy .. ".")
+    return false
+  end
+  if not editor.confirm("Publish the recap of session " .. int(n) .. " to the players, as " .. copy .. "?" ..
+      (before and " It replaces the one they have." or "")) then
+    return false
+  end
+  gm.write(copy, copyText)
+  gm.refresh()
+  gm.notify("Published the recap of session " .. int(n) .. " to the players, as " .. copy .. ".", {
+    { name = "Undo", run = function()
+      if gm.refuse() then return end
+      if before then
+        gm.write(copy, before)
+      elseif gm.exists(copy) then
+        space.deletePage(copy)
+      end
+      gm.refresh()
+      gm.notify("Undone: " .. (before and "the players have the recap they had before" or
+        "the players' recap is gone again"))
+    end },
+  })
+  return true
+end
+
+-- The session the open page is of, when it is a session's log or a recap
+-- draft.
+function gm.sessionHere()
+  local page = editor.getCurrentPage()
+  if not page or not page:startsWith(gm.config.sessionsFolder) or not gm.exists(page) then return nil end
+  local fm = gm.frontmatter(space.readPage(page))
+  if fm.type ~= gm.config.sessionType and fm.type ~= gm.config.recapDraftType then return nil end
+  return num(fm.session)
+end
+
+-- Asks which session, the one being played first; the first is the only
+-- one there is to ask about until the second begins.
+function gm.pickSession(label, help)
+  local now = gm.currentSession()
+  if now <= 1 then return now end
+  local options = {}
+  for s = now, 1, -1 do
+    options[#options + 1] = { name = "Session " .. int(s), orderId = now - s + 1,
+                              description = s == now and "This session" or nil }
+  end
+  local choice = editor.filterBox(label, options, help, "Type to filter")
+  if not choice then return nil end
+  return num((choice.name:match("(%d+)$")))
+end
+
+-- The recap draft a command acts on: the open page when it is one, else the
+-- only one there is, else one picked, the latest session first.
+function gm.pickRecap()
+  local here = editor.getCurrentPage()
+  if here and gm.pageType(here) == gm.config.recapDraftType then return here end
+  local t = gm.config.recapDraftType
+  local rows = query[[
+    from p = index.pages()
+    where p.type == t
+    select { name = p.name, session = p.session }
+  ]]
+  table.sort(rows, function(x, y) return (num(x.session) or 0) > (num(y.session) or 0) end)
+  if #rows == 0 then
+    gm.notify("No recap is drafted yet: GM: Draft Recap drafts one from what GM Kit recorded.", nil, "warning")
+    return nil
+  end
+  if #rows == 1 then return rows[1].name end
+  local pages = {}
+  for i, r in ipairs(rows) do pages[i] = r.name end
+  return gm.pick("Publish recap", "Which session's recap goes to the players?", pages)
+end
+
+-- The bar across a recap draft: whether the players have it as it stands,
+-- and the button that sends it.
+function gm.recapBar(page)
+  local text = space.readPage(page)
+  local spec = { class = "gmkit-bar" }
+  local function add(x) spec[#spec + 1] = x end
+  local function note(t) add(dom.span { class = "gmkit-bar-note", t }) end
+  local stale = installedVersion()
+  if stale then
+    note(reloadNote(stale))
+    add(gm.button("Reload", reloadTab))
+  end
+  local copyText, copy = gm.recapCopy(page, text)
+  if not copyText then
+    note("⚠ Which session is this the recap of? Give it `session:` in its frontmatter")
+    return widget.new { display = "block", html = dom.div(spec) }
+  end
+  add(dom.strong { "Recap of session " .. int(recapSession(page, text)) })
+  local has = gm.exists(copy)
+  local same = has and space.readPage(copy) == copyText
+  if not has then
+    note("○ Not published yet")
+  elseif same then
+    note("◉ Published to players")
+  else
+    note("◐ Changed since publishing")
+  end
+  local marks = recapHeld(text, copyText)
+  if #marks > 0 then
+    note("⚠ Has DM-only marks, so it can't be published: " .. table.concat(marks, ", "))
+  elseif not same then
+    add(gm.button(has and "Publish again" or "Publish recap", function() gm.publishRecap(page) end))
+  end
+  if has then note("[[" .. copy .. "|The players' copy]]") end
+  return widget.new { display = "block", html = dom.div(spec) }
 end
 
 function gm.button(label, run, primary)
@@ -4401,7 +5524,9 @@ function gm.sessionBar(page)
   page = page or editor.getCurrentPage()
   if not page or not page:startsWith(gm.config.sessionsFolder) then return nil end
   gm.freshStates()
-  if gm.pageType(page) ~= gm.config.sessionType then return nil end
+  local t = gm.pageType(page)
+  if t == gm.config.recapDraftType then return gm.recapBar(page) end
+  if t ~= gm.config.sessionType then return nil end
   local nav = gm.sessionNav(page)
   if not nav then return nil end
   return widget.new {
@@ -4425,6 +5550,12 @@ function gm.bar(page)
   }
   local function add(item) spec[#spec + 1] = item end
   local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
+  -- a stale tab says so first, since every button after it refuses to act
+  local stale = installedVersion()
+  if stale then
+    table.insert(spec, 1, dom.span { class = "gmkit-bar-note", reloadNote(stale) })
+    table.insert(spec, 2, gm.button("Reload", reloadTab))
+  end
   visibilityParts(page, add, note)
   local scene = can.started == true
   if scene then scenePlayParts(page, state, add, note) end
@@ -4464,6 +5595,8 @@ end
 -- priority: 10
 local function markCommand(mark)
   return function()
+    -- a stale tab refuses before the picker, not after it
+    if gm.refuse() then return end
     local m = gm.marks[mark]
     local pages, notes = gm.markable(mark)
     if #pages == 0 and m.empty then
@@ -4499,6 +5632,7 @@ end
 command.define {
   name = "GM: Reveal Page",
   run = function()
+    if gm.refuse() then return end
     local page = editor.getCurrentPage()
     if not gm.isAdventurePage(page) then
       local pages, notes = notWhollyRevealed()
@@ -4511,6 +5645,7 @@ command.define {
 command.define {
   name = "GM: Reveal Part",
   run = function()
+    if gm.refuse() then return end
     local page = editor.getCurrentPage()
     if not gm.isAdventurePage(page) then
       local pages, notes = notWhollyRevealed()
@@ -4525,6 +5660,7 @@ command.define {
 -- The open adventure page, or one picked from those the players can see or
 -- still have a copy of.
 local function unrevealCommand()
+  if gm.refuse() then return end
   local page = editor.getCurrentPage()
   if not gm.isAdventurePage(page) then
     local pages, notes, listed = {}, {}, {}
@@ -4571,6 +5707,11 @@ command.define {
 }
 
 command.define {
+  name = "GM: Preview Publish",
+  run = function() gm.previewPublish() end
+}
+
+command.define {
   name = "GM: Mark Met",
   key = "Ctrl-Alt-m",
   run = markCommand("met")
@@ -4589,6 +5730,7 @@ command.define {
 command.define {
   name = "GM: Mark Found",
   run = function()
+    if gm.refuse() then return end
     local pages, notes = gm.markable("found")
     local page, from = gm.pickItem("Found", "What did the party find? Recorded for session " ..
                                    gm.currentSession() .. ".", pages, notes)
@@ -4613,6 +5755,7 @@ command.define {
 
 local function useCommand(refund)
   return function()
+    if gm.refuse() then return end
     local pages, notes = gm.withUses(refund)
     if #pages == 0 then
       gm.notify(refund and "Nothing the party found is missing a use" or
@@ -4639,6 +5782,7 @@ command.define {
 command.define {
   name = "GM: Unmark",
   run = function()
+    if gm.refuse() then return end
     gm.freshStates()
     local pages, notes, marked = {}, {}, {}
     for _, page in ipairs(gm.adventurePages()) do
@@ -4694,6 +5838,7 @@ command.define {
 command.define {
   name = "GM: Unlog Roll",
   run = function()
+    if gm.refuse() then return end
     local page = gm.rollPage()
     if not page then
       gm.notify("There is no page here with rolls to take back", nil, "warning")
@@ -4706,6 +5851,27 @@ command.define {
 command.define {
   name = "GM: Next Session",
   run = function() gm.nextSession() end
+}
+
+-- On a session's log or its recap, that session's; anywhere else it asks
+-- which, the one being played first.
+command.define {
+  name = "GM: Draft Recap",
+  run = function()
+    if gm.refuse() then return end
+    local n = gm.sessionHere() or gm.pickSession("Draft recap",
+      "Which session's recap? The players see it once you publish it.")
+    if n then gm.draftRecap(n) end
+  end
+}
+
+command.define {
+  name = "GM: Publish Recap",
+  run = function()
+    if gm.refuse() then return end
+    local draft = gm.pickRecap()
+    if draft then gm.publishRecap(draft) end
+  end
 }
 
 actionButton.define {
@@ -4728,6 +5894,14 @@ actionButton.define {
   description = "Log a roll",
   command = "GM: Log Roll",
   priority = 0.75,
+}
+
+-- Just ahead of Publish, so what it would send is a click away from it.
+actionButton.define {
+  icon = "eye",
+  description = "Preview what publishing would send",
+  command = "GM: Preview Publish",
+  priority = 0.72,
 }
 
 actionButton.define {
