@@ -575,6 +575,22 @@ test("publishing's preview and report, and a players' recap, in SilverBullet's o
   expect(printed).toEqual([]);
 }, 60000);
 
+// A map drawn in a scene is the one the table may be shown, on the page as
+// in print; the DM's layer is on it where asked, and on the map's own page.
+test("a scene's map leaves the DM's layer off on the page, and the map's own page keeps it, in SilverBullet's own Lua", async () => {
+  const { env, run, state, printed } = await setup(ROOT);
+  state.current = "Adventure/Campaign/Act I/Scene 3";
+  await run(`__scene = maps.draw("World/Maps/The Old Orchard").html
+__dm = maps.draw("World/Maps/The Old Orchard", { dm = true }).html`);
+  expect(env.get("__scene")).toContain("<svg");
+  expect(env.get("__scene")).not.toContain(">S<");
+  expect(env.get("__dm")).toContain(">S<");
+  state.current = "Adventure/World/Maps/The Old Orchard";
+  await run(`__own = maps.draw().html`);
+  expect(env.get("__own")).toContain(">S<");
+  expect(printed).toEqual([]);
+}, 60000);
+
 // SilverBullet's own Config and validator, which the plain-Lua suite's mocks
 // stand in for: the same words, the value set all the same, and the bars
 // reading what they can of it.

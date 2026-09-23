@@ -3,16 +3,17 @@ tags: meta/library
 name: "Library/Storie/GM Maps"
 description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain, ways through and things are told apart by pattern and silhouette, so a map reads in one ink and in grayscale."
 author: "Steven Storie"
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # GM Maps
 
 Write an encounter area once, as a picture you can read in the source, and let the wiki and the book draw it. A map is a grid of characters with a legend under it. What each character means, the legend says; how big the grid is, the party decides.
 
-| On the page | In print |
-|---|---|
-| A plan at five feet to a square, with the creatures on it, each linked to its Bestiary entry | The same plan, the creatures left off |
+| | On the page | In print |
+|---|---|---|
+| On the map's own page | A plan at five feet to a square, with the creatures on it, each linked to its Bestiary entry | — |
+| Anywhere else, a scene say | The same plan, the creatures left off, unless it asks for them with `dm = true` | The same as on the page |
 
 This is for the ground a fight happens on, not for dungeons. A map here is one room, one clearing, one yard: the walls, the floor, the ways out, and where the creatures start.
 
@@ -153,7 +154,7 @@ They are drawn in the map's ink, at whole px, on the page and in print. The grid
 
 ## How it prints
 
-The map on the page is a widget: an SVG plan with the DM's layer on it, each thing that names a page a link to it, and a Markdown face that is the same plan with that layer left off. The key is inside the drawing either way, so there is one figure to place and nothing to keep in step with it.
+The map is a widget: an SVG plan on the page, each thing that names a page a link to it, and a Markdown face that is the same plan for print. Both leave the DM's layer off unless the map asks for it with `dm = true`, so a map drawn in a scene is, on the wiki as in the book, the one to turn round and show the table. **The map's own page is the exception**: it is the DM's reference, so a map drawn there shows the DM's layer on the page whatever it asks. The key is inside the drawing either way, so there is one figure to place and nothing to keep in step with it.
 
 That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what GM Kit publishes to the players. So **a map the players can be handed is what a map prints anyway**, in the book and on their own wiki, with nothing having to be stripped out of it. The map's own page is the exception: its map block is the DM's layer written out, so GM Kit 3.2 keeps a map page to the DM, and the players get the map where a page of theirs draws it. Every thing's square is drawn as the ground around it, so that map has no square left looking different where a creature or a trapdoor was.
 
@@ -168,13 +169,13 @@ That Markdown face is what [GM Book](<GM Book>) puts in both editions, and what 
 
 GM Kit 3.1 and GM Book 1.8 leave a DM callout out of everything the players get. With older versions, put the second map under a `## DM Only` heading at the foot of the page instead.
 
-The DM's edition then carries both: the map to run the fight from, and the clean one to turn round and show the table. The players' edition and their wiki carry only the clean one, and whether they ever see it is a decision, not something the library makes for you.
+The DM's edition then carries both: the map to run the fight from, and the clean one to turn round and show the table. So does the scene on the wiki. The players' edition and their wiki carry only the clean one, and whether they ever see it is a decision, not something the library makes for you.
 
 The SVG declares its own width and height, key included, so GM Book 1.7 or later measures it and breaks the page around it. A map is never taller than a column; one drawn larger is scaled down to fit, and the key is measured as it wraps, a row at a time, before the squares are sized. `maps.legendMarkdown` gives the same lines as text for a page that wants to say them in words as well.
 
 | Option | Means |
 |---|---|
-| `dm` | The DM's layer — creatures and hidden things — in the printed map as well as on the page. Off by default. `tokens` was this option's name in 1.1, and still works |
+| `dm` | The DM's layer, creatures and hidden things, on the map, on the page as in print. Off by default, but on the page the map's own page always shows it. `tokens` was this option's name in 1.1, and still works |
 | `legend` | The key inside the map. On by default |
 | `width` | The map's width in px, for a map that should print narrower than a column |
 
@@ -191,6 +192,10 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
 `type` is the page type that holds a map. `scale` is how many feet a square is, and `units` what to call them. `width` is a column of the book in px, which is what a map is drawn to fit. `coordinates` letters and numbers every map's squares: see *Coordinates*.
 
 **A tab that needs a reload.** Space Lua is read when a tab opens and not again, so a tab left open while `Library: Update` brings a new GM Maps draws with the old code. `maps.stale()` is nil when the tab runs the GM Maps the space holds, read from this page at any depth of the space, and otherwise a message saying which version each has and to reload (System: Reload, Ctrl-Alt-R). [GM Book](<GM Book>) asks it before a build, and builds nothing until the tab is reloaded.
+
+## Changes in 1.5
+
+**A map in a scene is the clean one on the page too.** It left the DM's layer off only in print: on the wiki a map drew its creatures wherever it was drawn, so a scene's two maps, one to show the table and one with the DM's layer in a DM callout, looked the same, and turning the screen round showed the players where everything was. Now a map honours `dm = true` on the page as in print, and the DM's layer is on the page only where it is asked for, or on the map's own page, which is the DM's reference. What prints is as it was. See *How it prints*.
 
 ## Changes in 1.4
 
@@ -215,7 +220,7 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
 maps = maps or {}
 -- The version this tab's Lua is, the same as this page's frontmatter: a tab
 -- left open over a Library: Update runs the old one (see maps.stale).
-maps.version = "1.4.0"
+maps.version = "1.5.0"
 
 maps.config = {
   type  = "map",   -- the page type that holds a map
@@ -1380,18 +1385,22 @@ function maps.source(ref, printing)
 end
 
 -- The map as a widget, or nil when there is none to draw: no map page by
--- that name, or no grid on it.
+-- that name, or no grid on it. The DM's layer is on it where it is asked
+-- for, on the page as in print. On the page it is also on the map's own
+-- page, which is the DM's reference: anywhere else, a scene say, the map on
+-- the page is the one the table may be shown.
 local function drawing(ref, opts)
-  local source = maps.source(ref, opts.printing)
+  local source, page = maps.source(ref, opts.printing)
   if not source then return nil end
   local m = maps.parse(source, opts.printing)
+  local asked = opts.dm == true or opts.tokens == true
+  local own = not opts.printing and page ~= nil and page == maps.here(false)
   local live, _, note = maps.svg(m, {
-    dm = true, link = true, width = opts.width, legend = opts.legend,
+    dm = asked or own, link = true, width = opts.width, legend = opts.legend,
   })
   if not live then return nil end
   local printed = (maps.svg(m, {
-    dm = opts.dm == true or opts.tokens == true,
-    link = false, width = opts.width, legend = opts.legend,
+    dm = asked, link = false, width = opts.width, legend = opts.legend,
   }))
 
   local html = { '<div class="gmmaps">', live }
@@ -1409,10 +1418,10 @@ local function drawing(ref, opts)
 end
 
 -- The map on the page and in print, one drawing either way, with its key
--- inside it. On the page the creatures are on it and linked to their
--- Bestiary entries; in print they are left off unless the map is asked for
--- them, and a link would have nowhere to go. A map it can't draw says so
--- on the page.
+-- inside it. The creatures, and anything hidden, are on it only where the
+-- map is asked for them, { dm = true }, and on the page on the map's own
+-- page, where they link to their Bestiary entries; in print a link would
+-- have nowhere to go. A map it can't draw says so on the page.
 function maps.draw(ref, opts)
   if type(ref) == "table" and opts == nil then ref, opts = nil, ref end
   opts = opts or {}

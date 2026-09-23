@@ -167,16 +167,44 @@ test("maps: a map with nothing plain to grow by says so", "adventure", function(
   eq(#grid, 4, "and leave the map the size it was drawn")
 end)
 
-test("maps: the page shows the creatures and print leaves them off", "adventure", function()
+test("maps: drawn anywhere but its own page, the map leaves the creatures off, on the page as in print", "adventure", function()
+  -- a scene, say: the map there is the one the table may be shown
   local w = drawn(ORCHARD)
   has(w.html, "<svg", "the page gets an SVG")
-  has(w.html, "Monsters/Strangler", "a creature on the map links to its Bestiary page")
-  has(w.html, ">S<", "and is drawn as its legend letter")
-  hasnt(w.markdown, ">S<", "print leaves the creatures off")
-  hasnt(w.markdown, "Monsters/", "and links to nothing")
+  hasnt(w.html, ">S<", "the page leaves the creatures off")
+  hasnt(w.html, "Monsters/Strangler", "and links to none of them")
+  hasnt(w.markdown, ">S<", "and so does print")
+  hasnt(w.markdown, "Monsters/", "which links to nothing")
   has(w.markdown, "<svg", "but still draws the ground")
   has(w.markdown, "briar, ten feet high", "with its key inside the drawing")
   hasnt(w.markdown, "strangler", "and no key row for a creature")
+  eq(svgOf(w.html), svgOf(w.markdown), "the page draws what prints, nothing on it naming a page")
+  -- asked for the DM's layer, both have it
+  local dm = drawn(ORCHARD, { dm = true })
+  has(dm.html, ">S<", "asked for them, the page has the creatures")
+  has(dm.html, "Monsters/Strangler", "each linked to its Bestiary page")
+  has(dm.markdown, ">S<", "and so does print")
+  hasnt(dm.markdown, "Monsters/", "which has nowhere to link")
+end)
+
+test("maps: on its own page the map shows the creatures, the DM's reference", "adventure", function()
+  H.current = ORCHARD
+  local own = drawn()
+  has(own.html, ">S<", "a bare maps.draw() on the map's page draws the creatures")
+  has(own.html, "Monsters/Strangler", "each linked to its Bestiary page")
+  hasnt(own.markdown, ">S<", "and prints without them")
+  eq(drawn(ORCHARD).html, own.html, "the map named on its own page is the same")
+  H.current = "Campaign/Act I/Scene 3"
+  hasnt(drawn(ORCHARD).html, ">S<", "on the scene that draws it, the creatures are off again")
+end)
+
+test("maps: in the DM space, a scene draws the clean map and its callout the DM's", "dm", function()
+  local scene = "Adventure/Campaign/Act I/Scene 3"
+  H.current = scene
+  hasnt(drawn(ORCHARD).html, ">S<", "the scene's map is the one to turn round and show the table")
+  has(drawn(ORCHARD, { dm = true }).html, ">S<", "the one asked for the DM's layer has the creatures")
+  H.current = "Adventure/" .. ORCHARD
+  has(drawn().html, ">S<", "and the map's own page keeps them")
 end)
 
 test("maps: the key is drawn, never the character from the source", "adventure", function()

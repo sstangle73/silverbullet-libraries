@@ -13,7 +13,7 @@ Each library is one page in `src/`, installed into a space as `Library/Storie/<n
 | [GM Book](src/GM%20Book.md) | Compiles the adventure into DM and player editions of one manuscript, for Homebrewery to render as a 5e book | The adventure space | 1.14.0 |
 | [GM Party](src/GM%20Party.md) | Numbers, hand-outs, fights and DCs that follow the party's size and level: your table's on the page, the general rule in print | The adventure space | 1.5.0 |
 | [GM Bestiary](src/GM%20Bestiary.md) | Creature pages that point at official stat blocks: a compendium link on the page, the book and its entry in print | The adventure space | 1.3.0 |
-| [GM Maps](src/GM%20Maps.md) | Encounter maps written as a grid of characters with a legend, drawn as a scaled plan with its own key, sized to the party | The adventure space | 1.4.0 |
+| [GM Maps](src/GM%20Maps.md) | Encounter maps written as a grid of characters with a legend, drawn as a scaled plan with its own key, sized to the party | The adventure space | 1.5.0 |
 | [GM Sheets](src/GM%20Sheets.md) | Character sheets drawn from a character page's frontmatter, on the wiki and a page to themselves in the book | The adventure space | 1.4.0 |
 | [Chapter Navigation](src/Chapter%20Navigation.md) | Previous, contents and next links above and below every chapter or scene page, read from the index | Each space with chapters or scenes to page through | 1.2.0 |
 | [Space Switcher](src/Space%20Switcher.md) | A strip across the top of every page that names the space you are in and links to your others, nested ones included | Every space | 1.1.0 |
