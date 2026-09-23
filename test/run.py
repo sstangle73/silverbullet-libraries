@@ -363,10 +363,7 @@ def main():
         print("note:", line)
     for f in failed.values():
         print("FAIL", f)
-    excused = L.eval("#EXCUSED")
-    print(f"{passed}/{total} passed" + (f", {excused} of them failing but excused until merged "
-                                        "(TEMPORARILY_EXPECTED_TO_FAIL in framework.lua)" if excused else "")
-          + (" (shuffled)" if args.shuffle else ""))
+    print(f"{passed}/{total} passed" + (" (shuffled)" if args.shuffle else ""))
     sys.exit(0 if total and passed == total else 1)
 
 

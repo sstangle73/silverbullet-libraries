@@ -196,3 +196,25 @@ test("book: a pointer to a page whose title the players don't get names nothing"
   has(player, "A stranger waits.\n\nOn they go.")
   hasnt(player, "Hob")
 end)
+
+test("book: a page that still holds a DM-only mark keeps the player edition back", "adventure", function()
+  -- an end marker with no stretch open stays in what the players get, on
+  -- purpose, so the page can't go out with the stretch it lost
+  H.pages["Campaign/Stray"] = "---\nbook_order: 70\n---\n\n# Stray\n\nPublic words.\n\nMore words. <!--/dm-->\n"
+  local before = H.pages["Build/Book Player"]
+  H.current = "index"
+  local report = gmbook.build({ "dm", "player" })
+  eq(#report.kept, 1, "one edition kept back")
+  eq(report.kept[1].edition, "player")
+  eq(H.pages["Build/Book Player"], before, "the player edition on the page is left as it was")
+  has(H.pages["Build/Book DM"], "More words.", "the DM's edition is written")
+  local found
+  for _, u in ipairs(report.unprinted) do
+    if u.page == "Campaign/Stray" then found = u end
+  end
+  ok(found and found.dm, "named with the mark")
+  has(found.dm, "stretch marker")
+  has(lastNotification().message, "Campaign/Stray: DM-only text left in the player edition")
+  hasnt(lastNotification().message, "Baked Sections")
+end)
+

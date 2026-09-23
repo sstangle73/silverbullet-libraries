@@ -16,7 +16,8 @@ test("dm-only: GM Kit and GM Book share its code word for word", "dm", function(
   eq(kit, book, "the shared DM-only code differs between GM Kit and GM Book")
 end)
 
--- { what, page, the players' copy, the DM's edition }
+-- { what, page, the players' copy, the DM's edition, and what the detector
+-- finds in the players' copy, where it finds anything }
 local DM_CASES = {
   { "a callout between paragraphs",
     "a\n\n> **dm** Who hid it\n> The Warden did.\n\nb\n",
@@ -142,7 +143,121 @@ local DM_CASES = {
     "---\ntype: x\n---\n\n# T\n\n> Read aloud.\n\n<!-- a note -->\n\ntext <span>x</span>\n",
     "---\ntype: x\n---\n\n# T\n\n> Read aloud.\n\n<!-- a note -->\n\ntext <span>x</span>\n",
     "---\ntype: x\n---\n\n# T\n\n> Read aloud.\n\n<!-- a note -->\n\ntext <span>x</span>\n" },
+  -- GM Kit 3.8: every level of DM Only, callouts named in more words,
+  -- elements of any kind, and markers inside a line
+  { "### DM Only runs to the next heading of its level or above",
+    "# A\nopen\n### DM Only\nsecret\n#### deeper\nstill secret\n### Next\nopen again\n## Up\nmore",
+    "# A\nopen\n### Next\nopen again\n## Up\nmore",
+    "# A\nopen\n### DM Only\nsecret\n#### deeper\nstill secret\n### Next\nopen again\n## Up\nmore" },
+  { "# DM Only runs to the next # heading",
+    "# A\n\nopen\n\n# DM Only\n\nsecret\n\n## Sub\n\nstill secret\n\n# B\n\nopen again\n",
+    "# A\n\nopen\n\n# B\n\nopen again\n",
+    "# A\n\nopen\n\n# DM Only\n\nsecret\n\n## Sub\n\nstill secret\n\n# B\n\nopen again\n" },
+  { "DM Only in bold, with closing #s",
+    "open\n\n## **DM Only** ##\n\nsecret\n\n## Next\n\npublic\n",
+    "open\n\n## Next\n\npublic\n",
+    "open\n\n## **DM Only** ##\n\nsecret\n\n## Next\n\npublic\n" },
+  { "a heading inside a stretch doesn't end DM Only",
+    "## DM Only\n\nsecret one\n\n<!--#dm-->\n\n## Hidden\n\nsecret two\n\n<!--/dm-->\n\nsecret three\n\n## Next\n\npublic\n",
+    "## Next\n\npublic\n",
+    "## DM Only\n\nsecret one\n\n## Hidden\n\nsecret two\n\nsecret three\n\n## Next\n\npublic\n" },
+  { "a heading inside a DM element doesn't end DM Only",
+    "## DM Only\n\n<div class=\"dm\">\n\n## Inside\n\nsecret\n\n</div>\n\nstill secret\n\n## Next\n\npublic\n",
+    "## Next\n\npublic\n",
+    "## DM Only\n\n## Inside\n\nsecret\n\nstill secret\n\n## Next\n\npublic\n" },
+  { "a callout typed DM, in capitals",
+    "> **DM** Who hid it\n> The Warden.\n\nb\n",
+    "b\n",
+    "**Who hid it.** The Warden.\n\nb\n" },
+  { "a callout typed DM only",
+    "> **DM only** Who hid it\n> The Warden.\n\nb\n",
+    "b\n",
+    "**Who hid it.** The Warden.\n\nb\n" },
+  { "a callout typed DM-only note, without a title",
+    "> **DM-only note**\n> The Warden.\n\nb\n",
+    "b\n",
+    "The Warden.\n\nb\n" },
+  { "a callout whose type only starts with the letters",
+    "> **DMG** page 12\n> Rules.\n\nb\n",
+    "> **DMG** page 12\n> Rules.\n\nb\n",
+    "> **DMG** page 12\n> Rules.\n\nb\n" },
+  { "a span in single quotes, among other classes",
+    "a <span class='dm note'>b</span> c\n",
+    "a c\n",
+    "a b c\n" },
+  { "a div on one line",
+    "a\n\n<div class=\"dm\">The key is under the mat.</div>\n\nb\n",
+    "a\n\nb\n",
+    "a\n\nThe key is under the mat.\n\nb\n" },
+  { "a div over paragraphs, its tags on lines of their own",
+    "a\n\n<div class=\"dm\">\n\n## Hidden\n\nsecret\n\n</div>\n\nb\n",
+    "a\n\nb\n",
+    "a\n\n## Hidden\n\nsecret\n\nb\n" },
+  { "a div with a div inside it, and another class",
+    "<div class=\"note dm\">\n<div class=\"box\">inner</div>\nstill secret\n</div>\npublic\n",
+    "public\n",
+    "<div class=\"box\">inner</div>\nstill secret\npublic\n" },
+  { "a div that opens and closes inside lines, over a blank line",
+    "a <div class=\"dm\">one\n\ntwo</div> b\n",
+    "a\nb\n",
+    "a one\n\ntwo b\n" },
+  { "a stretch that opens and closes inside lines",
+    "Text. <!--#dm--> secret\nmore secret <!--/dm--> after\n",
+    "Text.\nafter\n",
+    "Text. secret\nmore secret after\n" },
+  { "a stretch inside a sentence",
+    "a <!--#dm-->x<!--/dm--> b\n",
+    "a b\n",
+    "a x b\n" },
+  { "a stretch that is one line",
+    "<!--#dm--> x <!--/dm-->\npublic\n",
+    "public\n",
+    "x\npublic\n" },
+  { "an end marker with no stretch stays for the players, so the copy is held back",
+    "a\n\n<!--/dm-->\n\nb\n",
+    "a\n\n<!--/dm-->\n\nb\n",
+    "a\n\nb\n",
+    "a stretch marker" },
+  { "a DM element with nothing inside it goes whole",
+    "The map: <img class=\"dm\" src=\"map.png\"> and more.\n",
+    "The map: and more.\n",
+    "The map: <img class=\"dm\" src=\"map.png\"> and more.\n" },
+  { "a marker shown in inline code",
+    "Write `<!--#dm-->` above it, and `<!--/dm-->` below.\n",
+    "Write `<!--#dm-->` above it, and `<!--/dm-->` below.\n",
+    "Write `<!--#dm-->` above it, and `<!--/dm-->` below.\n" },
+  -- a DM Only heading in any case, joined by a space, a hyphen or nothing:
+  -- GM Book's player edition skipped all of these until 1.13
+  { "a DM Only heading written \"## DM only\"",
+    "# A\nopen\n## DM only\nsecret\n## Next\npublic\n",
+    "# A\nopen\n## Next\npublic\n",
+    "# A\nopen\n## DM only\nsecret\n## Next\npublic\n" },
+  { "a DM Only heading written \"## DM-Only\"",
+    "# A\nopen\n## DM-Only\nsecret\n## Next\npublic\n",
+    "# A\nopen\n## Next\npublic\n",
+    "# A\nopen\n## DM-Only\nsecret\n## Next\npublic\n" },
+  { "a DM Only heading written \"## dm only\"",
+    "# A\nopen\n## dm only\nsecret\n## Next\npublic\n",
+    "# A\nopen\n## Next\npublic\n",
+    "# A\nopen\n## dm only\nsecret\n## Next\npublic\n" },
+  { "a DM Only heading written \"## DMOnly\"",
+    "# A\nopen\n## DMOnly\nsecret\n## Next\npublic\n",
+    "# A\nopen\n## Next\npublic\n",
+    "# A\nopen\n## DMOnly\nsecret\n## Next\npublic\n" },
+  { "a DM Only heading written \"### dm - only ###\"",
+    "# A\nopen\n### dm - only ###\nsecret\n## Next\npublic\n",
+    "# A\nopen\n## Next\npublic\n",
+    "# A\nopen\n### dm - only ###\nsecret\n## Next\npublic\n" },
+  { "a DM Only heading written \"## DM Only  \"",
+    "# A\nopen\n## DM Only  \nsecret\n## Next\npublic\n",
+    "# A\nopen\n## Next\npublic\n",
+    "# A\nopen\n## DM Only  \nsecret\n## Next\npublic\n" },
 }
+
+-- DM Only headings written as a page may write them. GM Book's player
+-- edition reads them the same way once gmbook.stripSecrets asks the shared
+-- dmMaybe whether to read a page at all: its own test looks for "DM Only"
+-- as written, and would pass these pages by untouched.
 
 test("dm-only: each way of marking it, for the players and for the DM", "dm", function()
   for _, c in ipairs(DM_CASES) do
@@ -151,6 +266,55 @@ test("dm-only: each way of marking it, for the players and for the DM", "dm", fu
     eq(gmbook.showSecrets(c[2]), c[4], "GM Book's DM edition, " .. c[1])
     eq(gmbook.stripSecrets(c[3]), c[3], "stripping twice, " .. c[1])
     eq(gmbook.showSecrets(c[4]), c[4], "showing twice, " .. c[1])
+  end
+end)
+
+test("dm-only: a heading that only starts with DM Only is no DM Only heading", "dm", function()
+  -- a heading that only starts with the words is no DM Only heading, but
+  -- nothing with one is sent: see the detector below
+  local notes = "# A\n\n## DM Only Notes\n\nsecret\n"
+  eq(gm.stripSecrets(notes), notes)
+  eq(list(gm.dmMarks(notes)), "a DM Only heading")
+end)
+
+test("dm-only: what the players get of each case holds no DM-only mark", "dm", function()
+  for _, c in ipairs(DM_CASES) do
+    eq(list(gm.dmMarks(c[3])), c[5] or "", c[1])
+  end
+end)
+
+test("dm-only: the detector finds each kind of mark, in more forms than are read", "dm", function()
+  local found = {
+    { "a <!--#dm--> b", "a stretch marker" },
+    { "<!-- /DM -->", "a stretch marker" },
+    { "<!--#dmx-->", "a stretch marker" },
+    { "<span\nclass=\"dm\">The Warden hid the crown.</span>", "an element of class dm" },
+    { "<p class='note dm'>", "an element of class dm" },
+    { "<p class=\"dmx\">", "" },
+    { "> **DM** note", "a dm callout" },
+    { "- > **dm-only** note", "a dm callout" },
+    { "> [!DM] note", "a dm callout" },
+    { "> **DMG** page 12", "" },
+    { "- **dm** in bold, in a list", "" },
+    { "## DM Only Notes", "a DM Only heading" },
+    { "### dm only:", "a DM Only heading" },
+    { "DM Only\n-------", "a DM Only heading" },
+    { "DM only\n=====", "a DM Only heading" },
+    { "Just text\n---", "" },
+    { "#dmonly is a tag", "" },
+    { "<!--#dm-->\n> **dm** x\n## DM Only", "a stretch marker | a dm callout | a DM Only heading" },
+  }
+  for _, f in ipairs(found) do eq(list(gm.dmMarks(f[1])), f[2], f[1]) end
+end)
+
+test("dm-only: the detector leaves code alone", "dm", function()
+  for _, text in ipairs({
+    "```\n<!--#dm-->\n> **dm**\n## DM Only\n```\n",
+    "~~~md\n<span class=\"dm\">\n~~~",
+    "Use `<span class=\"dm\">` and `<!--#dm-->`.",
+    "> ```\n> <!--#dm-->\n> ```\n",
+  }) do
+    eq(list(gm.dmMarks(text)), "", text)
   end
 end)
 
@@ -189,6 +353,55 @@ test("dm-only: publishing leaves every kind of it out of the players' copy", "dm
   eq(H.pages["Player/World/Places/Crypt"],
      "---\ntype: place\n---\n\n# Crypt\n\nThe door is locked. It is heavy.\n\n" ..
      "Stone steps lead down.\n\n## Getting in\n\nForce the door.\n")
+end)
+
+test("dm-only: a heading in a stretch under DM Only lets nothing after it out", "dm", function()
+  local page = "Adventure/World/Places/Crypt"
+  H.pages[page] = "---\ntype: place\n---\n\n# Crypt\n\nOpen.\n\n## DM Only\n\nsecret one\n\n" ..
+    "<!--#dm-->\n\n## Hidden\n\nsecret two\n\n<!--/dm-->\n\nsecret three\n\n## Getting in\n\nForce the door.\n"
+  gm.writeRevealed({ page })
+  H.confirms = { true }
+  gm.publish()
+  eq(H.pages["Player/World/Places/Crypt"],
+     "---\ntype: place\n---\n\n# Crypt\n\nOpen.\n\n## Getting in\n\nForce the door.\n")
+end)
+
+test("dm-only: a stretch opened inside a line takes the rest, and closes inside one", "dm", function()
+  local page = "Adventure/World/Places/Crypt"
+  H.pages[page] = "---\ntype: place\n---\n\n# Crypt\n\nThe door is locked. <!--#dm--> The key is under the mat.\n" ..
+    "The lich waits. <!--/dm--> It is heavy.\n"
+  gm.writeRevealed({ page })
+  H.confirms = { true }
+  gm.publish()
+  eq(H.pages["Player/World/Places/Crypt"], "---\ntype: place\n---\n\n# Crypt\n\nThe door is locked.\nIt is heavy.\n")
+end)
+
+test("dm-only: a copy that still holds a DM-only mark is kept back and named", "dm", function()
+  local page = "Adventure/World/Places/Crypt"
+  -- a tag written over two lines is no tag a line at a time
+  H.pages[page] = "---\ntype: place\n---\n\n# Crypt\n\nThe door is locked. <span\n" ..
+    "class=\"dm\">The key is under the mat.</span> It is heavy.\n"
+  gm.setRevealed(page, true)
+  H.confirms = { true }
+  ok(gm.publish(), "the rest publishes")
+  eq(H.pages["Player/World/Places/Crypt"], nil, "the crypt isn't sent")
+  ok(H.pages["Player/Rules/House Rules"], "the other revealed pages are")
+  has(H.confirmsAsked[1], "Publish " .. count(FIXTURES.dm["State/Revealed"], "\n- [[") .. " revealed pages",
+      "the crypt isn't counted")
+  local n = lastNotification()
+  eq(n.kind, "warning")
+  has(n.message, "Kept back: " .. page .. " still has DM-only marks (an element of class dm).")
+end)
+
+test("dm-only: with every copy kept back there is nothing to publish, and it says why", "dm", function()
+  local page = "Adventure/World/Places/Crypt"
+  H.pages[page] = "# Crypt\n\nOpen.\n\nSecret. <!--/dm-->\n"
+  gm.writeRevealed({ page })
+  eq(gm.publish(), false)
+  eq(#H.confirmsAsked, 0)
+  eq(H.pages["Player/World/Places/Crypt"], nil)
+  has(lastNotification().message, "Nothing to publish. Kept back: " .. page ..
+      " still has DM-only marks (a stretch marker).")
 end)
 
 test("dm-only: a fence under DM Only keeps the rest of the section from the players", "dm", function()

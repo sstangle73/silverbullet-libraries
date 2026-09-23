@@ -96,20 +96,6 @@ function takePrinted()
   return lines
 end
 
--- TEMPORARY, until their files' owners switch them to takePrinted(): tests
--- that print on purpose and read H.printed[1] where it lies. The check
--- passes them over; each comes off this list once it takes what it printed.
-TEMPORARILY_ALLOWED_TO_PRINT = {
-  ["kit: top widget listener"] = true,
-}
-
--- TEMPORARY, until the branches are merged: tests in files the harness
--- doesn't own that fail because a mock now answers as SilverBullet does,
--- with the reason. Each still runs; a failure counts as a pass with a note,
--- and a pass says to take it off this list.
-TEMPORARILY_EXPECTED_TO_FAIL = {
-}
-
 -- A message that isn't valid UTF-8 would stop Python reading it back.
 local function printable(s)
   if utf8.len(s) then return s end
@@ -118,7 +104,6 @@ end
 
 function runAll(words)
   local passed, total, failed = 0, 0, {}
-  EXCUSED = {}
   for _, t in ipairs(T) do
     if not words or t.name:find(words, 1, true) then
       total = total + 1
@@ -128,25 +113,11 @@ function runAll(words)
       local good, err = pcall(function()
         reset(t.layout)
         t.fn()
-        if #H.printed > 0 and not TEMPORARILY_ALLOWED_TO_PRINT[t.name] then
+        if #H.printed > 0 then
           error("a library printed, as it does only when something went wrong (a test that " ..
                 "means it to reads it with takePrinted()): " .. table.concat(H.printed, " | "), 0)
         end
       end)
-      if TEMPORARILY_ALLOWED_TO_PRINT[t.name] and good and #H.printed == 0 then
-        REPORT[#REPORT + 1] = "'" .. t.name .. "' leaves nothing printed now: take it off " ..
-                              "TEMPORARILY_ALLOWED_TO_PRINT in framework.lua"
-      end
-      local excuse = TEMPORARILY_EXPECTED_TO_FAIL[t.name]
-      if excuse and good then
-        REPORT[#REPORT + 1] = "'" .. t.name .. "' passes now: take it off " ..
-                              "TEMPORARILY_EXPECTED_TO_FAIL in framework.lua"
-      elseif excuse then
-        EXCUSED[#EXCUSED + 1] = t.name
-        REPORT[#REPORT + 1] = printable("TEMPORARY: '" .. t.name .. "' fails, excused until merged (" ..
-                                        excuse .. "): " .. tostring(err))
-        good = true
-      end
       if good then
         passed = passed + 1
       else

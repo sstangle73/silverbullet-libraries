@@ -55,6 +55,23 @@ test("kit: the committed State/Revealed parses", "dm", function()
     "Adventure/Rules/Travel | Adventure/World/Factions/The Guild")
 end)
 
+-- As SilverBullet can write the list back after a rename, with
+-- linkWriteFormat: shortest-suffix, once a page of the same name is made
+-- elsewhere (GM Kit 3.8).
+test("kit: an entry without the adventure folder is the adventure page it ends", "dm", function()
+  H.pages["State/Revealed"] = "---\ntype: state\n---\n\n# Revealed to players\n\n" ..
+    "- [[World/People/Mara]]\n- [[Old Tam#Who They Are]]\n- [[World/People/Nobody]]\n"
+  eq(list(gm.readRevealed()), "Adventure/World/People/Mara | Adventure/World/People/Old Tam#Who They Are | " ..
+    "Adventure/World/People/Nobody")
+  H.confirms = { true }
+  gm.publish()
+  ok(H.pages["Player/World/People/Mara"], "Mara is published")
+  has(H.pages["Player/World/People/Old Tam"], "## Who They Are")
+  has(lastNotification().message, "Revealed but no longer there: Adventure/World/People/Nobody.")
+  gm.revealPart("Adventure/World/People/The Warden", "Who They Are")
+  has(H.pages["State/Revealed"], "- [[Adventure/World/People/Mara]]\n", "the next change writes it in full")
+end)
+
 test("kit: reveal from the bar, with undo", "dm", function()
   H.current = "Adventure/World/People/The Warden"
   click(gm.bar(), "Reveal")
@@ -402,7 +419,7 @@ test("kit: top widget listener", "dm", function()
   gm.bar = function() error("kaboom") end
   H.current = "Adventure/World/People/The Warden"
   eq(#dispatch("hooks:renderTopWidgets"), 0)
-  has(H.printed[1], "kaboom")
+  has(takePrinted()[1], "kaboom")
 end)
 
 test("kit: a failing bar button reports instead of vanishing", "dm", function()

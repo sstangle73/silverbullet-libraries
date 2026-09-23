@@ -155,6 +155,83 @@ test("unreveal: every part comes back, the copy goes, and Undo returns both", "d
   eq(H.pages[WARDEN_COPY], copy)
 end)
 
+-------------------------------------------------------------- headings told apart (GM Kit 3.8)
+
+local CELLAR = "Adventure/World/Places/Cellar"
+
+local function useCellar()
+  H.pages[CELLAR] = table.concat({
+    "---", "type: place", "---", "", "# Cellar", "",
+    "## Notes", "", "Damp.", "",
+    "## The [Hidden] Door", "", "Behind the barrels.", "",
+    "## Notes", "", "The miller keeps his ledger here.", "",
+  }, NL)
+end
+
+test("parts: two sections under one heading are told apart, and only the one revealed goes", "dm", function()
+  useCellar()
+  eq(partNames(gm.parts(CELLAR)), "Notes | The [Hidden] Door | Notes (2)")
+  H.current = CELLAR
+  H.picks = { "Notes (2)" }
+  click(gm.bar(), "Reveal part…")
+  eq(list(names(H.filterBoxes[#H.filterBoxes].options)), "Notes | The [Hidden] Door | Notes (2)")
+  eq(list(gm.revealedPart(CELLAR)), "Notes (2)")
+  publish()
+  local copy = H.pages["Player/World/Places/Cellar"]
+  has(copy, "## Notes" .. NL .. NL .. "The miller keeps his ledger here.")
+  hasnt(copy, "Damp.", "the first Notes stays hidden")
+end)
+
+test("parts: a heading with brackets in it is revealed, listed and published", "dm", function()
+  useCellar()
+  ok(gm.revealPart(CELLAR, "The [Hidden] Door"))
+  has(H.pages["State/Revealed"], "- [[" .. CELLAR .. "#The %5BHidden%5D Door]]" .. NL)
+  eq(list(gm.revealedPart(CELLAR)), "The [Hidden] Door")
+  has(textOf(gm.bar(CELLAR).html), "◔ Revealed in part, not published yet: The [Hidden] Door")
+  publish()
+  has(H.pages["Player/World/Places/Cellar"], "## The [Hidden] Door" .. NL .. NL .. "Behind the barrels.")
+  -- one written into the list by hand reads as it is written
+  gm.writeRevealed({})
+  H.pages["State/Revealed"] = H.pages["State/Revealed"] .. "- [[" .. CELLAR .. "#The [Hidden] Door]]" .. NL
+  eq(list(gm.revealedPart(CELLAR)), "The [Hidden] Door")
+end)
+
+-------------------------------------------------------------- Undo takes back its own (GM Kit 3.8)
+
+test("undo: undoing a part leaves a part revealed after it", "dm", function()
+  gm.revealPart(WARDEN, "Who They Are")
+  local first = lastNotification()
+  gm.revealPart(WARDEN, "At the Table")
+  runAction(first, "Undo")
+  eq(entries(WARDEN), WARDEN .. "#At the Table")
+end)
+
+test("undo: undoing a mark leaves a part revealed after it", "dm", function()
+  gm.mark(WARDEN, "met")
+  local met = lastNotification()
+  gm.revealPart(WARDEN, "What They Want")
+  runAction(met, "Undo")
+  eq(entries(WARDEN), WARDEN .. "#What They Want")
+  eq(gm.readState(WARDEN, true).met, nil, "and the mark itself is gone")
+end)
+
+test("undo: undoing a part the whole page has been revealed over leaves it whole", "dm", function()
+  gm.revealPart(WARDEN, "Who They Are")
+  local part = lastNotification()
+  gm.reveal(WARDEN)
+  runAction(part, "Undo")
+  eq(entries(WARDEN), WARDEN)
+end)
+
+test("undo: undoing an unreveal brings its parts back, and keeps one revealed since", "dm", function()
+  gm.revealPart(WARDEN, "Who They Are")
+  gm.unreveal(WARDEN)
+  local unrevealed = lastNotification()
+  gm.revealPart(WARDEN, "At the Table")
+  runAction(unrevealed, "Undo")
+  eq(entries(WARDEN), WARDEN .. "#At the Table | " .. WARDEN .. "#Who They Are")
+end)
+
 -------------------------------------------------------------- publishing
 
 test("publish: a page revealed in part sends its title and those parts, in the page's order", "dm", function()
@@ -276,6 +353,106 @@ test("mark met: a page already revealed by some part isn't revealed by name as w
   gm.mark(TAM, "met")
   eq(lastNotification().message, "Old Tam: met in session 1.")
   eq(entries(TAM), TAM .. "#Who They Are")
+end)
+
+test("mark met: reveal_first: none marks without revealing anything", "dm", function()
+  H.pages[TAM] = H.pages[TAM]:gsub("\nstatus: stub\n", "\nstatus: stub\nreveal_first: none\n")
+  gm.mark(TAM, "met")
+  eq(lastNotification().message, "Old Tam: met in session 1.")
+  eq(entries(TAM), "")
+  eq(gm.readState(TAM, true).met, "true")
+end)
+
+-------------------------------------------------------------- a name the party mustn't know (GM Kit 3.8)
+
+-- A stranger whose title sits in a stretch above it: the party meet him
+-- before they know who he is.
+local HEIR = "Adventure/World/People/The Heir"
+local HEIR_COPY = "Player/World/People/The Heir"
+
+local function useHeir()
+  H.pages[HEIR] = table.concat({
+    "---", "type: npc", "---", "",
+    "<!--#dm-->", "", "# The Heir", "", "The Warden's son, though nobody has told him yet.", "", "<!--/dm-->", "",
+    "## First Impressions", "", "A boy in a borrowed coat, asking about the ford.", "",
+  }, NL)
+end
+
+test("hidden name: a title in DM-only text hides the page's name, and so does a page with nothing left", "dm", function()
+  useHeir()
+  ok(gm.hidesName(HEIR), "a title in a stretch")
+  ok(not gm.hidesName(WARDEN), "a title of its own")
+  ok(not gm.hidesName("Adventure/World/People/Nobody"), "a page that isn't there")
+  local page = "Adventure/World/People/Stranger"
+  H.pages[page] = "---\ntype: npc\n---\n\n# The <span class=\"dm\">Heir</span>\n\nA boy.\n"
+  ok(gm.hidesName(page), "a title part DM-only, and the page's name no longer in it")
+  local tinker = "Adventure/World/People/The Tinker"
+  H.pages[tinker] = "---\ntype: npc\n---\n\n# The Tinker <span class=\"dm\">(the Warden's spy)</span>\n\nSells lanterns.\n"
+  ok(not gm.hidesName(tinker), "a title part DM-only, its page's name still in it")
+  H.pages[page] = "---\ntype: npc\n---\n\n<!--#dm-->\n\nThe Warden's son.\n"
+  ok(gm.hidesName(page), "no title, and nothing once the DM-only text is out")
+  H.pages[page] = "---\ntype: npc\n---\n\nA boy in a borrowed coat.\n"
+  ok(not gm.hidesName(page), "no title, and something for the players: its file name is its name")
+end)
+
+test("hidden name: marking met records it, reveals nothing, and says why", "dm", function()
+  useHeir()
+  H.current = HEIR
+  click(gm.bar(), "Mark met")
+  eq(lastNotification().message, "The Heir: met in session 1. Not revealed: the page's name is DM-only.")
+  eq(entries(HEIR), "", "not even its First Impressions")
+  eq(gm.readState(HEIR, true).met, "true")
+  has(textOf(gm.bar().html), "✓ Met in [[Sessions/Session 1|session 1]]")
+  runAction(lastNotification(), "Undo")
+  eq(gm.readState(HEIR, true).met, nil)
+end)
+
+test("hidden name: the bar says it won't be published, and offers no reveal", "dm", function()
+  useHeir()
+  local bar = gm.bar(HEIR)
+  has(textOf(bar.html), "⊘ Name is DM-only: not published")
+  eq(list(buttonsOf(bar.html)), "Mark met | Mark dead…")
+  eq(gm.reveal(HEIR), false)
+  eq(lastNotification().kind, "warning")
+  has(lastNotification().message, "The Heir's name is DM-only")
+  eq(gm.revealPart(HEIR, "First Impressions"), false)
+  eq(entries(HEIR), "")
+end)
+
+test("hidden name: publishing keeps it back, even on the revealed list, and names it", "dm", function()
+  useHeir()
+  gm.writeRevealed({ HEIR .. "#First Impressions", WARDEN })
+  publish()
+  eq(H.pages[HEIR_COPY], nil, "no copy at a path that names him")
+  ok(H.pages[WARDEN_COPY], "the rest publishes")
+  local n = lastNotification()
+  eq(n.kind, "warning")
+  has(n.message, "Kept back: " .. HEIR .. " hides its name in DM-only text.")
+  has(textOf(gm.bar(HEIR).html), "⊘ Name is DM-only: not published, though on the revealed list")
+end)
+
+test("hidden name: a copy sent before is named, and its bar takes it back for good", "dm", function()
+  useHeir()
+  gm.writeRevealed({ HEIR })
+  H.pages[HEIR_COPY] = "# The Heir\n\nThe Warden's son.\n"
+  publish()
+  has(lastNotification().message, "The players still have a copy of " .. HEIR .. ", which gives them its name")
+  H.current = HEIR
+  local bar = gm.bar()
+  has(textOf(bar.html), "◐ Name is DM-only, but the players have a copy")
+  click(bar, "Delete their copy")
+  eq(H.pages[HEIR_COPY], nil)
+  eq(entries(HEIR), "")
+  eq((lastNotification().options or {}).actions, nil, "no Undo to send it again")
+end)
+
+test("hidden name: a copy with nothing in it is kept back", "dm", function()
+  local page = "Adventure/World/Places/Nowhere"
+  H.pages[page] = "---\ntype: place\n---\n\n${widget.markdown(\"\")}\n"
+  gm.writeRevealed({ page, WARDEN })
+  publish()
+  eq(H.pages["Player/World/Places/Nowhere"], nil)
+  has(lastNotification().message, "Kept back: " .. page .. " would be empty.")
 end)
 
 -------------------------------------------------------------- pickers

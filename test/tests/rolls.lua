@@ -630,3 +630,92 @@ test("rolls: the owed list runs in the adventure's order, across its pages", "dm
   has(lines, "· Intelligence (Arcana): the 15, owed since [[Sessions/Session 1|session 1]]\n- ")
   has(H.pages["Session Table"], "${gm.owed()}", "the session table lists them")
 end)
+
+------------------------------------------------------------------ Rolls by section (GM Kit 3.8)
+
+-- The mill with a check of the same name as the bank's come in above it.
+local GATE = "## The gate\n\n**Wisdom (Perception)** — the gate.\n\n| | |\n|---|---|\n" ..
+  "| **Any roll** | Hinges, oiled |\n| **15** | Fresh scratches round the bolt |\n\n## The bank\n"
+local AT_GATE, AT_BANK = "Wisdom (Perception) · The gate", "Wisdom (Perception) · The bank"
+
+local function addGate()
+  H.pages[MILL] = (MILL_TEXT:gsub("## The bank\n", GATE, 1))
+end
+
+test("rolls: a check added above one with a roll leaves the roll with its check", "dm", function()
+  useMill()
+  H.picks = { PERCEPTION, "15 to 19" }
+  gm.logRoll()
+  addGate()
+  eq(checkNamed(AT_GATE).where, "the_gate")
+  eq(checkNamed(AT_BANK).where, "the_bank")
+  H.picks = { AT_BANK, "15 to 19" }
+  gm.logRoll()
+  eq(lastNotification().message, AT_BANK .. ", 15 to 19: nothing new, logged to session 1.",
+     "the bank's 15 is still the bank's")
+  H.picks = { AT_GATE, "15 or more" }
+  gm.logRoll()
+  eq(lastNotification().message, AT_GATE .. ", 15 or more: two things they know, logged to session 1.",
+     "and the gate's first roll counts afresh")
+  has(H.pages[MILL_STATE], "roll_wisdom_perception: 15\nroll_wisdom_perception_session: 1\n" ..
+      "roll_wisdom_perception_where: the_bank\n")
+  has(H.pages[MILL_STATE], "roll_wisdom_perception_2: 15\nroll_wisdom_perception_2_session: 1\n" ..
+      "roll_wisdom_perception_2_where: the_gate\n")
+  H.picks = { AT_GATE }
+  gm.pickUnlog(MILL)
+  hasnt(H.pages[MILL_STATE], "roll_wisdom_perception_2", "unlogged, its slot is let go")
+  has(H.pages[MILL_STATE], "roll_wisdom_perception: 15\n", "and the bank's stays")
+end)
+
+-- The mill's play state as 3.7 left it: each check's rolls kept by its
+-- place among the page's checks of its name.
+local OLD_MILL_STATE = "---\ntype: state-record\nsubject: \"[[" .. MILL .. "]]\"\n" ..
+  "roll_wisdom_perception: 15\nroll_wisdom_perception_session: 1\n" ..
+  "roll_intelligence_investigation_2_the_sack: 10\nroll_intelligence_investigation_2_the_sack_session: 1\n" ..
+  "---\n\n# Scene 4\n\n## Log\n\n"
+
+test("rolls: a roll logged before 3.8 reads by its place, and the next roll pins it", "dm", function()
+  useMill()
+  H.pages[MILL_STATE] = OLD_MILL_STATE
+  local text = textOf(gm.bar().html)
+  has(text, "✓ Perception: [[Sessions/Session 1|15 to 19]]")
+  has(text, "✓ Investigation: 1 of 2 found")
+  H.picks = { INSIGHT, "20 or more" }
+  gm.logRoll()
+  local state = H.pages[MILL_STATE]
+  has(state, "roll_wisdom_perception_where: the_bank\n")
+  has(state, "roll_intelligence_investigation_2_where: the_loft\n")
+  has(state, "roll_wisdom_insight_where: the_miller\n")
+  -- pinned, a check that comes in above can't take them
+  addGate()
+  has(textOf(gm.bar().html), "✓ Perception: [[Sessions/Session 1|15 to 19]]")
+  H.picks = { AT_BANK, "15 to 19" }
+  gm.logRoll()
+  eq(lastNotification().message, AT_BANK .. ", 15 to 19: nothing new, logged to session 1.")
+end)
+
+test("rolls: Undo takes back the pins with the roll that made them", "dm", function()
+  useMill()
+  H.pages[MILL_STATE] = OLD_MILL_STATE
+  H.picks = { INSIGHT, "20 or more" }
+  gm.logRoll()
+  has(H.pages[MILL_STATE], "_where")
+  runAction(lastNotification(), "Undo")
+  hasnt(H.pages[MILL_STATE], "_where", "back as it was")
+  has(H.pages[MILL_STATE], "roll_wisdom_perception: 15\n")
+  has(textOf(gm.bar().html), "✓ Perception: [[Sessions/Session 1|15 to 19]]")
+end)
+
+test("rolls: two checks of one name in one section are told apart by number", "dm", function()
+  useMill()
+  H.pages[MILL] = (MILL_TEXT:gsub("\n%*%*Intelligence %(Investigation%)%*%* — what the wheel tells you.",
+    "\n**Wisdom (Perception)**, again, at dusk.\n\n| | |\n|---|---|\n| **Any roll** | Lamps in the mill |\n\n" ..
+    "**Intelligence (Investigation)** — what the wheel tells you.", 1))
+  local first, second = checkNamed("Wisdom (Perception) · The bank"), checkNamed("Wisdom (Perception) · The bank (2)")
+  eq(first.where, "the_bank")
+  eq(second.where, "the_bank_2")
+  H.picks = { "Wisdom (Perception) · The bank (2)", "Any roll" }
+  gm.logRoll()
+  has(H.pages[MILL_STATE], "roll_wisdom_perception_2_where: the_bank_2\n")
+  has(textOf(gm.bar().html), "○ Perception", "the first is still to roll")
+end)
