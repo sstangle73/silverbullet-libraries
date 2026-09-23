@@ -455,6 +455,7 @@ test("the GM libraries name their version, and stale() finds a newer copy, in Si
   const { env, run, pages, printed } = await setup(ROOT);
   const libs: [string, string, string][] = [
     ["gm", "GM Kit", "Library/Storie/GM Kit"],
+    ["gmb", "GM Beyond", "Library/Storie/GM Beyond"],
     ["gmbook", "GM Book", "Adventure/Library/Storie/GM Book"],
     ["party", "GM Party", "Adventure/Library/Storie/GM Party"],
     ["bestiary", "GM Bestiary", "Adventure/Library/Storie/GM Bestiary"],
@@ -481,6 +482,93 @@ __bar = __text(gm.bar("${SCENE2}").html)`);
   expect(env.get("__marked")).toBe(false);
   expect(pages.has("State/People/The Warden")).toBe(false);
   expect(env.get("__bar")).toContain("⟳ Reload this tab: GM Kit 9.9.9 is installed");
+  expect(printed).toEqual([]);
+}, 60000);
+
+// A character's bar reads the page's frontmatter through yaml.parse, whose
+// lists and maps reach Lua as JavaScript's own arrays and objects: the rows,
+// the buttons and the play state, in SilverBullet's own Lua.
+test("a character's bar counts what runs out, from the page's own YAML, in SilverBullet's own Lua", async () => {
+  const { env, run, pages, notes, prompts, state, printed } = await setup(ROOT);
+  const BRAM = "Party/Bram";
+  const RECORD = "State/Characters/Bram";
+  pages.set(BRAM, [
+    "---", "type: pc", "player: Sam", "level: 5", "class: Fighter 3 / Wizard 2", "con: 14", "hp: 28",
+    "hit_dice: 3d10 + 2d6", "slots: [3, 1]", "resources:",
+    "  - {name: Second Wind, uses: 2, reset: Short Rest}",
+    "  - {name: Arcane Recovery, uses: 1, reset: Long Rest}",
+    "  - {name: Lucky Coin, uses: 3, reset: Dawn}",
+    "---", "", "# Bram", "", "A miller's son from Fordtown.", "",
+  ].join("\n"));
+  state.current = BRAM;
+  const errors = () => notes.filter((n) => n.message.startsWith("GM Kit:"));
+  const bar = async () => {
+    await run(`__bar = gm.topBar(); __t = __text(__bar.html); __b = __buttons(__bar.html)`);
+    return { text: env.get("__t") as string, buttons: env.get("__b") as string };
+  };
+  let b = await bar();
+  expect(b.text).toContain("28 of 28 hit points");
+  expect(b.text).toContain("●●● 3 of 3 left");
+  expect(b.text).toContain("●● 2 of 2 left · Short Rest");
+  expect(b.text).toContain("●●● 3 of 3 left · Dawn");
+  expect(b.text).toContain("●●●●● 5 of 5 left · 3d10 + 2d6");
+  expect(b.buttons).toBe("Damage… | Temporary… | Spend | Spend | Use | Use | Use | Spend | Give | Short Rest… | Long Rest");
+
+  prompts.push("6");
+  await run(`__click(gm.topBar().html, "Damage…")`);
+  expect(errors()).toEqual([]);
+  expect(notes.at(-1)!.message).toBe("Bram: took 6 damage, 22 of 28 hit points left.");
+  expect(pages.get(RECORD)).toContain("\nhp_lost: 6\n");
+  expect(pages.get(RECORD)).toContain('\nsubject: "[[Party/Bram]]"\n');
+  await run(`__click(gm.topBar().html, "Use")`);
+  expect(notes.at(-1)!.message).toBe("Bram: Second Wind used, 1 of 2 left.");
+  b = await bar();
+  expect(b.text).toContain("22 of 28 hit points");
+  expect(b.text).toContain("●○ 1 of 2 left · Short Rest");
+
+  // a Short Rest spends two dice for 13, and brings back Second Wind
+  prompts.push("2", "13");
+  await run(`__click(gm.topBar().html, "Short Rest…")`);
+  expect(errors()).toEqual([]);
+  expect(pages.get(RECORD)).not.toContain("hp_lost");
+  expect(pages.get(RECORD)).toContain("\nhit_dice_spent: 2\n");
+  expect(pages.get(RECORD)).not.toContain("used_second_wind");
+  // a Long Rest gives every die back, and its Undo takes only that back
+  await run(`gm.longRest("${BRAM}")`);
+  expect(pages.get(RECORD)).not.toContain("hit_dice_spent");
+  await action(notes.at(-1)!, "Undo");
+  expect(pages.get(RECORD)).toContain("\nhit_dice_spent: 2\n");
+  expect(pages.get(BRAM), "the character's page is never written to").toContain("hp: 28\n");
+  expect(errors()).toEqual([]);
+  expect(printed).toEqual([]);
+}, 60000);
+
+// Publishing's preview and report, and the players' recap, in SilverBullet's
+// own Lua: os.date for when, fenced quotes, and the recap's relative links.
+test("publishing's preview and report, and a players' recap, in SilverBullet's own Lua", async () => {
+  const { env, run, pages, notes, state, printed } = await setup(ROOT);
+  const errors = () => notes.filter((n) => n.message.startsWith("GM Kit:"));
+  const MARA = "Adventure/World/People/Mara";
+  await run(`__ok = gm.mark("${MARA}", "met") and gm.reveal("${MARA}") and gm.previewPublish()`);
+  expect(env.get("__ok")).toBe(true);
+  expect(errors()).toEqual([]);
+  const preview = pages.get("State/Publish Preview")!;
+  expect(preview).toMatch(/^---\ntype: state\n---\n\n# Publish preview\n\nWhat publishing would do, worked out \d{4}-\d\d-\d\d \d\d:\d\d:\d\d UTC in session 1\. Nothing has been sent/);
+  expect(preview).toContain("- [[" + MARA + "]]: the whole page");
+  expect(state.current).toBe("State/Publish Preview");
+  expect(pages.has("Player/World/People/Mara")).toBe(false);
+  await run(`gm.publish()`);
+  expect(errors()).toEqual([]);
+  expect(pages.has("Player/World/People/Mara")).toBe(true);
+  expect(pages.get("State/Publish Report")).toContain("[[" + MARA + "]]");
+  await run(`__ok = gm.draftRecap(1)`);
+  expect(env.get("__ok")).toBe(true);
+  const draft = pages.get("Sessions/Session 1 Recap")!;
+  expect(draft).toMatch(/^---\ntype: recap-draft\nsession: 1\n---\n\n# Session 1\n\n## Met\n\n- \[Mara\]\(<\.\.\/Player\/World\/People\/Mara>\)\n/);
+  await run(`__ok = gm.publishRecap("Sessions/Session 1 Recap")`);
+  expect(env.get("__ok")).toBe(true);
+  expect(pages.get("Player/Sessions/Session 1")).toMatch(/^---\ntype: recap\n---\n\n# Session 1\n/);
+  expect(errors()).toEqual([]);
   expect(printed).toEqual([]);
 }, 60000);
 
