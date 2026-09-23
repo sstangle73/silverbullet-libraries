@@ -1,0 +1,49 @@
+# The libraries' pipeline: both test suites and the leak scan, for a merge
+# request into main, for main itself, and for a branch named ci-*. Main moves
+# only through a merge request whose pipeline passed, so the public mirror
+# only ever gets commits that did. It runs on a self-hosted Docker runner.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH =~ /^ci-/
+
+variables:
+  # the leak scan reads the commit messages a merge request brings
+  GIT_DEPTH: "0"
+
+# The plain-Lua suite, in SilverBullet's load order and shuffled, and the
+# handout script's sums against GM Sheets'.
+plain:
+  image: python:3.12-slim
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  cache:
+    key: pip
+    paths: [.cache/pip]
+  script:
+    - pip install --quiet --disable-pip-version-check lupa pyyaml pypdf
+    - python test/run.py
+    - python test/run.py --shuffle
+    - python test/handout_test.py
+
+# The libraries in SilverBullet 2.11's own Lua, in a checkout of that tag
+# with its node_modules, kept between pipelines. SilverBullet 2.11.0 pins
+# Node 24.13.0 in its .nvmrc.
+spacelua:
+  image: node:24.13.0-bookworm
+  cache:
+    key: sb-2.11.0-node-24.13.0
+    paths: [sb211]
+  script:
+    - apt-get update -qq && apt-get install -y -qq python3 > /dev/null
+    - test -d sb211/.git || git clone --quiet --depth 1 --branch 2.11.0 https://github.com/silverbulletmd/silverbullet sb211
+    - test -d sb211/node_modules || (cd sb211 && npm ci --ignore-scripts --no-audit --no-fund)
+    - python3 test/spacelua/run.py sb211
+
+# Names that must never be in this public repo, from a File variable kept
+# out of it: see tools/leakscan.py.
+leak-scan:
+  image: python:3.12
+  script:
+    - python tools/leakscan.py
