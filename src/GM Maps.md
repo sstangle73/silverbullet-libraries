@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Maps"
 description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain, ways through and things are told apart by pattern and silhouette, so a map reads in one ink and in grayscale."
 author: "Steven Storie"
-version: "1.2.3"
+version: "1.3.0"
 ---
 
 # GM Maps
@@ -51,6 +51,8 @@ A page with `type: map` holds one map, in a fenced `map` block.
 
 `${maps.draw()}` reads the page it is on. Everywhere else, name the page as a link in the adventure would write it: `${maps.draw("World/Maps/The Old Orchard")}`. A path written for an adventure folder also finds the page in a space that holds that folder, the way a Bestiary reference does.
 
+A name that finds no map page draws a line saying so on the page. In print it draws nothing at all, so [GM Book](<GM Book>) keeps the edition back and names the page, rather than printing that line into the book as if it were the map.
+
 The block holds the grid first, then a blank line, then one declaration to a line. Keep the grid to ASCII: one character is one square.
 
 ## The legend
@@ -80,7 +82,7 @@ There are twelve kinds, in four families. **Terrain** fills a square, **a way th
 
 Every thing also carries a short label, drawn beside it: see *A thing is named on the map* below.
 
-Nothing else is a kind. A character in the grid with no legend line is drawn as open floor, and the map says so under it.
+Nothing else is a kind. A character in the grid with no legend line is drawn as open floor, and the map says so under it, on the page and never in print.
 
 A `token`, and any other thing, can name a page after an `=`, and the map then links to it the way a fight does:
 
@@ -112,7 +114,7 @@ Any of the **94 printable ASCII characters**, `!` to `~`, can be a legend key, a
 
 Two things a grid cannot hold:
 
-- **A space.** Short rows are padded with them, so a space is how the library says "nothing here". Write an explicit character for an empty square instead.
+- **A space.** Short rows are padded with them, so a space is how the library says "nothing here". Write an explicit character for an empty square instead. A row that starts with spaces loses them and moves left, so an L-shaped room written by indenting its narrow end loses its shape; the map says so under it.
 - **Nothing before the grid.** The block is the grid, then a blank line, then the declarations. A declaration above the grid discards it, and says so.
 
 ## Sizing to the party
@@ -122,6 +124,8 @@ Two things a grid cannot hold:
     grow to ${party.value{"square", plus = 3}}
 
 Eight for a party of five: an area one square wider than the party has members, plus a wall to each side. Write the grid at the size the adventure is written for, and the map grows or shrinks to the number the line gives.
+
+The rows grow or shrink by as many squares as the columns do, so a map keeps its shape: a corridor twelve squares by five, grown to fourteen across, is fourteen by seven, and a square map stays square.
 
 On the page that number is your table's. In print it is the adventure's, because a build evaluates the line with GM Party 1.2.1's `party.printed`, so the book is drawn for the party it is written for whoever is playing tonight.
 
@@ -154,7 +158,7 @@ GM Kit 3.1 and GM Book 1.8 leave a DM callout out of everything the players get.
 
 The DM's edition then carries both: the map to run the fight from, and the clean one to turn round and show the table. The players' edition and their wiki carry only the clean one, and whether they ever see it is a decision, not something the library makes for you.
 
-The SVG declares its own width and height, key included, so GM Book 1.7 or later measures it and breaks the page around it. A map is never taller than a column; one drawn larger is scaled down to fit. `maps.legendMarkdown` gives the same lines as text for a page that wants to say them in words as well.
+The SVG declares its own width and height, key included, so GM Book 1.7 or later measures it and breaks the page around it. A map is never taller than a column; one drawn larger is scaled down to fit, and the key is measured as it wraps, a row at a time, before the squares are sized. `maps.legendMarkdown` gives the same lines as text for a page that wants to say them in words as well.
 
 | Option | Means |
 |---|---|
@@ -172,6 +176,16 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
     })
 
 `type` is the page type that holds a map. `scale` is how many feet a square is, and `units` what to call them. `width` is a column of the book in px, which is what a map is drawn to fit.
+
+## Changes in 1.3
+
+**`grow to` keeps a map's shape.** The rows grow by as many squares as the columns, so a corridor stays a corridor. `maps.resize` takes the height as an optional fourth argument.
+
+**The map says what the docs promised.** A character in the grid with no line in the legend, and a row indented with spaces, are named in a warning under the map on the page, never in print. The key is wrapped before the squares are sized, so the map and its key fit a column together.
+
+**In print, a map that can't be drawn prints nothing**, so the book is kept back and the page named rather than printing "No map page". The map on the page still says so. `${maps.draw({ dm = true })}` now works in print too.
+
+**One book, whatever the Lua.** The key's lines wrap at the same word in SilverBullet and in plain Lua, and a widget drawn while the book builds draws its own page.
 
 ## Implementation
 
@@ -242,13 +256,26 @@ function maps.find(ref)
   return all.root ~= "" and all.byName[all.root .. ref] or nil
 end
 
--- The page a map reads with no page of its own: the one being printed
--- during a build or for the players, or the one open.
-function maps.here()
-  return (gmbook and gmbook.printing) or (gm and gm.printing) or editor.getCurrentPage()
+-- The page a map reads with no page of its own: in print, the one GM Book
+-- is printing; on the page, the one GM Kit is publishing for the players,
+-- or else the one open. A widget the browser draws while a build runs is on
+-- the page, not in print, so gmbook.printing is read only when printing.
+function maps.here(printing)
+  if printing and gmbook and gmbook.printing then return gmbook.printing end
+  return (gm and gm.printing) or editor.getCurrentPage()
 end
 
 ------------------------------------------------------------------ the source
+
+-- A number as a map writes it, the same in SilverBullet's Lua, whose
+-- numbers are JavaScript's, and in stock Lua, which prints 10/4*4 as 10.0:
+-- a whole number without a point, anything else to 14 figures. Nil for
+-- what isn't a number at all, such as 0/0, which neither Lua spells the same.
+local function numeral(n)
+  if n ~= n or n == math.huge or n == -math.huge then return nil end
+  if n == math.floor(n) and math.abs(n) <= 2 ^ 53 then return string.format("%d", n) end
+  return string.format("%.14g", n)
+end
 
 -- Every ${...} in a map's source evaluated, so a grow line can take its
 -- number from GM Party. Anything that doesn't evaluate is left as it stands.
@@ -275,14 +302,17 @@ local function expand(text, printing)
     if not e then break end
     out[#out + 1] = text:sub(i, s - 1)
     local src = text:sub(s + 2, e - 1)
-    -- during a build the printers stand in, so a grow line that asks GM
-    -- Party for a number gets the adventure's and not tonight's table's
-    local aug = (printing or (gmbook and gmbook.printing)) and gmbook and gmbook.printers or nil
+    -- in print the printers stand in, so a grow line that asks GM Party
+    -- for a number gets the adventure's and not tonight's table's; a map
+    -- on the page gets tonight's, even while a build prints another page
+    local aug = printing and gmbook and gmbook.printers or nil
     local ok, value = pcall(function()
       return spacelua.evalExpression(spacelua.parseExpression(src), aug)
     end)
-    if ok and (type(value) == "string" or type(value) == "number") then
-      out[#out + 1] = tostring(value)
+    local printed = ok and (type(value) == "string" and value
+      or type(value) == "number" and numeral(value)) or nil
+    if printed then
+      out[#out + 1] = printed
     else
       out[#out + 1] = text:sub(s, e)
     end
@@ -403,20 +433,28 @@ local function legendLine(char, rest)
   return { char = char, kind = kind, text = text, page = page, label = label }, warn
 end
 
+-- Numbers in words, as "1", "1 and 2", "1, 2 and 3".
+local function listed(items)
+  if #items == 1 then return tostring(items[1]) end
+  return table.concat(items, ", ", 1, #items - 1) .. " and " .. items[#items]
+end
+
 -- A map's source read: its grid as rows of characters, the legend by
 -- character, the order it was written in, and what else it was told.
 function maps.parse(source, printing)
   local rows, legend, order, warn = {}, {}, {}, {}
   local grow, title = nil, nil
   local scale, units = maps.setting("scale"), maps.setting("units")
-  local inGrid = true
+  local inGrid, indented = true, {}
   for line in (expand(source or "", printing) .. "\n"):gmatch("([^\n]*)\n") do
     local l = (line:gsub("%s+$", ""))
+    local lead = l:match("^[ \t]+")
     l = (l:gsub("^%s+", ""))
     if l == "" then
       if #rows > 0 then inGrid = false end
     elseif inGrid and not declares(l) then
       rows[#rows + 1] = l
+      if lead then indented[#indented + 1] = #rows end
     else
       inGrid = false
       local word = l:match("^(%a+)%s")
@@ -445,6 +483,29 @@ function maps.parse(source, printing)
         warn[#warn + 1] = "Not a legend line: " .. l
       end
     end
+  end
+  -- A space is how a short row is padded, not a square, so a row's leading
+  -- spaces come off, and everything in the row moves left with them.
+  if #indented > 0 then
+    warn[#warn + 1] = (#indented == 1 and "Row " or "Rows ") .. listed(indented) ..
+      (#indented == 1 and " starts" or " start") .. " with spaces, which a grid can't hold: they are " ..
+      "taken off, and the row moves left. Write a character for each empty square instead."
+  end
+  -- A character with no legend line is drawn as open floor, which is
+  -- rarely what was meant.
+  local unknown, seen = {}, {}
+  for _, row in ipairs(rows) do
+    for c = 1, #row do
+      local ch = row:sub(c, c)
+      if ch ~= " " and ch:byte() < 128 and not legend[ch] and not seen[ch] then
+        seen[ch] = true
+        unknown[#unknown + 1] = ch
+      end
+    end
+  end
+  if #unknown > 0 then
+    warn[#warn + 1] = (#unknown == 1 and "No legend line for " or "No legend lines for ") ..
+      listed(unknown) .. (#unknown == 1 and ", so it is" or ", so they are") .. " drawn as open floor."
   end
   return { rows = rows, legend = legend, order = order, grow = grow,
            scale = scale, units = units, title = title, warn = warn }
@@ -530,15 +591,17 @@ local function nearestCol(m, grid)
   return best
 end
 
--- Grows or shrinks the grid to width squares across, around its middle, by
--- copying the nearest uniform row and column or taking them away. A copy is
--- laid in at the middle, one above it and the next below, so whatever sits
--- at the centre stays there and whatever sits against a wall stays against
--- it. Returns the grid and whether it reached the size asked for.
-function maps.resize(m, grid, width)
+-- Grows or shrinks the grid to width squares across and height down
+-- (width again if not given), around its middle, by copying the nearest
+-- uniform row and column or taking them away. A copy is laid in at the
+-- middle, one above it and the next below, so whatever sits at the centre
+-- stays there and whatever sits against a wall stays against it. Returns
+-- the grid and whether it reached the size asked for.
+function maps.resize(m, grid, width, height)
+  height = height or width
   local ok = true
   local above = true
-  while #grid < width do
+  while #grid < height do
     local f = nearestRow(m, grid)
     if not f then
       ok = false
@@ -550,7 +613,7 @@ function maps.resize(m, grid, width)
     table.insert(grid, above and centre or centre + 1, copy)
     above = not above
   end
-  while #grid > width do
+  while #grid > height do
     local f = nearestRow(m, grid)
     if not f then
       ok = false
@@ -582,13 +645,17 @@ function maps.resize(m, grid, width)
 end
 
 -- The map's grid at the size it should be drawn, with a note when it could
--- not reach the size asked for.
+-- not reach the size asked for. The grow line says how far the grid runs
+-- across, and the rows grow or shrink by as many squares as the columns
+-- do, so a map keeps its shape: a corridor twelve by five grown to
+-- fourteen across is fourteen by seven, not fourteen square.
 function maps.grid(m)
   local grid = (rectangle(m.rows))
   if #grid == 0 then return grid, nil end
   if not m.grow then return grid, nil end
-  local target = math.max(3, math.floor(m.grow))
-  local sized, ok = maps.resize(m, grid, target)
+  local across = math.max(3, math.floor(m.grow))
+  local down = math.max(3, #grid + across - #grid[1])
+  local sized, ok = maps.resize(m, grid, across, down)
   if ok then return sized, nil end
   return sized, "The map has no uniform row or column left to grow by, so it stays as drawn."
 end
@@ -878,21 +945,38 @@ local function doorBar(cx, cy, s, dx, dy, ink, weight)
   }
 end
 
+-- SilverBullet's strings are UTF-16 and stock Lua's are UTF-8 bytes, so #
+-- counts "—" as one character in the first and three in the second. Text
+-- is counted in UTF-16 units in both: # in SilverBullet, and in stock Lua a
+-- unit for each character's first byte, two for one outside the BMP.
+local WIDE = #"—" == 1
+local function textLength(s)
+  if WIDE then return #s end
+  local n = 0
+  for i = 1, #s do
+    local b = s:byte(i)
+    if b < 128 or b >= 192 then n = n + (b >= 240 and 2 or 1) end
+  end
+  return n
+end
+
 -- A label broken to fit, at about this font's average character width. An
 -- estimate is enough: it only decides where a long line wraps, and it comes
--- out the same under every Lua, which is what a built edition needs.
+-- out the same under every Lua, which is what a built edition needs. Words
+-- are split at ASCII spaces only, since %s is a different set in each Lua.
 local function wrapLabel(text, room, size)
   local per = math.max(8, math.floor(room / (size * 0.47)))
-  if #text <= per then return { text } end
-  local lines, line = {}, ""
-  for word in text:gmatch("%S+") do
+  if textLength(text) <= per then return { text } end
+  local lines, line, used = {}, "", 0
+  for word in text:gmatch("[^ \t]+") do
+    local w = textLength(word)
     if line == "" then
-      line = word
-    elseif #line + 1 + #word <= per then
-      line = line .. " " .. word
+      line, used = word, w
+    elseif used + 1 + w <= per then
+      line, used = line .. " " .. word, used + 1 + w
     else
       lines[#lines + 1] = line
-      line = word
+      line, used = word, w
     end
   end
   if line ~= "" then lines[#lines + 1] = line end
@@ -933,13 +1017,23 @@ function maps.svg(m, opts)
     end
   end
 
+  -- The key's rows broken to fit before the squares are sized: a row that
+  -- wraps is taller, and the map and its key together have to fit the
+  -- height a map is given. They are broken at the narrowest the drawing can
+  -- be with a key, a column, and drawn so, wherever it comes out wider.
+  local left = pad + KEY_SWATCH + 6
+  local keyLines, keyHeight = {}, 0
+  for i, e in ipairs(keys) do
+    keyLines[i] = wrapLabel(e.text, width - left - pad, KEY_SIZE)
+    keyHeight = keyHeight + KEY_ROW + (#keyLines[i] - 1) * (KEY_SIZE + 1.5)
+  end
   -- a whole number of px to a square, so every line in the drawing lands on
   -- an integer and the text of it is the same in any Lua
   local cell = math.min(34, math.floor((width - pad * 2) / cols))
   local max = opts.maxHeight or 860
-  local function extra(n) return pad * 2 + foot + n * KEY_ROW end
-  if cell * rows + extra(#keys) > max then
-    cell = math.floor((max - extra(#keys)) / rows)
+  local extra = pad * 2 + foot + keyHeight
+  if cell * rows + extra > max then
+    cell = math.floor((max - extra) / rows)
   end
   if cell < 6 then cell = 6 end
   local gw, gh = cell * cols, cell * rows
@@ -1040,7 +1134,7 @@ function maps.svg(m, opts)
   -- creature's own ring and letter. Nothing here asks the reader to match a
   -- symbol they cannot see.
   local y = pad + gh + foot
-  for _, e in ipairs(keys) do
+  for k, e in ipairs(keys) do
     local cy = y + KEY_SWATCH / 2
     local swatch
     local function box(fill)
@@ -1074,8 +1168,7 @@ function maps.svg(m, opts)
     else
       swatch = box(nil)
     end
-    local left = pad + KEY_SWATCH + 6
-    local lines = wrapLabel(e.text, canvas - left - pad, KEY_SIZE)
+    local lines = keyLines[k]
     local label = {}
     for i, line in ipairs(lines) do
       label[#label + 1] = table.concat {
@@ -1138,8 +1231,10 @@ local function missing(ref)
 end
 
 -- A map's source, read from its page: the block, and the page it came from.
-function maps.source(ref)
-  local name = ref or maps.here()
+-- printing says whether it is for print, where a map with no page named
+-- reads the page being printed.
+function maps.source(ref, printing)
+  local name = ref or maps.here(printing)
   if not name then return nil, nil end
   local page = maps.find(name)
   local text
@@ -1155,20 +1250,16 @@ function maps.source(ref)
   return block(text), (page and page.name) or name
 end
 
--- The map on the page and in print, one drawing either way, with its key
--- inside it. On the page the creatures are on it and linked to their
--- Bestiary entries; in print they are left off unless the map is asked for
--- them, and a link would have nowhere to go.
-function maps.draw(ref, opts)
-  if type(ref) == "table" and opts == nil then ref, opts = nil, ref end
-  opts = opts or {}
-  local source = maps.source(ref)
-  if not source then return missing(ref or maps.here()) end
+-- The map as a widget, or nil when there is none to draw: no map page by
+-- that name, or no grid on it.
+local function drawing(ref, opts)
+  local source = maps.source(ref, opts.printing)
+  if not source then return nil end
   local m = maps.parse(source, opts.printing)
   local live, _, note = maps.svg(m, {
     dm = true, link = true, width = opts.width, legend = opts.legend,
   })
-  if not live then return missing(ref or maps.here()) end
+  if not live then return nil end
   local printed = (maps.svg(m, {
     dm = opts.dm == true or opts.tokens == true,
     link = false, width = opts.width, legend = opts.legend,
@@ -1188,18 +1279,32 @@ function maps.draw(ref, opts)
   }
 end
 
+-- The map on the page and in print, one drawing either way, with its key
+-- inside it. On the page the creatures are on it and linked to their
+-- Bestiary entries; in print they are left off unless the map is asked for
+-- them, and a link would have nowhere to go. A map it can't draw says so
+-- on the page.
+function maps.draw(ref, opts)
+  if type(ref) == "table" and opts == nil then ref, opts = nil, ref end
+  opts = opts or {}
+  return drawing(ref, opts) or missing(ref or maps.here(opts.printing))
+end
+
 ------------------------------------------------------------------ in print
 
 -- What a map prints as: the plan, without the creatures unless it is asked
 -- for them, and its legend. GM Book evaluates an expression with maps
 -- standing for this table, and finds it in gmbook.printers.
 maps.printed = setmetatable({
+  -- A map it can't draw prints nothing, rather than the page's "No map
+  -- page" as if that were the map: GM Book then keeps the edition back and
+  -- names the page, and the widget on the page says what it looked for.
   draw = function(ref, opts)
+    if type(ref) == "table" and opts == nil then ref, opts = nil, ref end
     local ask = { printing = true }
     for k, v in pairs(opts or {}) do ask[k] = v end
-    local w = maps.draw(ref, ask)
-    if type(w) == "table" and type(w.markdown) == "string" then return w.markdown end
-    return nil
+    local w = drawing(ref, ask)
+    return w and w.markdown or nil
   end,
 }, { __index = maps })
 

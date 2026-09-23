@@ -58,16 +58,35 @@ test("book: Act I prints the adventure's numbers, not code", "adventure", functi
   hasnt(dm, "shared by two")
 end)
 
-local builtForFive
-test("book: a build is the same whatever the live party", "adventure", function()
-  gmbook.compile({ "dm", "player" })
-  builtForFive = { dm = H.pages["Build/Book DM"], player = H.pages["Build/Book Player"] }
-end)
-test("book: (a party of six, two away, in DM)", "dm", function()
+-- A build held to the committed book, naming the first line that differs
+-- rather than printing two whole books.
+local function sameAsCommitted(got, want, what)
+  ok(got, what .. ": the build wrote nothing")
+  if got == want then return end
+  local nextGot, nextWant = (got .. "\n"):gmatch("([^\n]*)\n"), (want .. "\n"):gmatch("([^\n]*)\n")
+  local n = 0
+  while true do
+    local a, b = nextGot(), nextWant()
+    n = n + 1
+    eq(a, b, what .. " differs from the committed build at line " .. n)
+    if a == nil then break end
+  end
+  eq(got, want, what)
+end
+
+-- The committed book is built for the adventure's party of five. A table of
+-- six at level 4, two of them away tonight, changes every number on the
+-- wiki and none in the book.
+test("book: a build is the same whatever the live party", "dm", function()
   useParty(6, 4, 2)
+  ok(party.value() ~= 5, "the live party should differ from the adventure's")
+  H.current = "index"
+  H.pages["Adventure/Build/Book DM"], H.pages["Adventure/Build/Book Player"] = nil, nil
   gmbook.compile({ "dm", "player" })
-  eq(H.pages["Adventure/Build/Book DM"], builtForFive.dm, "the DM edition changed with the party")
-  eq(H.pages["Adventure/Build/Book Player"], builtForFive.player, "the player edition changed with the party")
+  sameAsCommitted(H.pages["Adventure/Build/Book DM"], FIXTURES.dm["Adventure/Build/Book DM"],
+    "the DM edition, for a party of six with two away")
+  sameAsCommitted(H.pages["Adventure/Build/Book Player"], FIXTURES.dm["Adventure/Build/Book Player"],
+    "the player edition, for a party of six with two away")
 end)
 
 test("kit: publishing puts in Markdown faces and leaves other expressions live", "dm", function()

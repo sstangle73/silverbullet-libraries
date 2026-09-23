@@ -100,7 +100,6 @@ end
 -- that print on purpose and read H.printed[1] where it lies. The check
 -- passes them over; each comes off this list once it takes what it printed.
 TEMPORARILY_ALLOWED_TO_PRINT = {
-  ["book: top widget listener"] = true,
   ["kit: top widget listener"] = true,
   ["chapters: a failure hides the bar instead of breaking the page"] = true,
   ["switcher: a failure hides the strip instead of breaking the page"] = true,
@@ -111,8 +110,6 @@ TEMPORARILY_ALLOWED_TO_PRINT = {
 -- with the reason. Each still runs; a failure counts as a pass with a note,
 -- and a pass says to take it off this list.
 TEMPORARILY_EXPECTED_TO_FAIL = {
-  ["book: a failed copy says what to do"] =
-    "editor.copyToClipboard no longer throws: SilverBullet catches a failed copy and says so itself",
 }
 
 -- A message that isn't valid UTF-8 would stop Python reading it back.

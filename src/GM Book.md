@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.12.0"
+version: "1.13.0"
 ---
 
 # GM Book
@@ -17,6 +17,8 @@ Self-contained as of 1.1: it no longer needs GM Kit, so it can live inside a sta
 - **In the header**, the printer builds both editions.
 - **On a built page**, a bar across the top has *Build again*, *Copy for Homebrewery* and *Open Homebrewery*, and *Open PDF* when a PDF of that edition sits beside it: see *Rendering it*. The bar isn't part of the page, so the copy is the manuscript alone.
 - **After a build**, the notification has a button to open each edition.
+
+A build takes a while, and one runs at a time: a click while one is running is told so and starts nothing.
 
 To put a build button on a page of your own:
 
@@ -44,6 +46,10 @@ The player edition leaves out everything a page marks as DM-only, and the DM's e
 
 A callout ends at the first blank line. A stretch holds anything, headings, tables and boxes included, and one with no end runs to the end of the page, so a start marker above a page's title keeps the whole page back. A page with nothing left for the player edition takes no room in it, not even a page break. None of them counts inside fenced code. GM Kit reads them with the same code, so the players' copies it publishes leave out exactly what the player edition does.
 
+**A page only the DM may see** has nothing on it marked, because all of it is the DM's: a [GM Maps](<GM Maps>) map page writes out every creature and trapdoor in its map block. The player edition leaves out every page of such a type, even one with a `book_order`, and prints nothing where another page shows it. The DM's edition prints it like any other page. The types are `map` by default, and the type GM Maps is set to give its pages counts as well:
+
+    config.set("gmBook.privateTypes", { "map", "plot" })
+
 Each edition is printed from its own text, so an expression inside DM-only text prints in the DM's edition and never runs for the player edition. A map drawn with its DM's layer can sit in a callout right under the clean one: see [GM Maps](<GM Maps>). Unwrapped, a callout's paragraphs, tables and maps are measured like any others, so the page breaks fall around them as they do around the rest of the page.
 
 ## Setting the order
@@ -52,7 +58,7 @@ Put `book_order` in the frontmatter of any page that belongs in the book. Pages 
 
     book_order: 20
 
-Leave gaps (10, 20, 30) so you can insert chapters without renumbering.
+Leave gaps (10, 20, 30) so you can insert chapters without renumbering. Pages that share a `book_order` go in by their names.
 
 ## A chapter in several pages
 
@@ -75,11 +81,13 @@ A library can print something other than what the page shows. The builder evalua
 
 GM Party does this: on the page its numbers show your party's count, and in print they show the rule behind it.
 
-While a page is being printed, `gmbook.printing` is that page's name, so an expression that reads the page it sits on prints from the right one. It is nil outside a build.
+**A printer that can't draw what it is asked for returns nil**, or raises an error, never a message saying so: a map whose page isn't there, say. Either one keeps the edition back and names the page, the expression and why, and the widget on the page can say what went wrong. A message returned as text would be printed into the book as if it were the map.
 
-A query's table, a button or anything else with no Markdown to give can't print. **An edition holding one is kept back**: the builder names the pages, writes nothing, and leaves the edition already on the page as it is. Writing it would take what the expression draws out of the book with nothing in the text to say so, and a wiki that commits the book would push the loss; an edition a build old is the smaller harm.
+While a page is being printed, `gmbook.printing` is that page's name, so an expression that reads the page it sits on prints from the right one. It is nil outside a build. Read it only in a printer: a widget the browser draws while a build runs belongs to the page on the screen, not to the one being printed.
 
-Two things cause it. The expression may be one that never prints, such as a query or a button — bake those with `Baked Sections: Update`. Or the library that gives the expression its meaning may be missing from the client: Space Lua is read when a client boots and not again, so a library installed while the tab was open is on disk and in the index but not in its Lua, and every expression that calls it fails. `System: Reload` reads them afresh.
+A query's table, a button or anything else with no Markdown to give can't print, and nor can an expression that raises an error. **An edition holding one is kept back**: the builder writes nothing, leaves the edition already on the page as it is, and names each such expression with its page and why. Writing it would take what the expression draws out of the book with nothing in the text to say so, and a wiki that commits the book would push the loss; an edition a build old is the smaller harm.
+
+The notification tells three causes apart. The expression may be one that never prints, such as a query or a button — bake those with `Baked Sections: Update`. The library that gives the expression its meaning may be missing from the client: Space Lua is read when a client boots and not again, so a library installed while the tab was open is on disk and in the index but not in its Lua, and every expression that calls it fails. `System: Reload` reads them afresh; the notification says so when the name an expression starts from means nothing in the tab. Otherwise the expression raised an error, such as `${party.nn()}` for `${party.n()}`, and the notification gives the error.
 
 ## One page shown in another
 
@@ -89,7 +97,9 @@ A book doesn't print the same text twice. Where the page shown is in the book, t
 
     *See Lantern: Rules.*
 
-A page that isn't in the book is printed in place: the section, with its headings moved in under the heading above, its expressions printed, and its DM-only text left out of the player edition. The player edition also leaves out a pointer to a section it doesn't have. A page or section that can't be found prints nothing, and the build names it.
+A page that isn't in the book is printed in place: the section, with its headings moved in under the heading above, and its expressions printed.
+
+Each edition cuts the section out of the page as that edition prints it, never the other way round. So a section under a `## DM Only` heading, or on a page kept back from above its title, isn't in the player edition at all: it prints nothing there, neither in place nor as a pointer. The same goes for a pointer to a whole page with nothing left for the players. A pointer's words come from the page as its edition prints it too: the title without its DM-only words, and with its expressions printed. A page or section that no edition has prints nothing, and the build names it.
 
 To print every one in place, or to word the pointer your own way (`%s` is the page and section):
 
@@ -104,6 +114,8 @@ An adventure folder can also be part of a larger space, as `Adventure/` is when 
 
     config.set("gmBook", { root = "Module/" })
 
+Copies of GM Book can end up at more than one depth, as `Library: Update All` in the larger space can leave them: one at `Library/Storie/GM Book` as well as the adventure's own. A build then reads from the shortest folder of any, here the whole space, so its notification names the copies. Remove the one you don't use, or set the root yourself.
+
 In the larger space, a wiki link written for the adventure folder, such as `[[World/Items/Lantern]]`, isn't the page's full path, so SilverBullet finds it by the end of its path. Any other page whose path ends the same way, such as notes kept at the same path in another folder, matches too, and SilverBullet asks which one you meant. A relative Markdown link, `[Lantern](<../../World/Items/Lantern>)`, starts from the folder of the page it is on, so it opens the same page in either space. The builder prints it as its label.
 
 ## What it transforms
@@ -115,6 +127,7 @@ In the larger space, a wiki link written for the adventure folder, such as `[[Wo
 - `[Label](<../Some/Page>)`, a link to a page in the space, becomes `Label`. Images and links to websites stay.
 - Baked-section markers removed, rendered bodies kept
 - DM-only text left out of the player edition, and in the DM's printed as ordinary text, as in *DM-only text*
+- HTML comments, `<!-- … -->`, left out of the player edition: a brew doesn't show them, but anyone who opens it reads them. One never closed runs to the end of its page, as it does on the page. Code keeps its own.
 - `> **note**` and `> **warning**` blockquotes become Homebrewery `{{note}}` boxes. A warning keeps a `warning` class, so a brew's style can set it apart.
 - A section's headings dropped a level
 - A page break before every chapter, though not before a section, and wherever a page fills up
@@ -145,6 +158,16 @@ It is an estimate, so each page keeps `gmbook.layout.slack` (one line) free at t
 
 **Pandoc with a 5e LaTeX template**: for a fully local, reproducible build.
 
+## Changes in 1.13
+
+**The player edition keeps back what the DM keeps back, however it arrives.** A section shown from another page is cut from that page as the edition prints it, so a stretch opened above it, or a `## DM Only` it sits under, keeps it out. A pointer is named by its page's title as the edition prints it, and a page whose title the players don't get, or that gives them nothing at all, gets no pointer. A page only the DM may see, a map's own page by default, is left out of the player edition along with anything shown from it: see *DM-only text*. HTML comments stay out of the player edition too.
+
+**One build at a time.** A second build while one is running is refused, with a notification. `gmbook.printing` is put back however a build ends.
+
+**An edition kept back says why.** The notification names each expression that printed nothing and its error, and suggests a reload only when the library the expression calls isn't loaded in the tab. A library that can't draw something in print now returns nothing, so the edition waits rather than printing its message: see *Live values*. `report.unprinted` lists them for scripts.
+
+**Smaller things.** Pages with the same `book_order` go in the order of their names, so every Lua builds the same book. Copies of GM Book at different depths of the space are named when the book builds. *Copy for Homebrewery* says what to do if SilverBullet couldn't copy.
+
 ## Implementation
 
 ```space-lua
@@ -171,6 +194,12 @@ gmbook.config = {
   -- neither is labelled unless the space is still doing its first index. false
   -- turns the ring off.
   progress     = "sync",
+  -- Page types whose page is itself the DM's: a GM Maps map page writes
+  -- out every creature and trapdoor, and nothing on it is marked DM-only
+  -- because all of it is. The player edition leaves such a page out, even
+  -- with a book_order, and prints nothing where a page shows it. The type
+  -- GM Maps is set to give its pages counts too.
+  privateTypes = { "map" },
 }
 
 gmbook.editions = {
@@ -582,6 +611,54 @@ function gmbook.forEdition(text, playerEdition)
   return gmbook.showSecrets(text)
 end
 
+-- The page types only the DM may see, as a set: gmBook.privateTypes, and
+-- the type GM Maps gives its pages when it is loaded, since a space may have
+-- told it another.
+function gmbook.privateTypes()
+  local set = {}
+  local list = config.get("gmBook.privateTypes", gmbook.config.privateTypes)
+  if type(list) == "string" then list = { list } end
+  if type(list) == "table" then
+    for _, t in ipairs(list) do set[t] = true end
+  end
+  if maps and maps.setting then
+    local ok, t = pcall(maps.setting, "type")
+    if ok and type(t) == "string" then set[t] = true end
+  end
+  return set
+end
+
+-- A page's type from its own frontmatter, read the way the index reads it:
+-- "quoted" or 'quoted' without its quotes, and a # comment after it gone.
+local function typeOf(text)
+  local head = text:match("^%-%-%-\n(.-\n)%-%-%-")
+  local v = head and ("\n" .. head):match("\ntype:[ \t]*([^\n]*)")
+  if not v then return nil end
+  v = (v:gsub("[ \t]+#.*$", ""))
+  v = (v:gsub("[ \t]+$", ""))
+  return v:match('^"(.*)"$') or v:match("^'(.*)'$") or v
+end
+
+-- Whether a page is of a private type, by the index or by its own
+-- frontmatter: either one saying so is enough. Gives back the test, for
+-- the pages of one build.
+local function privateTest()
+  local set, indexed = gmbook.privateTypes(), {}
+  local typed = query[[
+    from p = index.pages()
+    where p.type ~= nil
+    select { name = p.name, kind = p.type }
+  ]]
+  for _, p in ipairs(typed) do
+    if type(p.kind) == "string" and set[p.kind] then indexed[p.name] = true end
+  end
+  return function(name, text)
+    if indexed[name] then return true end
+    local t = text and typeOf(text)
+    return t ~= nil and set[t] == true
+  end
+end
+
 function gmbook.stripFrontmatter(text)
   if text:match("^%-%-%-") then
     local _, e = text:find("\n%-%-%-\n")
@@ -617,6 +694,81 @@ function gmbook.unbake(text)
   return text
 end
 
+-- A line without its HTML comments. open says whether a comment is still
+-- open from the lines above. Inline code keeps its own. Gives back the
+-- line, whether a comment is open at its end, and whether it changed.
+local function uncomment(line, open)
+  local out, i, n, changed = {}, 1, #line, open
+  local keep = not open and 1 or nil
+  local function put(s)
+    -- the space either side of a comment stands once
+    local last = out[#out]
+    if last and last:match("%s$") and s:match("^%s") then s = (s:gsub("^%s+", "")) end
+    if s ~= "" then out[#out + 1] = s end
+  end
+  while i <= n do
+    if open then
+      local e = line:find("-->", i, true)
+      if not e then break end
+      open, i, keep = false, e + 3, e + 3
+    else
+      local a = line:find("[`<]", i)
+      if not a then break end
+      if line:sub(a, a) == "`" then
+        local run = line:match("^`+", a)
+        local close = line:find(run, a + #run, true)
+        i = close and close + #run or a + #run
+      elseif line:sub(a, a + 3) == "<!--" then
+        put(line:sub(keep, a - 1))
+        open, changed, i, keep = true, true, a + 4, nil
+      else
+        i = a + 1
+      end
+    end
+  end
+  if keep then put(line:sub(keep)) end
+  local text = table.concat(out)
+  if changed then text = (text:gsub("%s+$", "")) end
+  return text, open, changed
+end
+
+-- The player edition without HTML comments: one doesn't show when the brew
+-- renders, but anyone who opens the brew reads it. Code, fenced or inline,
+-- keeps its own. A comment never closed runs to the end, as it does on the
+-- page. A line left with nothing on it goes, and one of the blank lines
+-- around it with it.
+function gmbook.stripComments(text)
+  if not text:find("<!--", 1, true) then return text end
+  local out, fence, open, cut = {}, nil, false, false
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local drop = false
+    if fence then
+      local run = line:match("^%s*(" .. fence.ch .. "+)%s*$")
+      if run and #run >= fence.n then fence = nil end
+    else
+      local run = not open and (line:match("^%s*(```+)") or line:match("^%s*(~~~+)"))
+      if run then
+        fence = { ch = run:sub(1, 1), n = #run }
+      else
+        local kept, still, changed = uncomment(line, open)
+        open = still
+        if changed then
+          if kept:match("%S") then line = kept else drop = true end
+        end
+      end
+    end
+    if drop then
+      cut = true
+    elseif cut and not line:match("%S") and (#out == 0 or not out[#out]:match("%S")) then
+      cut = false
+    else
+      out[#out + 1] = line
+      cut = false
+    end
+  end
+  return table.concat(out, "\n")
+end
+
 function gmbook.admonitions(text)
   local out, inBlock = {}, false
   for line in (text .. "\n"):gmatch("([^\n]*)\n") do
@@ -640,26 +792,61 @@ function gmbook.admonitions(text)
   return table.concat(out, "\n")
 end
 
--- The folder a build reads from and writes to: "" for the whole space, or
--- the folder this page is installed under. See "Building from a larger space".
-function gmbook.root()
-  local configured = config.get("gmBook.root", nil)
-  if configured then return configured end
+-- Every copy of this library in the space: its page, and the folder it is
+-- installed under.
+local function installs()
   local lib = gmbook.config.libraryPage
   local names = query[[
     from p = index.pages()
     where p.name:endsWith(lib)
     select p.name
   ]]
-  local root
+  local out = {}
   for _, name in ipairs(names) do
     local candidate = name:sub(1, #name - #lib)
-    if (candidate == "" or candidate:endsWith("/"))
-        and (not root or #candidate < #root) then
-      root = candidate
+    if candidate == "" or candidate:endsWith("/") then
+      out[#out + 1] = { page = name, root = candidate }
     end
   end
+  return out
+end
+
+-- The folder a build reads from and writes to: "" for the whole space, or
+-- the folder this page is installed under. See "Building from a larger space".
+function gmbook.root()
+  local configured = config.get("gmBook.root", nil)
+  if configured then return configured end
+  local root
+  for _, c in ipairs(installs()) do
+    if not root or #c.root < #root then root = c.root end
+  end
   return root or ""
+end
+
+-- The copies of this library, shallowest first, when they sit at different
+-- depths, as a Library: Update All run in a space that holds others can
+-- leave them: a copy at the top silently moves the build to the whole
+-- space. Empty when there is one, or they share a depth, or the config
+-- chooses the root.
+function gmbook.copies()
+  if config.get("gmBook.root", nil) then return {} end
+  local all, depths, seen = installs(), 0, {}
+  for _, c in ipairs(all) do
+    local _, d = c.root:gsub("/", "")
+    c.depth = d
+    if not seen[d] then
+      seen[d] = true
+      depths = depths + 1
+    end
+  end
+  if depths < 2 then return {} end
+  table.sort(all, function(a, b)
+    if a.depth ~= b.depth then return a.depth < b.depth end
+    return a.page < b.page
+  end)
+  local names = {}
+  for _, c in ipairs(all) do names[#names + 1] = c.page end
+  return names
 end
 
 function gmbook.output(edition, root)
@@ -679,11 +866,13 @@ end
 
 function gmbook.pages(root)
   -- `~= nil`, not the field alone: a query's where reads 0 as false, so a
-  -- page at book_order 0 would drop out of the book
+  -- page at book_order 0 would drop out of the book. Pages that share a
+  -- book_order go in by name: the index promises no order of its own, so
+  -- without one the harness and SilverBullet built different books.
   local pages = query[[
     from p = index.pages()
     where p.book_order ~= nil
-    order by p.book_order
+    order by p.book_order, p.name
   ]]
   local out = {}
   for _, p in ipairs(pages) do
@@ -719,14 +908,44 @@ gmbook.printers = gmbook.printers or {}
 -- Nil outside a build.
 gmbook.printing = nil
 
+-- A number as the book prints it, the same in SilverBullet's Lua, whose
+-- numbers are JavaScript's, and in stock Lua, which prints 10/4*4 as 10.0:
+-- a whole number without a point, anything else to 14 figures, as stock
+-- Lua's own tostring gives a fraction. Nil for what isn't a number at all,
+-- such as 0/0, which neither Lua spells the same.
+local function numeral(n)
+  if n ~= n or n == math.huge or n == -math.huge then return nil end
+  if n == math.floor(n) and math.abs(n) <= 2 ^ 53 then return string.format("%d", n) end
+  return string.format("%.14g", n)
+end
+
+-- Lua's own words, which no library is named.
+local RESERVED = {}
+for word in ("and break do else elseif end false for function goto if in local nil not or " ..
+    "repeat return then true until while query using"):gmatch("%a+") do
+  RESERVED[word] = true
+end
+
+-- Whether the name an expression starts from means nothing in this client,
+-- as a library's doesn't when the client loaded before it was installed:
+-- every expression that calls it fails, and System: Reload is the cure.
+local function unloaded(source)
+  local name = source:match("^%s*([%a_][%w_]*)")
+  if not name or RESERVED[name] then return false end
+  local ok, value = pcall(function()
+    return spacelua.evalExpression(spacelua.parseExpression(name), gmbook.printers)
+  end)
+  return ok and value == nil
+end
+
 -- Each ${...} put in as what it prints: text and numbers as they are, a
 -- widget as its Markdown face. Found with SilverBullet's own parser, so it
--- sees exactly what the page renders. Returns the text, and the expressions
--- left in because they give nothing to print.
+-- sees exactly what the page renders. Returns the text, the expressions
+-- left in because they give nothing to print, and for each of those why:
+-- the error it raised, if it did, and whether the name it starts from is
+-- missing from this client.
 function gmbook.print(text, page)
-  if not text:find("${", 1, true) then return text, {} end
-  local printing = gmbook.printing
-  gmbook.printing = page
+  if not text:find("${", 1, true) then return text, {}, {} end
   local found = {}
   local function walk(node)
     if node.type == "LuaDirective" then
@@ -736,26 +955,34 @@ function gmbook.print(text, page)
     end
   end
   walk(markdown.parseMarkdown(text))
-  local left = {}
+  -- The page being printed, put back however this ends: an error, or a
+  -- stop from the user, which pcall passes on rather than catching. Left
+  -- set, every map or reference that reads the page it is on would read
+  -- this one until the client reloads.
+  local was = gmbook.printing
+  gmbook.printing = page
+  local restore <close> = setmetatable({}, { __close = function() gmbook.printing = was end })
+  local left, why = {}, {}
   for i = #found, 1, -1 do
     local node = found[i]
     local source = text:sub(node.from + 3, node.to - 1)
-    local ok, value = pcall(function()
-      return spacelua.evalExpression(spacelua.parseExpression(source), gmbook.printers)
-    end)
     local out
-    if ok then
+    -- what it gives is looked at inside the pcall too: a value that errors
+    -- when read is as unprintable as an expression that errors
+    local fine, err = pcall(function()
+      local value = spacelua.evalExpression(spacelua.parseExpression(source), gmbook.printers)
       if type(value) == "string" then
         out = value
       elseif type(value) == "number" then
-        out = tostring(value)
+        out = numeral(value)
       elseif type(value) == "table" and value._isWidget and type(value.markdown) == "string" then
         out = value.markdown
       end
-    end
+    end)
     local head, tail = text:sub(1, node.from), text:sub(node.to + 1)
     if not out then
       table.insert(left, 1, source)
+      table.insert(why, 1, { error = (not fine) and tostring(err) or nil, unloaded = unloaded(source) })
     elseif out == "" and (head == "" or head:match("\n[ \t]*$")) and tail:match("^[ \t]*\n") then
       -- an expression alone on its line, printing nothing: the line goes too
       head = head:gsub("[ \t]*$", "")
@@ -766,8 +993,7 @@ function gmbook.print(text, page)
       text = head .. out .. tail
     end
   end
-  gmbook.printing = printing
-  return text, left
+  return text, left, why
 end
 
 -- A transclusion alone on its line, ![[Page]] or ![[Page#Section]], as the
@@ -846,8 +1072,8 @@ function gmbook.section(text, heading)
   return out and table.concat(out, "\n") or nil
 end
 
--- A page's title: its first # heading, or the last part of its name.
-local function titleOf(text, name)
+-- A page's first # heading, or nil.
+local function headingOf(text)
   local fence
   for line in (gmbook.stripFrontmatter(text) .. "\n"):gmatch("([^\n]*)\n") do
     local mark = line:sub(1, 3)
@@ -860,7 +1086,11 @@ local function titleOf(text, name)
       if title then return title end
     end
   end
-  return name:match("([^/]+)$") or name
+end
+
+-- A page's title: its first # heading, or the last part of its name.
+local function titleOf(text, name)
+  return headingOf(text) or name:match("([^/]+)$") or name
 end
 
 -- Moves text's headings so the highest of them sits at level `top`.
@@ -901,26 +1131,51 @@ end
 local function transcluded(ref, heading, playerEdition, ctx, level, depth)
   local page = gmbook.resolve(ref, ctx.root)
   local text = page and ctx.read(page)
-  local body = text and gmbook.section(gmbook.stripFrontmatter(text), heading)
-  if not body then
-    ctx.missing[ctx.from .. " (" .. ref .. (heading and ("#" .. heading) or "") .. ")"] = true
+  local raw = text and gmbook.stripFrontmatter(text)
+  local named = ctx.from .. " (" .. ref .. (heading and ("#" .. heading) or "") .. ")"
+  if not raw then
+    ctx.missing[named] = true
+    return {}
+  end
+  -- a page only the DM may see, such as a map's own page, shows nowhere in
+  -- the player edition
+  if playerEdition and ctx.private(page, text) then return {} end
+  -- The page as this edition prints it first, and the section cut from
+  -- that: a section cut first can't see a stretch opened above it, or the
+  -- `## DM Only` it sits under.
+  local shown = gmbook.forEdition(raw, playerEdition)
+  local body = gmbook.section(shown, heading)
+  if not body or not body:match("%S") then
+    -- kept from this edition, which is no reason to name it; missing only
+    -- when no edition has it
+    if not gmbook.section(raw, heading) and not gmbook.section(gmbook.showSecrets(raw), heading) then
+      ctx.missing[named] = true
+    end
     return {}
   end
   if ctx.mode ~= "inline" and ctx.inBook[page] then
-    if playerEdition and heading and
-        not gmbook.section(gmbook.stripSecrets(gmbook.stripFrontmatter(text)), heading) then
-      return {}  -- the player edition doesn't have that section
-    end
-    local label = titleOf(text, page) .. (heading and (": " .. heading) or "")
+    -- a page whose title the player edition leaves out keeps its name back:
+    -- the page's own name is that title, so no pointer may name it
+    if playerEdition and headingOf(raw) and not headingOf(shown) then return {} end
+    -- named as this edition prints the page: its title without what the
+    -- edition leaves out, and with its expressions printed
+    local title, left, why = gmbook.print(titleOf(shown, page), page)
+    ctx.note(left, why, page)
+    title = gmbook.forEdition(title, playerEdition)
+    if not title:match("%S") then title = page:match("([^/]+)$") or page end
+    local label = title .. (heading and (": " .. heading) or "")
     return { (ctx.see:gsub("%%s", function() return label end)) }
   end
   if depth >= 4 then return {} end
-  local left
-  body, left = gmbook.print(gmbook.forEdition(body, playerEdition), page)
-  if #left > 0 then ctx.live[ctx.from] = true end
+  local left, why
+  body, left, why = gmbook.print(body, page)
+  ctx.note(left, why, page)
+  -- what an expression printed can hold DM-only text of its own
+  body = gmbook.forEdition(body, playerEdition)
   body = gmbook.transclude(body, playerEdition, ctx, depth + 1)
   body = shiftHeadings(body, math.max(level, 1) + 1)
   body = (body:gsub("^%s*\n", "")):gsub("%s+$", "")
+  if body == "" then return {} end
   local lines = {}
   for line in (body .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
   return lines
@@ -970,6 +1225,7 @@ function gmbook.render(text, playerEdition, section, ctx)
   if ctx then text = gmbook.transclude(text, playerEdition, ctx) end
   if section then text = gmbook.demote(text) end
   text = gmbook.unbake(text)
+  if playerEdition then text = gmbook.stripComments(text) end
   text = gmbook.delink(text)
   return gmbook.admonitions(text)
 end
@@ -978,10 +1234,20 @@ end
 -- `progress`, when given, is called as progress(done, total) after each page,
 -- before each edition is paginated, and after each is written. Only
 -- gmbook.build passes one: a build run headlessly has no editor to draw on.
+-- The report says the folder it read (`root`), what it wrote (`written`),
+-- which editions it kept back (`kept`), the transclusions it couldn't find
+-- (`missing`), and the copies of GM Book at different depths (`copies`,
+-- see gmbook.copies). `live` names the pages holding an expression that
+-- gave nothing to print, and `unprinted` has each such expression: the
+-- book's page it is in (`page`), the page it is written on when that is
+-- another, shown in this one (`from`), its source (`expression`), the error
+-- it raised if it did (`error`), and whether the name it starts from is
+-- missing from this client (`unloaded`).
 function gmbook.compile(editions, progress)
   local root = gmbook.root()
   local pages = gmbook.pages(root)
-  local report = { pages = #pages, live = {}, written = {}, kept = {}, missing = {} }
+  local report = { pages = #pages, root = root, copies = gmbook.copies(), live = {}, unprinted = {},
+                   written = {}, kept = {}, missing = {} }
   if #pages == 0 then return report end
   local texts, cache = {}, {}
   local ctx = {
@@ -992,7 +1258,23 @@ function gmbook.compile(editions, progress)
       if cache[name] == nil then cache[name] = gmbook.exists(name) and space.readPage(name) or false end
       return cache[name] or nil
     end,
+    private = privateTest(),
   }
+  -- The expressions left unprinted, by the book's page they are in: each
+  -- one's source, the page it is written on, and why.
+  ctx.note = function(left, why, source)
+    if #left == 0 then return end
+    local list = ctx.live[ctx.from]
+    if not list then
+      list = {}
+      ctx.live[ctx.from] = list
+    end
+    for k, expression in ipairs(left) do
+      local w = why and why[k] or {}
+      list[#list + 1] = { expression = expression, source = source, error = w.error,
+                          unloaded = w.unloaded == true }
+    end
+  end
   for i, p in ipairs(pages) do
     ctx.inBook[p.name] = true
     texts[i] = space.readPage(p.name)
@@ -1014,16 +1296,26 @@ function gmbook.compile(editions, progress)
     ctx.live = {}
     for i, raw in ipairs(texts) do
       local from = pages[i].name:sub(#root + 1)
-      local text, left = gmbook.print(gmbook.forEdition(raw, player), pages[i].name)
-      if #left > 0 then ctx.live[from] = true end
-      local section = pages[i].book_section == true
-      ctx.from = from
-      local body = gmbook.render(text, player, section, ctx)
-      -- a page with nothing left for this edition, such as one kept back
-      -- whole for the DM, takes no room in it
-      if body:match("%S") then
-        if #parts > 0 then parts[#parts + 1] = section and "\n\n" or sep end
-        parts[#parts + 1] = body
+      -- a page only the DM may see is no part of the player edition, and
+      -- its expressions never run for it
+      if not (player and ctx.private(pages[i].name, raw)) then
+        ctx.from = from
+        local text, left, why = gmbook.print(gmbook.forEdition(raw, player), pages[i].name)
+        ctx.note(left, why, pages[i].name)
+        local section = pages[i].book_section == true
+        local body = gmbook.render(text, player, section, ctx)
+
+        -- FAIL-CLOSED CHECK: the player edition's page is final here, with
+        -- what it shows from other pages; the shared DM-only code's detector
+        -- belongs here, keeping the edition back and naming the page when a
+        -- DM-only mark is still in it.
+
+        -- a page with nothing left for this edition, such as one kept back
+        -- whole for the DM, takes no room in it
+        if body:match("%S") then
+          if #parts > 0 then parts[#parts + 1] = section and "\n\n" or sep end
+          parts[#parts + 1] = body
+        end
       end
       tick()
     end
@@ -1032,7 +1324,9 @@ function gmbook.compile(editions, progress)
       local name = p.name:sub(#root + 1)
       if ctx.live[name] then
         live[#live + 1] = name
-        liveAll[name] = true
+        local all = liveAll[name] or {}
+        liveAll[name] = all
+        for _, e in ipairs(ctx.live[name]) do all[#all + 1] = e end
       end
     end
     local out = gmbook.output(edition, root)
@@ -1053,25 +1347,132 @@ function gmbook.compile(editions, progress)
       report.written[#report.written + 1] = { edition = edition, page = out, sheets = sheets }
     end
   end
+  -- each expression once, though both editions left it unprinted
+  local seen = {}
   for _, p in ipairs(pages) do
     local name = p.name:sub(#root + 1)
-    if liveAll[name] then report.live[#report.live + 1] = name end
+    if liveAll[name] then
+      report.live[#report.live + 1] = name
+      for _, e in ipairs(liveAll[name]) do
+        local from = e.source:startsWith(root) and e.source:sub(#root + 1) or e.source
+        local key = name .. "\n" .. from .. "\n" .. e.expression
+        if not seen[key] then
+          seen[key] = true
+          report.unprinted[#report.unprinted + 1] = {
+            page = name, from = from ~= name and from or nil, expression = e.expression,
+            error = e.error, unloaded = e.unloaded,
+          }
+        end
+      end
+    end
   end
   for what in pairs(ctx.missing) do report.missing[#report.missing + 1] = what end
   table.sort(report.missing)
   return report
 end
 
+-- Stock Lua's strings are bytes, SilverBullet's UTF-16.
+local BYTES = #"—" ~= 1
+
+-- Text for a notification, on one line and at most about n characters, cut
+-- at a space where there is one, so a long expression or error can't fill
+-- a phone's screen.
+local function brief(s, n)
+  s = (tostring(s):gsub("%s+", " "))
+  s = (s:gsub("^ ", ""))
+  s = (s:gsub(" $", ""))
+  if #s <= n then return s end
+  local cut, at, from = s:sub(1, n), nil, 1
+  while true do
+    local space = cut:find(" ", from, true)
+    if not space then break end
+    at, from = space, space + 1
+  end
+  if at and at > n / 2 then
+    cut = cut:sub(1, at - 1)
+  elseif BYTES then
+    -- no half of a character left behind
+    while #cut > 0 and cut:byte(#cut) >= 128 and cut:byte(#cut) < 192 do cut = cut:sub(1, -2) end
+    if #cut > 0 and cut:byte(#cut) >= 192 then cut = cut:sub(1, -2) end
+  end
+  return cut .. "…"
+end
+
+-- What the notification says of the expressions a kept-back edition would
+-- lose: the first three, each with its page and why, and what to do. A
+-- library missing from the tab is cured by a reload, and a query or a button
+-- by baking; an error says what is wrong itself.
+local function unprintedText(report)
+  local items, reload, bake = {}, false, false
+  for k, u in ipairs(report.unprinted) do
+    local why
+    if u.unloaded then
+      why, reload = "its library isn't loaded in this tab", true
+    elseif u.expression:match("^%s*query%s*%[") then
+      why, bake = "a query never prints", true
+    elseif u.error then
+      why = brief(u.error, 100)
+    else
+      why, bake = "it gives nothing to print", true
+    end
+    if k <= 3 then
+      items[#items + 1] = u.page .. (u.from and (" (from " .. u.from .. ")") or "") ..
+        ", ${" .. brief(u.expression, 60) .. "}: " .. why
+    end
+  end
+  local text = table.concat(items, "; ")
+  if #report.unprinted > 3 then text = text .. "; and " .. (#report.unprinted - 3) .. " more" end
+  text = text .. "."
+  if reload then
+    text = text .. " A library installed while this tab was open isn't in its Lua until System: Reload."
+  end
+  if bake then
+    text = text .. " A query or a button never prints: bake it with Baked Sections: Update."
+  end
+  return text .. " Then build again."
+end
+
+-- What the notification says of copies of GM Book at different depths.
+local function copiesText(report)
+  local names = report.copies
+  local listed = #names == 1 and names[1] or
+    (table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names])
+  return " GM Book is installed at more than one depth, " .. listed .. ", so the build read " ..
+    (report.root == "" and "the whole space" or report.root) ..
+    ". Set gmBook.root to choose, or remove the copy you don't use."
+end
+
 function gmbook.build(editions)
+  -- Every syscall a build makes yields to the browser, so a second click,
+  -- or Build again beside the header's printer, would start a second build
+  -- over the first: the two would print through the one gmbook.printing and
+  -- write the same pages. One at a time.
+  if gmbook.building then
+    editor.flashNotification("The book is already being built. Wait for it to say it's done, " ..
+      "then build again if you need to.", "warning")
+    return nil
+  end
+  gmbook.building = true
   -- The ring is the only progress SilverBullet draws, and every syscall the
   -- build makes yields to the browser, so it moves while the build runs.
   local ring = config.get("gmBook.progress", gmbook.config.progress)
+  local cleared = false
+  -- However the build ends, an error or a stop from the user included, the
+  -- next one can start and the ring doesn't stay on the screen.
+  local finish <close> = setmetatable({}, { __close = function()
+    gmbook.building = false
+    if ring and not cleared then pcall(editor.showProgress, ring) end
+  end })
   local report = gmbook.compile(editions, ring and function(done, total)
     editor.showProgress(ring, math.floor(done / total * 100))
   end or nil)
-  if ring then editor.showProgress(ring) end
+  if ring then
+    cleared = true
+    editor.showProgress(ring)
+  end
   if report.pages == 0 then
-    editor.flashNotification("No pages have a book_order, so there is nothing to build", "warning")
+    editor.flashNotification("No pages have a book_order, so there is nothing to build." ..
+      (#report.copies > 0 and copiesText(report) or ""), "warning")
     return report
   end
   local names, actions = {}, {}
@@ -1093,12 +1494,10 @@ function gmbook.build(editions)
     kind = "warning"
     local kept = {}
     for _, k in ipairs(report.kept) do kept[#kept + 1] = "the " .. gmbook.editions[k.edition].label end
-    message = message .. " Kept back " .. table.concat(kept, " and ") .. ", unchanged: " ..
-      #report.live .. (#report.live == 1 and " page holds" or " pages hold") ..
-      " expressions with nothing to print, and writing that would take what they draw out of the book: " ..
-      table.concat(report.live, ", ") ..
-      ". A client that loaded the libraries before one of them existed is the usual cause, so run " ..
-      "System: Reload; otherwise run Baked Sections: Update on them. Then build again."
+    message = message .. " Kept back " .. table.concat(kept, " and ") .. ", unchanged, as writing " ..
+      (#kept == 1 and "it" or "them") .. " would take out what " ..
+      (#report.unprinted == 1 and "this expression draws: " or "these expressions draw: ") ..
+      unprintedText(report)
   end
   if #report.missing > 0 then
     kind = "warning"
@@ -1106,6 +1505,10 @@ function gmbook.build(editions)
       " transclusion names a page or section that can't be found, so it prints nothing: " or
       " transclusions name pages or sections that can't be found, so they print nothing: ") ..
       table.concat(report.missing, ", ") .. "."
+  end
+  if #report.copies > 0 then
+    kind = "warning"
+    message = message .. copiesText(report)
   end
   -- A warning names pages to go and fix, and is several lines on a phone:
   -- it needs longer on the screen than "built it, here it is".
@@ -1125,13 +1528,12 @@ function gmbook.copy(edition)
     editor.flashNotification("There is no " .. label .. " yet. Build the book first.", "warning")
     return false
   end
-  local ok, err = pcall(editor.copyToClipboard, space.readPage(page))
-  if not ok then
-    editor.flashNotification("Couldn't copy to the clipboard (" .. tostring(err) ..
-      "). Open " .. page .. " and copy it by hand.", "error")
-    return false
-  end
-  editor.flashNotification("Copied the " .. label .. ". Paste it into a new Homebrewery brew.",
+  -- SilverBullet 2.11 catches a copy that fails, says so in a notification
+  -- of its own and returns as if it had worked, so this can't tell the two
+  -- apart: the message holds either way.
+  editor.copyToClipboard(space.readPage(page))
+  editor.flashNotification("Copied the " .. label .. ": paste it into a new Homebrewery brew. " ..
+    "If SilverBullet said it couldn't copy, open " .. page .. " and copy it by hand.",
     "info", {
       timeout = 12000,
       actions = {{ name = "Open Homebrewery", run = gmbook.openHomebrewery }},

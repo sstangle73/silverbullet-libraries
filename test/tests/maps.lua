@@ -93,7 +93,7 @@ test("maps: a map's source reads as a grid and a legend", "adventure", function(
 end)
 
 test("maps: a line with no kind is drawn as floor, and says so", "adventure", function()
-  local m = maps.parse("##" .. NL .. "##" .. NL .. NL .. "x it is a mystery")
+  local m = maps.parse("##" .. NL .. "##" .. NL .. NL .. "# wall wall" .. NL .. "x it is a mystery")
   eq(m.legend["x"].kind, "floor")
   eq(m.legend["x"].text, "it is a mystery")
   eq(#m.warn, 1)
@@ -272,10 +272,13 @@ test("maps: a path written for Adventure finds the page from DM", "dm", function
   eq(maps.find(ORCHARD).name, "Adventure/" .. ORCHARD)
 end)
 
-test("maps: a page it can't find says so rather than drawing", "adventure", function()
+test("maps: a page it can't find says so on the page, and prints nothing", "adventure", function()
   local w = maps.draw("World/Maps/Nowhere")
+  has(w.html, "No map page for World/Maps/Nowhere")
   has(w.markdown, "No map page for World/Maps/Nowhere")
-  eq(maps.printed.draw("World/Maps/Nowhere"), "*No map page for World/Maps/Nowhere.*")
+  -- in print a message would go into the book as if it were the map, so
+  -- it gives nothing, and GM Book keeps the edition back and names the page
+  eq(maps.printed.draw("World/Maps/Nowhere"), nil)
 end)
 
 test("maps: print is the size the adventure is written for", "adventure", function()

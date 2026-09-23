@@ -14,6 +14,24 @@ local function chapterCount()
   return n
 end
 
+-- A build held to the committed book, word for word, so any change to what
+-- the book prints fails here until it is committed on purpose. Where they
+-- differ, the first line that does is named, rather than two whole books.
+local function sameAsCommitted(got, want, what)
+  ok(got, what .. ": the build wrote nothing")
+  if got == want then return end
+  local nextGot, nextWant = (got .. "\n"):gmatch("([^\n]*)\n"), (want .. "\n"):gmatch("([^\n]*)\n")
+  local n = 0
+  while true do
+    local a, b = nextGot(), nextWant()
+    n = n + 1
+    eq(a, b, what .. " differs from the committed build at line " .. n ..
+      " (if the change is meant, run python test/build_book.py --write and read the diff)")
+    if a == nil then break end
+  end
+  eq(got, want, what)
+end
+
 test("book: registers commands, a header button and a top widget", "adventure", function()
   for _, c in ipairs({ "GM: Build Book", "GM: Build Book (DM)", "GM: Build Book (Player)",
                        "GM: Copy Book for Homebrewery" }) do
@@ -61,28 +79,37 @@ end)
 
 test("book: single editions", "adventure", function()
   H.current = "index"
+  H.pages["Build/Book Player"] = nil
   H.commands["GM: Build Book (Player)"].run()
-  ok(H.pages["Build/Book Player"])
-  ok(not H.pages["Build/Book DM"] or H.pages["Build/Book DM"] == FIXTURES.adventure["Build/Book DM"],
-     "a player build touched the DM edition")
+  ok(H.pages["Build/Book Player"], "no player edition")
+  for _, name in ipairs(H.writes) do ok(name ~= "Build/Book DM", "a player build wrote the DM edition") end
   has(lastNotification().message, "Built the player edition")
   hasnt(lastNotification().message, "DM edition")
 end)
 
-local builtInAdventure
-test("book: a build from DM matches a build from Adventure", "adventure", function()
+-- Both editions, word for word as committed. A change that alters the book
+-- on purpose is committed with test/build_book.py --write, after reading
+-- the diff; any other change fails here.
+test("book: builds the committed book, both editions", "adventure", function()
   H.current = "index"
-  gmbook.compile({ "dm", "player" })
-  builtInAdventure = { dm = H.pages["Build/Book DM"], player = H.pages["Build/Book Player"] }
+  H.pages["Build/Book DM"], H.pages["Build/Book Player"] = nil, nil
+  local report = gmbook.compile({ "dm", "player" })
+  eq(#report.written, 2, "both editions written")
+  sameAsCommitted(H.pages["Build/Book DM"], FIXTURES.adventure["Build/Book DM"], "the DM edition")
+  sameAsCommitted(H.pages["Build/Book Player"], FIXTURES.adventure["Build/Book Player"], "the player edition")
 end)
-test("book: (DM side of the comparison)", "dm", function()
+
+-- The same book from the DM space, which holds Adventure/ as a folder: the
+-- build reads only Adventure/ and writes Adventure/Build/.
+test("book: a build from DM is the same book, in Adventure/Build", "dm", function()
   H.current = "index"
+  H.pages["Adventure/Build/Book DM"], H.pages["Adventure/Build/Book Player"] = nil, nil
   local report = gmbook.compile({ "dm", "player" })
   eq(report.pages, bookPageCount())
-  ok(H.pages["Adventure/Build/Book DM"], "DM build didn't write Adventure/Build/Book DM")
   ok(not H.pages["Build/Book DM"], "DM build wrote a stray Build/ at the DM root")
-  eq(H.pages["Adventure/Build/Book DM"], builtInAdventure.dm, "DM editions differ")
-  eq(H.pages["Adventure/Build/Book Player"], builtInAdventure.player, "player editions differ")
+  sameAsCommitted(H.pages["Adventure/Build/Book DM"], FIXTURES.dm["Adventure/Build/Book DM"], "the DM edition")
+  sameAsCommitted(H.pages["Adventure/Build/Book Player"], FIXTURES.dm["Adventure/Build/Book Player"],
+    "the player edition")
 end)
 
 test("book: the player edition drops DM Only sections", "adventure", function()
@@ -97,27 +124,6 @@ test("book: the player edition drops DM Only sections", "adventure", function()
   hasnt(player, "## DM Only")
   if withSecrets > 0 then has(dm, "## DM Only") end
   ok(#player <= #dm)
-end)
-
-test("book: matches the committed build apart from pages changed since", "adventure", function()
-  gmbook.compile({ "dm" })
-  local sep = "\n\n\\page\n\n"
-  local function split(s)
-    local parts, i = {}, 1
-    while true do
-      local a, b = s:find(sep, i, true)
-      if not a then parts[#parts + 1] = s:sub(i); return parts end
-      parts[#parts + 1] = s:sub(i, a - 1)
-      i = b + 1
-    end
-  end
-  local new, old = split(H.pages["Build/Book DM"]), split(FIXTURES.adventure["Build/Book DM"])
-  eq(#new, #old, "chapter count")
-  local changed = {}
-  for i = 1, #new do
-    if new[i] ~= old[i] then changed[#changed + 1] = (new[i]:match("\n?# ([^\n]+)") or ("#" .. i)) end
-  end
-  REPORT[#REPORT + 1] = "chapters that differ from the committed Book DM: " .. (#changed > 0 and list(changed) or "none")
 end)
 
 -- A build takes tens of seconds, and before 1.12 nothing on the screen moved
@@ -165,7 +171,9 @@ test("book: keeps back an edition holding an expression with nothing to print", 
   local n = lastNotification()
   eq(n.kind, "warning")
   has(n.message, "Kept back the DM edition and the player edition, unchanged")
-  has(n.message, "Campaign/Live")
+  has(n.message, "Campaign/Live, ${query[[from p = index.pages()]]}: a query never prints.")
+  has(n.message, "Baked Sections: Update", "a query is baked")
+  hasnt(n.message, "System: Reload", "not cured by a reload")
   eq(#report.written, 0, "nothing written")
   eq(#report.kept, 2, "both editions kept back")
   eq(H.pages["Build/Book DM"], before, "the edition on the page is left as it was")
@@ -284,9 +292,11 @@ end)
 test("book: a failed copy says what to do", "adventure", function()
   gmbook.compile({ "dm" })
   H.clipboardFails = true
-  eq(gmbook.copy("dm"), false)
-  eq(lastNotification().kind, "error")
+  -- SilverBullet reports a failed copy itself and returns as if it worked
+  eq(gmbook.copy("dm"), true)
+  has(H.notifications[#H.notifications - 1].message, "Could not copy to clipboard")
   has(lastNotification().message, "copy it by hand")
+  has(lastNotification().message, "Build/Book DM")
 end)
 
 test("book: copying before a build", "adventure", function()
@@ -317,5 +327,5 @@ test("book: top widget listener", "adventure", function()
   eq(#dispatch("hooks:renderTopWidgets"), 0)
   gmbook.bar = function() error("boom") end
   eq(#dispatch("hooks:renderTopWidgets"), 0)
-  has(H.printed[1], "boom")
+  has(takePrinted()[1], "boom")
 end)
