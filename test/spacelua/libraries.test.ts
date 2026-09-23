@@ -448,6 +448,42 @@ test("the small libraries name their version, and stale() finds a newer copy, in
   expect(printed).toEqual([]);
 }, 60000);
 
+// The GM libraries' stale() in SilverBullet's own Lua and query engine: each
+// swallows its own errors, so a query that failed here would say nothing
+// ever, and a stale tab would go on writing.
+test("the GM libraries name their version, and stale() finds a newer copy, in SilverBullet's own Lua", async () => {
+  const { env, run, pages, printed } = await setup(ROOT);
+  const libs: [string, string, string][] = [
+    ["gm", "GM Kit", "Library/Storie/GM Kit"],
+    ["gmbook", "GM Book", "Adventure/Library/Storie/GM Book"],
+    ["party", "GM Party", "Adventure/Library/Storie/GM Party"],
+    ["bestiary", "GM Bestiary", "Adventure/Library/Storie/GM Bestiary"],
+    ["maps", "GM Maps", "Adventure/Library/Storie/GM Maps"],
+    ["sheets", "GM Sheets", "Adventure/Library/Storie/GM Sheets"],
+  ];
+  for (const [ns, lib, copy] of libs) {
+    await run(`__v = ${ns}.version; __s = ${ns}.stale()`);
+    expect(env.get("__v"), ns).toBe(versionOf(lib));
+    expect(env.get("__s") ?? null, ns).toBeNull();
+    const text = pages.get(copy)!;
+    pages.set(copy, text.replace(/\nversion: "[^"]*"\n/, '\nversion: "9.9.9"\n'));
+    // GM Party and GM Bestiary keep the answer two seconds: forget it
+    await run(`if ${ns} == party or ${ns} == bestiary then ${ns}.refresh() end
+__s = ${ns}.stale()`);
+    expect(env.get("__s") ?? "", ns).toContain("9.9.9");
+    pages.set(copy, text);
+    await run(`if ${ns} == party or ${ns} == bestiary then ${ns}.refresh() end`);
+  }
+  // a stale tab's GM Kit writes nothing, and says why
+  pages.set("Library/Storie/GM Kit", pages.get("Library/Storie/GM Kit")!.replace(/\nversion: "[^"]*"\n/, '\nversion: "9.9.9"\n'));
+  await run(`__marked = gm.mark("Adventure/World/People/The Warden", "met")
+__bar = __text(gm.bar("${SCENE2}").html)`);
+  expect(env.get("__marked")).toBe(false);
+  expect(pages.has("State/People/The Warden")).toBe(false);
+  expect(env.get("__bar")).toContain("⟳ Reload this tab: GM Kit 9.9.9 is installed");
+  expect(printed).toEqual([]);
+}, 60000);
+
 // SilverBullet's own Config and validator, which the plain-Lua suite's mocks
 // stand in for: the same words, the value set all the same, and the bars
 // reading what they can of it.

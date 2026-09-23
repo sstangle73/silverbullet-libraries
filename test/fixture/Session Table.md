@@ -11,7 +11,7 @@ Currently session **${gm.currentSession()}**. ${widgets.commandButton("Next sess
 
 ${widgets.commandButton("Scene started…", "GM: Mark Scene Started")} ${widgets.commandButton("Scene finished…", "GM: Mark Scene Finished")} ${widgets.commandButton("Log a decision", "GM: Log Decision")} ${widgets.commandButton("Log a roll…", "GM: Log Roll")}
 
-${widgets.commandButton("Met…", "GM: Mark Met")} ${widgets.commandButton("Died…", "GM: Mark Dead")} ${widgets.commandButton("Visited…", "GM: Mark Visited")} ${widgets.commandButton("Found…", "GM: Mark Found")} ${widgets.commandButton("Reveal a page…", "GM: Reveal Page")} ${widgets.commandButton("Publish to players", "GM: Publish to Players")}
+${widgets.commandButton("Met…", "GM: Mark Met")} ${widgets.commandButton("Died…", "GM: Mark Dead")} ${widgets.commandButton("Visited…", "GM: Mark Visited")} ${widgets.commandButton("Found…", "GM: Mark Found")} ${widgets.commandButton("Reveal a page…", "GM: Reveal Page")} ${widgets.commandButton("Preview publishing", "GM: Preview Publish")} ${widgets.commandButton("Publish to players", "GM: Publish to Players")} ${widgets.commandButton("Draft recap…", "GM: Draft Recap")}
 
 ${widgets.commandButton("Use one…", "GM: Spend Use")} ${widgets.commandButton("Refund one…", "GM: Refund Use")} ${widgets.commandButton("Unmark…", "GM: Unmark")}
 
