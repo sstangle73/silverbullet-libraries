@@ -1,6 +1,7 @@
-// Runs the GM libraries in SilverBullet 2.11's own Lua runtime, over the test
+// Runs the libraries in SilverBullet 2.11's own Lua runtime, over the test
 // campaign as a DM space holds it: test/fixture/, with each library from src/
 // where test/install.json puts it. SBLIB is the silverbullet-libraries root.
+// test/spacelua/run.py copies this into a 2.11.0 checkout and runs it.
 //
 // The plain-Lua suite (test/run.py) is the wide one. This one is narrow and
 // honest: Space Lua is not Lua 5.4, and a library that passes there can
@@ -8,13 +9,15 @@
 import { expect, test } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { parseBlock } from "./parse.ts";
+import { parseBlock, parseExpressionString } from "./parse.ts";
 import { luaBuildStandardEnv } from "./stdlib.ts";
 import { LuaEnv, LuaNativeJSFunction, LuaStackFrame, LuaTable } from "./runtime.ts";
 import { evalStatement } from "./eval.ts";
-import { extractSpaceLuaFromPageText } from "../boot_config.ts";
+import { applyQuery } from "./query_collection.ts";
+import { indexSpaceLua } from "../../plugs/index/space_lua.ts";
+import { collectNodesOfType } from "../../plug-api/lib/tree.ts";
 import { parse } from "../markdown_parser/parse_tree.ts";
-import { buildExtendedMarkdownLanguage } from "../markdown_parser/parser.ts";
+import { buildExtendedMarkdownLanguage, parseMarkdown } from "../markdown_parser/parser.ts";
 import YAML from "js-yaml";
 
 const ROOT = process.env.SBLIB!;
@@ -52,6 +55,76 @@ function loadTree(root: string): Map<string, string> {
   }
   return pages;
 }
+
+// A space-lua block as SilverBullet's indexer records it.
+type Block = { ref: string; script: string; priority?: number };
+
+// Every space-lua block on these pages, in the order SilverBullet 2.11 runs
+// them, found and sorted by its own code: the indexer names each block
+// "<page>@<offset of its fence>" and reads its priority
+// (plugs/index/space_lua.ts), drops a block inside an HTML comment
+// (plugs/index/indexer.ts), and client/space_lua.ts runs them by the query
+// below, priority first and then that name as JavaScript sorts strings.
+async function loadOrder(pages: Iterable<[string, string]>): Promise<Block[]> {
+  const blocks: Block[] = [];
+  for (const [name, text] of pages) {
+    if (!text.includes("space-lua")) continue;
+    const tree = parseMarkdown(text);
+    const comments = collectNodesOfType(tree, "CommentBlock").map((n) => [n.from!, n.to!]);
+    for (const block of await indexSpaceLua({ name } as any, {} as any, tree)) {
+      const from = (block as any).range[0];
+      if (!comments.some(([a, z]) => from >= a && from < z)) blocks.push(block as Block);
+    }
+  }
+  const env = new LuaEnv(luaBuildStandardEnv());
+  const query = {
+    objectVariable: "script",
+    orderBy: [
+      { expr: parseExpressionString("script.priority or 0"), desc: true, nulls: "first" },
+      { expr: parseExpressionString("script.ref"), desc: false },
+    ],
+  };
+  return (await applyQuery(blocks, query as any, env, LuaStackFrame.createWithGlobalEnv(env))) as Block[];
+}
+
+// The same order by the rule test/run.py loads the plain-Lua suite by: the
+// first "-- priority: N" anywhere in a block, then "<page>@<offset>".
+function ruleOrder(pages: Iterable<[string, string]>): string[] {
+  const blocks: { ref: string; priority: number }[] = [];
+  for (const [name, text] of pages) {
+    for (const m of text.matchAll(/```space-lua\n([\s\S]*?)\n```/g)) {
+      const priority = m[1].match(/--\s*priority:\s*(-?\d+)/)?.[1];
+      blocks.push({ ref: `${name}@${m.index}`, priority: priority === undefined ? 0 : +priority });
+    }
+  }
+  blocks.sort((a, b) => b.priority - a.priority || (a.ref < b.ref ? -1 : a.ref > b.ref ? 1 : 0));
+  return blocks.map((b) => b.ref);
+}
+
+// Run one block as SilverBullet does, a chunk of its own in an environment
+// of its own, so a local in it is never seen in the next. A load error
+// fails the test, with the block's name. As in run(), only the message
+// goes on: a Lua error holds the whole environment.
+async function loadBlock(env: LuaEnv, block: Block) {
+  try {
+    const ast = parseBlock(block.script, { ref: block.ref });
+    await evalStatement(ast, new LuaEnv(env), LuaStackFrame.createWithGlobalEnv(env, ast.ctx));
+  } catch (e: any) {
+    throw new Error(`loading ${block.ref}: ${String(e?.message ?? e)}`);
+  }
+}
+
+// SilverBullet's own widget.new, which the libraries draw with, with LF
+// line endings as the release has it: a checkout made with core.autocrlf
+// has CRLF.
+const WIDGET = "Library/Std/APIs/Widget";
+const widgetPage = (): [string, string] => [
+  WIDGET,
+  readFileSync(join(SB, "libraries", WIDGET + ".md"), "utf-8").replace(/\r\n/g, "\n"),
+];
+
+// The DM space's order is the same for every test: work it out once.
+let dmOrder: Promise<Block[]> | undefined;
 
 function scalar(v: string): unknown {
   if (v === "") return null;
@@ -121,8 +194,12 @@ function __click(node, label)
 end
 `;
 
-async function setup(root: string) {
+// The DM space, with every block on its pages loaded; or, with `only`, the
+// blocks on those pages instead.
+async function setup(root: string, only?: Map<string, string>) {
   const pages = loadTree(root);
+  const commands: string[] = [];
+  const views: string[] = [];
   const notes: { message: string; kind: string; options: any }[] = [];
   const progress: { kind: string; percentage?: number }[] = [];
   const printed: string[] = [];
@@ -238,7 +315,19 @@ async function setup(root: string) {
   // JavaScript values that Lua indexes as they are
   stub("net", { proxyFetch: (url: string) => responses.get(url) ?? { ok: false, status: 404 } });
   stub("codeWidget", { refreshAll: () => null });
-  stub("command", { define: () => null });
+  stub("command", {
+    define: (def: any) => {
+      commands.push(def?.name);
+      return null;
+    },
+  });
+  // Chapter Navigation's and Space Switcher's views
+  stub("view", {
+    define: (spec: any) => {
+      views.push(spec?.name);
+      return null;
+    },
+  });
   stub("actionButton", { define: () => null });
   stub("event", { listen: () => null });
   stub("jsonschema", { validateObject: () => null });
@@ -261,18 +350,14 @@ async function setup(root: string) {
     }
   };
   await run(PRELUDE);
-  // Every GM library the DM space loads, in SilverBullet's order: priority
-  // first, then page name.
-  const priority = (md: string) => Number(md.match(/```space-lua\n\s*--\s*priority:\s*(-?\d+)/)?.[1] ?? 0);
-  const gmLibs = [...pages.keys()]
-    .filter((n) => /(^|\/)Library\/Storie\/GM [^/]+$/.test(n))
-    .sort((a, b) => priority(pages.get(b)!) - priority(pages.get(a)!) || (a < b ? -1 : a > b ? 1 : 0));
-  const libs = [
-    readFileSync(join(SB, "libraries/Library/Std/APIs/Widget.md"), "utf-8"),
-    ...gmLibs.map((n) => pages.get(n)!),
-  ];
-  for (const md of libs) await run(extractSpaceLuaFromPageText(md));
-  return { env, run, pages, notes, printed, picks, prompts, state, freeze, opened, files, responses };
+  // Every space-lua block the DM space holds, each run on its own in
+  // SilverBullet's order: every library the campaign installs, in whichever
+  // space's folder, its CONFIG pages, and SilverBullet's own widget.new.
+  const order = only
+    ? await loadOrder([widgetPage(), ...only])
+    : await (dmOrder ??= loadOrder([widgetPage(), ...pages]));
+  for (const block of order) await loadBlock(env, block);
+  return { env, run, pages, notes, printed, picks, prompts, state, freeze, opened, files, responses, commands, views, order };
 }
 
 // Run a notification's action, passing on only the message of an error.
@@ -283,6 +368,45 @@ async function action(note: { options: any }, name: string) {
     throw new Error(String(e?.message ?? e));
   }
 }
+
+// The plain-Lua suite's order, held to SilverBullet's own indexer and sort.
+// GM Kit's two fences sit where the second's offset sorts first as text, so
+// its second block runs first.
+test("blocks load in SilverBullet's order, as the plain-Lua suite loads them", async () => {
+  const pages = loadTree(ROOT);
+  const order = (await loadOrder(pages)).map((b) => b.ref);
+  expect(order).toEqual(ruleOrder(pages));
+  const kit = "Library/Storie/GM Kit";
+  const fences = [...pages.get(kit)!.matchAll(/```space-lua\n/g)].map((m) => `${kit}@${m.index}`);
+  expect(fences.length).toBeGreaterThan(1);
+  expect(order.filter((r) => r.startsWith(kit + "@"))).toEqual([...fences].sort());
+}, 60000);
+
+test("a local in one block is not seen in the next", async () => {
+  const env = new LuaEnv(luaBuildStandardEnv());
+  const page = "```space-lua\nlocal secret = 1\nfirst = secret\n```\n\n```space-lua\nsecond = secret\n```\n";
+  for (const block of await loadOrder([["P", page]])) await loadBlock(env, block);
+  expect(env.get("first")).toBe(1);
+  expect(env.get("second") ?? null).toBeNull();
+}, 60000);
+
+// Every library in src/, the ones the campaign doesn't install as well, in
+// one space: each loads, and none trips over another's load order.
+test("every library in src/ loads, all of them in one space", async () => {
+  const libs = new Map<string, string>();
+  for (const f of readdirSync(join(ROOT, "src"))) {
+    if (f.endsWith(".md")) libs.set("Library/Storie/" + f.slice(0, -3), readFileSync(join(ROOT, "src", f), "utf-8"));
+  }
+  expect(libs.size).toBeGreaterThan(10);
+  const { env, commands, views, printed, order } = await setup(ROOT, libs);
+  expect(order.length).toBe(ruleOrder([widgetPage(), ...libs]).length);
+  for (const name of ["gm", "gmbook", "party", "bestiary", "maps", "sheets", "gmb", "spaceSwitcher", "chapterNav", "kb"]) {
+    expect(env.get(name), name).toBeTruthy();
+  }
+  expect(commands).toContain("Tasks: Generate for Today");
+  expect(views).toEqual(expect.arrayContaining(["spaceSwitcher", "chapterNavTop", "chapterNavBottom"]));
+  expect(printed).toEqual([]);
+}, 60000);
 
 test("Scene 2's bar draws, with a row for the lantern", async () => {
   const { env, run, printed } = await setup(ROOT);

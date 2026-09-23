@@ -11,14 +11,67 @@ function T.sleep(ms)
   js.window.eval("new Promise(r => setTimeout(r, " .. math.floor(ms) .. "))")
 end
 
--- Open a page and give its widgets time to draw.
-function T.go(page, settle)
-  editor.navigate(page)
-  for _ = 1, 50 do
-    if editor.getCurrentPage() == page then break end
-    T.sleep(100)
+-- The browser's clock, in ms.
+function T.now() return js.window.eval("Date.now()") end
+
+-- Call check() every `every` ms (default 100) until it gives a true value,
+-- and return that value; nil once `timeout` ms (default 15000) are up. An
+-- error in check() counts as not yet.
+function T.poll(check, timeout, every)
+  local deadline = T.now() + (timeout or 15000)
+  while true do
+    local ok, v = pcall(check)
+    if ok and v then return v end
+    if T.now() >= deadline then return nil end
+    T.sleep(every or 100)
   end
-  T.sleep(settle or 1500)
+end
+
+-- As T.poll, but an error naming `what` was waited for once the time is up:
+--   T.waitUntil(function() return T.page("State/People/Mara") end, "Mara's record", 20000)
+function T.waitUntil(check, what, timeout, every)
+  local v = T.poll(check, timeout, every)
+  if not v then
+    error("T.waitUntil: gave up after " .. (timeout or 15000) .. " ms waiting for " .. (what or "a condition"), 2)
+  end
+  return v
+end
+
+-- When the page last changed, in the browser's clock: a node or its text
+-- added, removed or rewritten anywhere. The first call starts watching.
+function T.lastChange()
+  return js.window.eval([[(() => {
+    if (!window.__tWatch) {
+      window.__tChanged = Date.now();
+      window.__tWatch = new MutationObserver(() => { window.__tChanged = Date.now(); });
+      window.__tWatch.observe(document.body, { childList: true, characterData: true, subtree: true });
+    }
+    return window.__tChanged;
+  })()]])
+end
+
+-- After something done at `since` (a T.now()), wait until the page has
+-- changed and then kept still for `quiet` ms (default 400): what the click
+-- or the navigation set off has been drawn. A page that doesn't change at
+-- all is taken as drawn after 1500 ms. True, or false once `timeout` ms
+-- (default 15000) are up, as when a build keeps its progress ring turning:
+-- then wait for what the flow needs with T.waitUntil.
+function T.settle(since, quiet, timeout)
+  quiet = quiet or 400
+  return T.poll(function()
+    local changed, now = T.lastChange(), T.now()
+    return now - changed >= quiet and (changed > since or now - since >= 1500)
+  end, timeout, 50) ~= nil
+end
+
+-- Open a page and wait for it to draw; `settle` is the stillness that
+-- counts as drawn, in ms (T.settle).
+function T.go(page, settle)
+  T.lastChange()
+  local since = T.now()
+  editor.navigate(page)
+  T.poll(function() return editor.getCurrentPage() == page end, 5000)
+  T.settle(since, settle)
   return editor.getCurrentPage()
 end
 
@@ -41,13 +94,16 @@ function T.buttons(scope)
 end
 
 -- Click the nth (default first) button labelled exactly `label` inside
--- `scope`; errors when there is none. Waits `settle` ms afterwards.
+-- `scope`; errors when there is none. Then waits for the page to settle
+-- (T.settle, `settle` ms of stillness).
 function T.click(label, scope, nth, settle)
+  T.lastChange()
+  local since = T.now()
   local n = js.window.eval("(() => { const bs = Array.from(document.querySelectorAll(decodeURIComponent('"
     .. enc((scope or ".sb-lua-top-widget") .. " button") .. "'))).filter(b => b.innerText.trim() === decodeURIComponent('"
     .. enc(label) .. "')); const b = bs[" .. ((nth or 1) - 1) .. "]; if (!b) return -1; b.click(); return bs.length; })()")
   if n == -1 then error("T.click: no button '" .. label .. "' in " .. (scope or ".sb-lua-top-widget")) end
-  T.sleep(settle or 1200)
+  T.settle(since, settle)
   return n
 end
 
@@ -58,12 +114,15 @@ function T.notes()
                  actions: Array.from(n.querySelectorAll("button")).map(b => b.innerText) })))]])
 end
 
--- Click an action button (Undo, Reveal, Open...) on the newest notification that has it.
+-- Click an action button (Undo, Reveal, Open...) on the newest notification
+-- that has it, and wait for the page to settle (T.settle).
 function T.act(name, settle)
+  T.lastChange()
+  local since = T.now()
   local ok = js.window.eval("(() => { const bs = Array.from(document.querySelectorAll('.sb-notifications button')).filter(b => b.innerText.trim() === decodeURIComponent('"
     .. enc(name) .. "')); const b = bs[bs.length - 1]; if (!b) return false; b.click(); return true; })()")
   if not ok then error("T.act: no notification action '" .. name .. "'") end
-  T.sleep(settle or 1200)
+  T.settle(since, settle)
 end
 
 -- Dismiss every notification, so the next T.notes() shows only new ones.

@@ -28,10 +28,16 @@ usage:
 
 Every request holds a lock, so scripts from several callers never
 interleave: put a whole flow (open a page, click, wait, read) in one
-script. After each eval or script, any file the request changed is
-reported on stderr.
+script. The lock is the machine's, one for each port, since every checkout
+serves on the same port: a caller from another checkout waits too. After
+each eval or script, any file the request changed is reported on stderr.
+
+A request goes only to this checkout's own server: the process it started,
+still running, and the one listening on the port. Anything else there, such
+as another checkout's server, stops it with a message saying so.
 """
 import _winapi
+import csv
 import hashlib
 import json
 import msvcrt
@@ -58,7 +64,6 @@ PIDFILE = WORK / "server.pid"
 SECRETS = WORK / "secrets.json"
 BASELINE = WORK / "baseline.json"
 COPIED = WORK / "copied.json"
-LOCKFILE = WORK / "instance.lock"
 PRELUDE = ROOT / "prelude.lua"
 BIN = pathlib.Path(os.environ.get("SB_BIN", str(ROOT / "bin" / "silverbullet.exe")))
 CHROME = pathlib.Path(os.environ.get(
@@ -67,6 +72,8 @@ CHROME = pathlib.Path(os.environ.get(
         / "chrome-headless-shell-win64/chrome-headless-shell.exe")))
 HOST, PORT = "127.0.0.1", int(os.environ.get("SB_TEST_PORT", "3111"))
 BASE = f"http://{HOST}:{PORT}"
+# Machine-wide, not the checkout's: every checkout serves on PORT.
+LOCKFILE = pathlib.Path.home() / ".cache" / "sblib-instance" / f"port-{PORT}.lock"
 ADMIN = "admin"
 
 # Space id: folder in the campaign ("" for all of it), name, description.
@@ -86,10 +93,11 @@ def folder(sid):
 # ---------------------------------------------------------------- locking
 
 class Lock:
-    """An exclusive lock on instance.lock, released when the process ends."""
+    """An exclusive lock on the port's lock file, released when the process ends."""
 
     def __enter__(self):
         WORK.mkdir(exist_ok=True)
+        LOCKFILE.parent.mkdir(parents=True, exist_ok=True)
         self.f = open(LOCKFILE, "a+b")
         waited = 0.0
         while True:
@@ -99,7 +107,8 @@ class Lock:
                 return self
             except OSError:
                 if waited == 0:
-                    print("[instance] waiting for the lock...", file=sys.stderr)
+                    print(f"[instance] waiting for the lock on port {PORT} ({LOCKFILE}), "
+                          "which this or another checkout holds...", file=sys.stderr)
                 time.sleep(0.25)
                 waited += 0.25
                 if waited > 1800:
@@ -179,17 +188,56 @@ def pid():
 
 
 def alive(p):
+    """Whether pid p is running, and is a SilverBullet server: after a
+    restart, the pid in server.pid may be some other program's."""
     if not p:
         return False
-    out = subprocess.run(["tasklist", "/FI", f"PID eq {p}", "/NH"],
+    out = subprocess.run(["tasklist", "/FI", f"PID eq {p}", "/FO", "CSV", "/NH"],
                          capture_output=True, text=True).stdout
-    return str(p) in out
+    for row in csv.reader(out.splitlines()):
+        if len(row) > 1 and row[1] == str(p):
+            return row[0].lower() == BIN.name.lower()
+    return False
+
+
+def listener():
+    """The pid listening on PORT, or None. A listening socket is the one whose
+    far end is 0.0.0.0:0; netstat's state column is in the system's language."""
+    out = subprocess.run(["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        parts = line.split()
+        if (len(parts) == 5 and parts[0] == "TCP" and parts[1].rsplit(":", 1)[-1] == str(PORT)
+                and parts[2] == "0.0.0.0:0" and parts[4].isdigit()):
+            return int(parts[4])
+    return None
+
+
+def ours():
+    """Stop unless this checkout's server is running and is the one on PORT."""
+    p, owner = pid(), listener()
+    if not alive(p):
+        sys.exit(f"[instance] this checkout's server is not running"
+                 + (f", and pid {owner} is listening on port {PORT}" if owner else "")
+                 + ": start it (or provision)")
+    if owner != p:
+        sys.exit(f"[instance] this checkout's server (pid {p}) is running, but "
+                 + (f"pid {owner}" if owner else "nothing") + f" is listening on port {PORT}: "
+                 "stop it and start it again")
 
 
 def start():
-    if alive(pid()):
-        print("already running, pid", pid())
-        return
+    """Start this checkout's server, and wait until it is the one answering."""
+    p, owner = pid(), listener()
+    if alive(p):
+        if owner == p:
+            print("already running, pid", p)
+            return
+        sys.exit(f"[instance] this checkout's server (pid {p}) is running, but "
+                 + (f"pid {owner}" if owner else "nothing") + f" is listening on port {PORT}: "
+                 "stop it and start it again")
+    if owner is not None:
+        sys.exit(f"[instance] pid {owner}, not this checkout's server, is listening on port {PORT}: "
+                 "stop it, with its own checkout's instance.py stop if it is one, or set SB_TEST_PORT")
     if not BIN.exists():
         sys.exit(f"no SilverBullet server at {BIN}: set SB_BIN, or put the 2.11.0 release's there")
     env = dict(os.environ, SB_HOSTNAME=HOST, SB_PORT=str(PORT), SB_SHELL_BACKEND="off",
@@ -202,14 +250,28 @@ def start():
     proc = subprocess.Popen([str(BIN), str(DATA)], env=env, stdout=log, stderr=log,
                             stdin=subprocess.DEVNULL, creationflags=flags, cwd=str(WORK))
     PIDFILE.write_text(str(proc.pid))
-    for _ in range(60):
+    began = time.time()
+    while time.time() - began < 30:
+        code = proc.poll()
+        if code is not None:
+            PIDFILE.unlink(missing_ok=True)
+            sys.exit(f"[instance] the server stopped, with exit code {code}, before it answered; "
+                     f"see {LOG}")
         try:
             urllib.request.urlopen(BASE + "/dm/.ping", timeout=2)
-            print("started, pid", proc.pid, "at", BASE)
-            return
         except Exception:
             time.sleep(0.5)
-    sys.exit("server did not answer /dm/.ping; see " + str(LOG))
+            continue
+        owner = listener()
+        if owner == proc.pid:
+            print("started, pid", proc.pid, "at", BASE)
+            return
+        stop()
+        sys.exit(f"[instance] {BASE} answered, but pid {owner}, not the server just started "
+                 f"(pid {proc.pid}, now stopped), is listening there")
+    stop()
+    sys.exit(f"[instance] the server (pid {proc.pid}, now stopped) did not answer /dm/.ping "
+             f"within 30 s; see {LOG}")
 
 
 def stop():
@@ -341,12 +403,16 @@ def main(argv):
         with Lock():
             provision(src)
     elif cmd == "start":
-        start()
+        with Lock():
+            start()
     elif cmd == "stop":
         with Lock():
             stop()
     elif cmd == "status":
-        print("running" if alive(pid()) else "stopped", pid(), BASE)
+        p, owner = pid(), listener()
+        print("running" if alive(p) else "stopped", p, BASE)
+        if owner is not None and owner != p:
+            print(f"pid {owner}, not this checkout's server, is listening on port {PORT}")
         print("spaces:", ", ".join("/" + s + "/" for s in SPACES))
     elif cmd == "reset":
         with Lock():
@@ -367,6 +433,7 @@ def main(argv):
                       + "return __instance_res\n")
         timeout = int(os.environ.get("INSTANCE_TIMEOUT", "120"))
         with Lock():
+            ours()
             before = hashes()
             status, body = runtime(space, "lua" if cmd == "eval" else "lua_script", source, timeout)
             if cmd == "script" and status == 504:
@@ -378,6 +445,7 @@ def main(argv):
         print(body)
         sys.exit(0 if status == 200 else 1)
     elif cmd == "logs":
+        ours()
         limit = rest[1] if len(rest) > 1 else "100"
         status, body, _ = http("GET", f"/{rest[0]}/.runtime/logs?limit={limit}", headers=auth())
         for e in json.loads(body).get("logs", []) if status == 200 else []:

@@ -67,7 +67,11 @@ test("scenes: the Adventure space draws the same bar in its own names", "adventu
   local scenes = sceneList(act)
   ok(#scenes >= 2, "Act I should have scenes to walk between")
   eq(chapterNav.markdown(scenes[2].name), sceneBar(scenes, 2, act, "Act I"))
-  eq(H.views["chapterNavTop"].content(), nil, "no current page, no bar")
+  -- a client opens on the index page, which is no scene: no bar, and
+  -- nothing gone wrong drawing it
+  eq(editor.getCurrentPage(), "index")
+  eq(H.views["chapterNavTop"].content(), nil, "the index page got a bar")
+  eq(list(H.printed), "", "the bar failed to draw on the index page")
   H.current = scenes[#scenes].name
   has(H.views["chapterNavBottom"].content(), "(" .. #scenes .. " of " .. #scenes .. ")")
 end)

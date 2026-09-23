@@ -12,7 +12,8 @@ end
 
 local function fresh()
   return {
-    pages = {}, current = nil, writes = {}, deleted = {}, navigations = {},
+    -- A client always has a page open, the index page when nothing else is.
+    pages = {}, current = "index", writes = {}, deleted = {}, navigations = {},
     notifications = {}, progress = {}, prompts = {}, promptsAsked = {}, confirms = {}, confirmsAsked = {},
     picks = {}, filterBoxes = {}, clipboard = nil, clipboardFails = false, opened = {},
     reloads = 0, saves = 0, refreshes = 0, commands = {}, listeners = {}, printed = {},
@@ -158,25 +159,39 @@ end
 -- "" fail it as well as nil and false.
 local function truthy(v) return v ~= nil and v ~= false and v ~= 0 and v ~= "" end
 
--- Target of the query[[...]] transpiler in run.py.
+-- Target of the query[[...]] transpiler in run.py. It orders as SLIQ does
+-- (query_collection.ts, sortKeyCompare): a stable merge sort, so rows that
+-- tie on every key keep the order they came in, and a nil sorts after every
+-- value ascending and before every value descending. Values compare as Lua
+-- compares them; for strings that is JavaScript's order too, but for a
+-- character beyond U+FFFF, which JavaScript puts before U+E000-U+FFFF.
 function __liq(src, where, orders, select, limit)
   local rows = {}
   for _, p in ipairs(src()) do
     if not where or truthy(where(p)) then rows[#rows + 1] = p end
   end
   if orders and #orders > 0 then
-    table.sort(rows, function(a, b)
-      for _, o in ipairs(orders) do
-        local x, y = o.fn(a), o.fn(b)
+    local keyed = {}
+    for i, p in ipairs(rows) do
+      local keys = {}
+      for j, o in ipairs(orders) do keys[j] = o.fn(p) end
+      keyed[i] = { row = p, keys = keys, at = i }
+    end
+    table.sort(keyed, function(a, b)
+      for j, o in ipairs(orders) do
+        local x, y = a.keys[j], b.keys[j]
+        if (x == nil) ~= (y == nil) then
+          if o.desc then return x == nil end
+          return y == nil
+        end
         if x ~= y then
-          if x == nil then return false end
-          if y == nil then return true end
           if o.desc then return x > y end
           return x < y
         end
       end
-      return false
+      return a.at < b.at
     end)
+    for i, k in ipairs(keyed) do rows[i] = k.row end
   end
   local out = {}
   for i, p in ipairs(rows) do
@@ -232,8 +247,16 @@ function editor.filterBox(label, options, help, placeholder)
   end
   error("picker '" .. label .. "' has no option '" .. choice .. "'")
 end
+-- As in SilverBullet 2.11 (client/plugos/syscalls/editor.ts): a copy that
+-- fails, as one does when the page has lost focus, is caught there and shown
+-- in a notification of SilverBullet's own, and the call returns as usual.
+-- H.clipboardFails makes it fail.
 function editor.copyToClipboard(text)
-  if H.clipboardFails then error("Document is not focused") end
+  if H.clipboardFails then
+    H.notifications[#H.notifications + 1] = { kind = "info", message = "Could not copy to clipboard: " ..
+      "NotAllowedError: Failed to execute 'writeText' on 'Clipboard': Document is not focused." }
+    return
+  end
   H.clipboard = text
 end
 function editor.openUrl(url) H.opened[#H.opened + 1] = url end
@@ -460,9 +483,11 @@ function markdown.markdownToHtml(text)
   return '<div class="md">' .. text .. "</div>"
 end
 
--- yaml.parse, by PyYAML through run.py, the way SilverBullet hands js-yaml's
--- result to Lua: a map's keys are always strings, as a JavaScript object's
--- are, so a spell list's {1: [...]} is keyed "1", never 1.
+-- yaml.parse, by PyYAML through run.py, read as js-yaml reads it (YAML 1.2's
+-- core schema: `yes` and `on` stay words, 1:30 stays text) and handed to Lua
+-- the way SilverBullet hands js-yaml's result over: a map's keys are always
+-- strings, as a JavaScript object's are, so a spell list's {1: [...]} is
+-- keyed "1", never 1.
 yaml = {}
 function yaml.parse(text)
   assert(type(text) == "string", "yaml.parse needs a string")
@@ -590,7 +615,11 @@ local function clearPlay(layout, pages)
 end
 
 function reset(layout)
+  -- What the libraries printed outlives a reset in the middle of a test, for
+  -- runAll to check at its end; runAll clears H before each test.
+  local printed = H and H.printed
   H = fresh()
+  H.printed = printed or H.printed
   H.prefix = "/" .. layout .. "/"
   -- Every library global goes, so nothing a library remembered in one
   -- space is still there in the next. A library that caches the pages it
@@ -600,9 +629,14 @@ function reset(layout)
     nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
   for name, text in pairs(FIXTURES[layout]) do H.pages[name] = text end
   clearPlay(layout, H.pages)
+  -- Each block a chunk of its own, in SilverBullet's order (run.py), so a
+  -- local in one block is never seen in the next.
   for _, lib in ipairs(LIBS[layout]) do
     local chunk, err = load(lib.source, "=" .. lib.name)
-    if not chunk then error("load " .. lib.name .. ": " .. err) end
-    chunk()
+    if chunk then
+      local good, e = pcall(chunk)
+      if not good then chunk, err = nil, tostring(e) end
+    end
+    if not chunk then error("load " .. lib.name .. " (" .. tostring(lib.ref) .. "): " .. err, 0) end
   end
 end

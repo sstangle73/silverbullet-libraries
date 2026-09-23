@@ -85,6 +85,36 @@ end
 -- Lines a test wants printed with the results, not as failures.
 REPORT = {}
 
+-- A library prints only when something went wrong that it chose to swallow,
+-- such as a bar that failed to draw, so a test fails if anything is left in
+-- H.printed at its end. A test that makes a library print on purpose takes
+-- what it printed, and checks it:
+--   has(takePrinted()[1], "boom")
+function takePrinted()
+  local lines = H.printed
+  H.printed = {}
+  return lines
+end
+
+-- TEMPORARY, until their files' owners switch them to takePrinted(): tests
+-- that print on purpose and read H.printed[1] where it lies. The check
+-- passes them over; each comes off this list once it takes what it printed.
+TEMPORARILY_ALLOWED_TO_PRINT = {
+  ["book: top widget listener"] = true,
+  ["kit: top widget listener"] = true,
+  ["chapters: a failure hides the bar instead of breaking the page"] = true,
+  ["switcher: a failure hides the strip instead of breaking the page"] = true,
+}
+
+-- TEMPORARY, until the branches are merged: tests in files the harness
+-- doesn't own that fail because a mock now answers as SilverBullet does,
+-- with the reason. Each still runs; a failure counts as a pass with a note,
+-- and a pass says to take it off this list.
+TEMPORARILY_EXPECTED_TO_FAIL = {
+  ["book: a failed copy says what to do"] =
+    "editor.copyToClipboard no longer throws: SilverBullet catches a failed copy and says so itself",
+}
+
 -- A message that isn't valid UTF-8 would stop Python reading it back.
 local function printable(s)
   if utf8.len(s) then return s end
@@ -93,13 +123,35 @@ end
 
 function runAll(words)
   local passed, total, failed = 0, 0, {}
+  EXCUSED = {}
   for _, t in ipairs(T) do
     if not words or t.name:find(words, 1, true) then
       total = total + 1
+      -- No H, so reset() starts the test's printed lines afresh; a reset in
+      -- the middle of the test keeps them.
+      H = nil
       local good, err = pcall(function()
         reset(t.layout)
         t.fn()
+        if #H.printed > 0 and not TEMPORARILY_ALLOWED_TO_PRINT[t.name] then
+          error("a library printed, as it does only when something went wrong (a test that " ..
+                "means it to reads it with takePrinted()): " .. table.concat(H.printed, " | "), 0)
+        end
       end)
+      if TEMPORARILY_ALLOWED_TO_PRINT[t.name] and good and #H.printed == 0 then
+        REPORT[#REPORT + 1] = "'" .. t.name .. "' leaves nothing printed now: take it off " ..
+                              "TEMPORARILY_ALLOWED_TO_PRINT in framework.lua"
+      end
+      local excuse = TEMPORARILY_EXPECTED_TO_FAIL[t.name]
+      if excuse and good then
+        REPORT[#REPORT + 1] = "'" .. t.name .. "' passes now: take it off " ..
+                              "TEMPORARILY_EXPECTED_TO_FAIL in framework.lua"
+      elseif excuse then
+        EXCUSED[#EXCUSED + 1] = t.name
+        REPORT[#REPORT + 1] = printable("TEMPORARY: '" .. t.name .. "' fails, excused until merged (" ..
+                                        excuse .. "): " .. tostring(err))
+        good = true
+      end
       if good then
         passed = passed + 1
       else

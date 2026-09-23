@@ -1,18 +1,24 @@
 """Run the libraries' tests in plain Lua 5.4, with SilverBullet's APIs mocked,
 over the test campaign in fixture/ with every library installed from src/.
 
-usage: python test/run.py [--only book,kit] [-k words] [--src DIR]
+usage: python test/run.py [--only book,kit] [-k words] [--src DIR] [--shuffle]
 
-  --only  run only these files from tests/, named without .lua
-  -k      run only the tests whose name holds these words
-  --src   the libraries to test, if not src/: an older release, say, to
-          check that a regression test fails on the code before its fix
+  --only     run only these files from tests/, named without .lua
+  -k         run only the tests whose name holds these words
+  --src      the libraries to test, if not src/: an older release, say, to
+             check that a regression test fails on the code before its fix
+  --shuffle  a stress run: the blocks of every page load in reverse, so a
+             block that leans on another from its own page shows up
 
 The fixture is a server's DM space. It holds the other four spaces as
 folders, Adventure/, Author/, Book/ and Player/, and each of those is a
 space of its own as well, so a test names the space it runs in. Every
-space-lua block in a space loads the way SilverBullet loads them: priority
-first, highest first and none counting as 0, then page name.
+space-lua block in a space loads the way SilverBullet 2.11 loads them, each
+as a chunk of its own: highest priority first, the first `-- priority: N`
+anywhere in the block and none counting as 0, then by the block's name,
+"<page>@<offset of its fence in UTF-16 code units>", compared as JavaScript
+compares strings. So a page's blocks need not load in page order: two fences
+at 26434 and 146433 load the second first, since "146433" < "26434".
 
 install.json says which library goes where, as a campaign would install
 them. The fixture holds no library pages of its own, so what runs is always
@@ -20,6 +26,7 @@ src/ as it is now.
 """
 import argparse
 import json
+import locale
 import pathlib
 import re
 import sys
@@ -37,7 +44,11 @@ SRC = TEST.parent / "src"
 
 KEYWORDS = re.compile(r"\b(where|order\s+by|select|limit)\b")
 BLOCK = re.compile(r"```space-lua\n(.*?)\n```", flags=re.S)
-PRIORITY = re.compile(r"\s*--\s*priority:\s*(-?\d+)")
+# SilverBullet 2.11 (plugs/index/space_lua.ts) reads a block's priority with
+# /--\s*priority:\s*(-?\d+)/, the first match anywhere in the block: \s and
+# \d as JavaScript has them.
+JS_SPACE = "[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]"
+PRIORITY = re.compile(f"--{JS_SPACE}*priority:{JS_SPACE}*(-?[0-9]+)")
 SPACES = {"dm": "", "adventure": "Adventure/", "author": "Author/",
           "book": "Book/", "player": "Player/"}
 
@@ -104,14 +115,20 @@ def transpile(block):
         block, flags=re.S)
 
 
+def read_page(path):
+    # The bytes as SilverBullet reads them: no newline translation, so a
+    # carriage return stays where it is, and offsets count it.
+    return path.read_bytes().decode("utf-8")
+
+
 def read_pages(root):
     """Every page under root, by name."""
-    return {p.relative_to(root).as_posix()[:-3]: p.read_text(encoding="utf-8")
+    return {p.relative_to(root).as_posix()[:-3]: read_page(p)
             for p in sorted(root.rglob("*.md"))}
 
 
 def src_pages():
-    return {p.stem: p.read_text(encoding="utf-8") for p in sorted(SRC.glob("*.md"))}
+    return {p.stem: read_page(p) for p in sorted(SRC.glob("*.md"))}
 
 
 def use_src(folder):
@@ -142,14 +159,49 @@ def space(pages, prefix):
     return {n[len(prefix):]: t for n, t in pages.items() if n.startswith(prefix)}
 
 
-def scripts(found):
+def utf16_length(text):
+    """The length of text as JavaScript counts it, in UTF-16 code units."""
+    return len(text.encode("utf-16-le")) // 2
+
+
+def js_order(text):
+    """A sort key that orders strings as JavaScript's < does, by UTF-16 code
+    unit. Python's own order is by code point, which differs for a character
+    beyond U+FFFF: JavaScript sees its surrogates, D800-DFFF, and sorts it
+    before U+E000-U+FFFF. Big-endian UTF-16 bytes sort as the code units do."""
+    return text.encode("utf-16-be")
+
+
+def blocks(name, text):
+    """A page's space-lua blocks, each with the name SilverBullet gives it
+    (plugs/index/space_lua.ts): "<page>@<offset of the fence>"."""
     out = []
-    for name, text in found.items():
-        for i, block in enumerate(BLOCK.findall(text)):
-            m = PRIORITY.match(block)
-            out.append((-(int(m.group(1)) if m else 0), name, i, transpile(block)))
-    out.sort(key=lambda s: s[:3])
-    return [(f"{name} #{i + 1}", source) for _, name, i, source in out]
+    for i, m in enumerate(BLOCK.finditer(text), 1):
+        source = m.group(1)
+        found = PRIORITY.search(source)
+        offset = utf16_length(text[:m.start()])
+        out.append({"page": name, "index": i, "offset": offset, "ref": f"{name}@{offset}",
+                    "priority": int(found.group(1)) if found else 0, "source": source})
+    return out
+
+
+def load_order(found, shuffle=False):
+    """The blocks of a space's pages in the order SilverBullet 2.11 runs them
+    (client/space_lua.ts): priority, highest first, then the name as a
+    JavaScript string. With shuffle, each page's blocks of one priority swap
+    places end for end, a stress run for code that leans on their order."""
+    out = [b for name, text in found.items() for b in blocks(name, text)]
+    out.sort(key=lambda b: (-b["priority"], js_order(b["ref"])))
+    if shuffle:
+        slots = {}
+        for i, b in enumerate(out):
+            slots.setdefault((b["page"], b["priority"]), []).append(i)
+        shuffled = list(out)
+        for places in slots.values():
+            for place, taken in zip(places, reversed(places)):
+                shuffled[place] = out[taken]
+        out = shuffled
+    return out
 
 
 def to_lua(L, value):
@@ -166,11 +218,23 @@ def to_lua(L, value):
     return value
 
 
+def js_key(k):
+    # String(k), as a key of a JavaScript object: YAML's null, true and 1.0
+    # are "null", "true" and "1" there
+    if k is None:
+        return "null"
+    if isinstance(k, bool):
+        return "true" if k else "false"
+    if isinstance(k, float) and k.is_integer():
+        return str(int(k))
+    return str(k)
+
+
 def jsify(value):
     # js-yaml's result as SilverBullet hands it to Lua: every map key a
     # string, as a JavaScript object's keys are, and a date as its text
     if isinstance(value, dict):
-        return {str(k): jsify(v) for k, v in value.items()}
+        return {js_key(k): jsify(v) for k, v in value.items()}
     if isinstance(value, list):
         return [jsify(v) for v in value]
     if hasattr(value, "isoformat"):
@@ -178,14 +242,69 @@ def jsify(value):
     return value
 
 
-def build(pages=None):
+if pyyaml is not None:
+    class JsYamlLoader(pyyaml.SafeLoader):
+        """PyYAML's safe loader, reading plain scalars as js-yaml 4 does for
+        SilverBullet: YAML 1.2's core schema, where only true and false (in
+        three spellings) are booleans and there is no base 60. PyYAML follows
+        YAML 1.1, where yes, No and on are booleans and 1:30 is 90."""
+
+    # Every resolver but YAML 1.1's booleans, numbers and "=" stays: null,
+    # timestamps and merge keys read the same in both.
+    JsYamlLoader.yaml_implicit_resolvers = {
+        first: [(tag, rx) for tag, rx in resolvers
+                if tag.rsplit(":", 1)[-1] not in ("bool", "int", "float", "value")]
+        for first, resolvers in pyyaml.SafeLoader.yaml_implicit_resolvers.items()
+    }
+    # js-yaml 4's lib/type/bool.js, int.js and float.js, as patterns; an int
+    # is tried before a float, as there
+    JsYamlLoader.add_implicit_resolver(
+        "tag:yaml.org,2002:bool",
+        re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"), list("tTfF"))
+    JsYamlLoader.add_implicit_resolver(
+        "tag:yaml.org,2002:int",
+        re.compile(r"^[-+]?(?:0|0b[01_]*[01]|0x[0-9a-fA-F_]*[0-9a-fA-F]|0o[0-7_]*[0-7]"
+                   r"|0[0-9](?:[0-9_]*[0-9])?|[1-9](?:[0-9_]*[0-9])?)$"),
+        list("-+0123456789"))
+    JsYamlLoader.add_implicit_resolver(
+        "tag:yaml.org,2002:float",
+        re.compile(r"^(?:[-+]?[0-9][0-9_]*(?:\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?"
+                   r"|\.[0-9_]+(?:[eE][-+]?[0-9]+)?|[-+]?\.(?:inf|Inf|INF)|\.(?:nan|NaN|NAN))(?<!_)$"),
+        list("-+0123456789."))
+
+    def js_yaml_int(loader, node):
+        # constructYamlInteger: 0b, 0x and 0o, and anything else decimal, so
+        # 010 is ten, where PyYAML reads it as octal
+        value = loader.construct_scalar(node).replace("_", "")
+        sign = -1 if value[0] == "-" else 1
+        value = value.lstrip("+-")
+        base = {"0b": 2, "0x": 16, "0o": 8}.get(value[:2])
+        return sign * (int(value[2:], base) if base else int(value, 10))
+
+    JsYamlLoader.add_constructor("tag:yaml.org,2002:int", js_yaml_int)
+
+
+def yaml_parse(text):
+    """yaml.parse as SilverBullet has it: js-yaml's reading of text."""
+    return jsify(pyyaml.load(text, Loader=JsYamlLoader))
+
+
+def build(pages=None, shuffle=False):
     """A Lua runtime with the mocks loaded and each space's pages and libraries.
 
     FIXTURES[space] holds the space's pages by name and LIBS[space] its
-    space-lua blocks in load order. SRC holds each library as src/ has it,
-    INSTALL the folders install.json puts it in, and REPOSITORY the page
-    Library: Install reads.
+    space-lua blocks in load order, each as { name = "<page> #<n>", ref =
+    "<page>@<offset>", page, index, offset, priority, source }. SRC holds
+    each library as src/ has it, INSTALL the folders install.json puts it
+    in, and REPOSITORY the page Library: Install reads.
     """
+    # Lua's %s, %a and string.lower ask the C library, which follows the
+    # locale: Python sets LC_CTYPE from the system at startup, and on Windows
+    # that is a code page such as 1252, where byte 0xA0 is a space, so %s cut
+    # "à" (C3 A0) in half. SilverBullet's strings are JavaScript's, whose
+    # classes are ASCII. LC_COLLATE (string <) and LC_NUMERIC (tostring)
+    # start as "C" in Python; set all three, for any caller.
+    locale.setlocale(locale.LC_ALL, "C")
     pages = tree() if pages is None else pages
     L = lua54.LuaRuntime(unpack_returned_tuples=True)
     g = L.globals()
@@ -193,15 +312,20 @@ def build(pages=None):
     for layout, prefix in SPACES.items():
         found = space(pages, prefix)
         fixtures[layout] = found
-        libs[layout] = [{"name": n, "source": s} for n, s in scripts(found)]
+        libs[layout] = [dict(b, name=f"{b['page']} #{b['index']}", source=transpile(b["source"]))
+                        for b in load_order(found, shuffle)]
     g.FIXTURES = to_lua(L, fixtures)
     g.LIBS = to_lua(L, libs)
+    g.SHUFFLED = shuffle
     g.SRC = to_lua(L, src_pages())
     g.INSTALL = to_lua(L, install_map())
     repository = TEST.parent / "Repositories" / "storie.md"
-    g.REPOSITORY = repository.read_text(encoding="utf-8") if repository.exists() else None
+    g.REPOSITORY = read_page(repository) if repository.exists() else None
+    # For the harness's own tests: the names of a set of pages' blocks in
+    # load order, as a space holding just those pages would load them.
+    g.__load_order = lambda found: to_lua(L, [b["ref"] for b in load_order(dict(found.items()))])
     if pyyaml is not None:
-        g.__yaml_parse = lambda text: to_lua(L, jsify(pyyaml.safe_load(text)))
+        g.__yaml_parse = lambda text: to_lua(L, yaml_parse(text))
     # the made-up D&D Beyond characters, as the character service sends them
     g.DDB = to_lua(L, {p.stem: json.loads(p.read_text(encoding="utf-8"))
                        for p in sorted((TEST / "ddb").glob("*.json"))})
@@ -214,6 +338,8 @@ def main():
     ap.add_argument("--only", help="test files to run, comma-separated, without .lua")
     ap.add_argument("-k", dest="words", help="run only the tests whose name holds these words")
     ap.add_argument("--src", help="the libraries to test, if not src/")
+    ap.add_argument("--shuffle", action="store_true",
+                    help="load the blocks of every page in reverse, as a stress run")
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     if args.src:
@@ -225,7 +351,7 @@ def main():
         if missing:
             sys.exit("no tests/" + ".lua, tests/".join(missing) + ".lua")
         files = [f for f in files if f.stem in wanted]
-    L = build()
+    L = build(shuffle=args.shuffle)
     L.execute((TEST / "framework.lua").read_text(encoding="utf-8"))
     load = L.eval("loadTests")
     for f in files:
@@ -235,7 +361,10 @@ def main():
         print("note:", line)
     for f in failed.values():
         print("FAIL", f)
-    print(f"{passed}/{total} passed")
+    excused = L.eval("#EXCUSED")
+    print(f"{passed}/{total} passed" + (f", {excused} of them failing but excused until merged "
+                                        "(TEMPORARILY_EXPECTED_TO_FAIL in framework.lua)" if excused else "")
+          + (" (shuffled)" if args.shuffle else ""))
     sys.exit(0 if total and passed == total else 1)
 
 
