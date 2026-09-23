@@ -283,20 +283,25 @@ test("libraries: the small libraries' stale() names each copy that differs, and 
   loadEveryLibrary()
   local tail = "Library/Storie/Chapter Navigation"
   local newer, older = "Adventure/" .. tail, "Book/" .. tail
-  H.pages[newer] = withVersion(H.pages[newer], "1.2.0")
-  eq(chapterNav.stale(), "Chapter Navigation 1.1.1 is running; " .. newer .. " holds 1.2.0. Run System: Reload.")
-  H.pages[older] = withVersion(H.pages[older], "1.0.9")
-  eq(chapterNav.stale(), "Chapter Navigation 1.1.1 is running; " .. newer .. " holds 1.2.0; " .. older ..
-     " holds 1.0.9, an older version. Run System: Reload, and update the older copy from inside its own space.")
+  local running = "Chapter Navigation " .. chapterNav.version .. " is running; "
+  H.pages[newer] = withVersion(H.pages[newer], "9.9.0")
+  eq(chapterNav.stale(), running .. newer .. " holds 9.9.0. Run System: Reload.")
+  H.pages[older] = withVersion(H.pages[older], "0.0.9")
+  eq(chapterNav.stale(), running .. newer .. " holds 9.9.0; " .. older ..
+     " holds 0.0.9, an older version. Run System: Reload, and update the older copy from inside its own space.")
   H.pages[newer] = SRC["Chapter Navigation"]
-  eq(chapterNav.stale(), "Chapter Navigation 1.1.1 is running; " .. older ..
-     " holds 1.0.9, an older version. Update the older copy from inside its own space.")
+  eq(chapterNav.stale(), running .. older ..
+     " holds 0.0.9, an older version. Update the older copy from inside its own space.")
   H.pages[older] = H.pages[older]:gsub('\nversion: "[^"\n]*"', "", 1)
-  eq(chapterNav.stale(), "Chapter Navigation 1.1.1 is running; " .. older ..
+  eq(chapterNav.stale(), running .. older ..
      " has no version. Update the older copy from inside its own space.")
-  -- 1.10 is after 1.9, as numbers, not as text
-  H.pages[older] = withVersion(SRC["Chapter Navigation"], "1.1.10")
-  has(chapterNav.stale(), "holds 1.1.10. Run System: Reload.")
+  -- 1.10 is after 1.2, as numbers, though not as text: a minor version eight
+  -- on from the running one's, which as text sorts before it
+  local major, minor = chapterNav.version:match("^(%d+)%.(%d+)")
+  local later = major .. "." .. string.format("%d", tonumber(minor) + 8) .. ".0"
+  ok(later < chapterNav.version, "as text, " .. later .. " sorts before " .. chapterNav.version)
+  H.pages[older] = withVersion(SRC["Chapter Navigation"], later)
+  has(chapterNav.stale(), "holds " .. later .. ". Run System: Reload.")
   H.pages[older] = SRC["Chapter Navigation"]
   H.pages["Notes/Deep/Library/Storie/Chapter Navigation"] = withVersion(SRC["Chapter Navigation"], "9.0.0")
   has(chapterNav.stale(), "Notes/Deep/Library/Storie/Chapter Navigation holds 9.0.0",

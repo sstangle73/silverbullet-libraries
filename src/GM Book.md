@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.13.0"
+version: "1.14.0"
 ---
 
 # GM Book
@@ -192,6 +192,20 @@ The script that prints it can say what it printed in a JSON file beside it, `Bui
 
 **Pandoc with a 5e LaTeX template**: for a fully local, reproducible build.
 
+## Changes in 1.14
+
+**A tab behind its libraries builds nothing.** A tab left open while `Library: Update` brings a new GM Book, or a new release of a library the book prints with, would build with the old code over the new pages. The build is refused, and the notification and the bar name each library, with a *Reload* button: see *Buttons*.
+
+**What the page breaks can't allow for is named**, with the page it lands on in each edition: a block taller than a column, an image or raw HTML with no height, a `\page` inside fenced code. So are pages that share a `book_order` or have one that isn't a number, and a section whose chapter an edition leaves out. See *Page breaks*.
+
+**Page numbers, if you want them.** `gmBook.contents` puts a contents page at the front of each edition, and `gmBook.pageRefs` gives a pointer the page it points to. Both are off, so a book already committed builds as it did. See *Page numbers*.
+
+**The player edition names the pages it links to but has nothing of**, in the notification after a build and in `report.missingLinks`.
+
+**The bar says what printed each PDF**, from the JSON the printing script leaves beside it: the pages, when, the Homebrewery version, and any page that spills. See *Rendering it*.
+
+**Smaller things.** A comment after a blank line is no longer counted as raw HTML, a link that can't be looked up no longer fails a build, and a printed date with no such day says nothing.
+
 ## Changes in 1.13
 
 **The player edition keeps back what the DM keeps back, however it arrives.** Every form of DM-only text GM Kit 3.8 reads counts here too, as the table under *DM-only text* shows: a DM Only heading at any level and in any case, a callout whose type begins `dm`, a `<div class="dm">`, a stretch marker mid-line. A page whose only DM-only text sat under `## DM only` used to reach the player edition whole. And the player edition fails closed: a page that still holds a DM-only mark keeps it back, named in the notification. A section shown from another page is cut from that page as the edition prints it, so a stretch opened above it, or a `## DM Only` it sits under, keeps it out. A pointer is named by its page's title as the edition prints it, and a page whose title the players don't get, or that gives them nothing at all, gets no pointer. A page only the DM may see, a map's own page by default, is left out of the player edition along with anything shown from it: see *DM-only text*. HTML comments stay out of the player edition too.
@@ -209,7 +223,7 @@ The script that prints it can say what it printed in a JSON file beside it, `Bui
 gmbook = gmbook or {}
 -- The version this tab's Lua is, the same as this page's frontmatter: a tab
 -- left open over a Library: Update runs the old one (see gmbook.stale).
-gmbook.version = "1.13.0"
+gmbook.version = "1.14.0"
 
 gmbook.config = {
   outputFolder = "Build/",

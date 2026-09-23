@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Maps"
 description: "Encounter maps written as a grid of characters with a legend under it: drawn as a scaled plan with a key of its own, on the wiki and in the book, and sized to the party. Terrain, ways through and things are told apart by pattern and silhouette, so a map reads in one ink and in grayscale."
 author: "Steven Storie"
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # GM Maps
@@ -192,6 +192,12 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
 
 **A tab that needs a reload.** Space Lua is read when a tab opens and not again, so a tab left open while `Library: Update` brings a new GM Maps draws with the old code. `maps.stale()` is nil when the tab runs the GM Maps the space holds, read from this page at any depth of the space, and otherwise a message saying which version each has and to reload (System: Reload, Ctrl-Alt-R). [GM Book](<GM Book>) asks it before a build, and builds nothing until the tab is reloaded.
 
+## Changes in 1.4
+
+**Coordinates, if you want them**: letters across the top and numbers down the side, outside the frame, so a square can be called out at the table. `gmMaps.coordinates` turns them on for every map, and a map's own `coordinates` line has its way whatever the setting. They are off, so a map already drawn draws as it did. See *Coordinates*.
+
+**A tab that needs a reload.** `maps.version` and `maps.stale()` say when the tab runs another GM Maps than the space holds, and GM Book builds nothing until it is reloaded.
+
 ## Changes in 1.3
 
 **`grow to` keeps a map's shape.** The rows grow by as many squares as the columns, so a corridor stays a corridor. `maps.resize` takes the height as an optional fourth argument.
@@ -209,7 +215,7 @@ The SVG declares its own width and height, key included, so GM Book 1.7 or later
 maps = maps or {}
 -- The version this tab's Lua is, the same as this page's frontmatter: a tab
 -- left open over a Library: Update runs the old one (see maps.stale).
-maps.version = "1.3.0"
+maps.version = "1.4.0"
 
 maps.config = {
   type  = "map",   -- the page type that holds a map

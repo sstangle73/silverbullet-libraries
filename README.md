@@ -8,17 +8,17 @@ Each library is one page in `src/`, installed into a space as `Library/Storie/<n
 
 | Library | What it does | Space | Version |
 |---|---|---|---|
-| [GM Kit](src/GM%20Kit.md) | Play state kept out of the adventure: who the party met, where they went, what they found and its uses, rolls and decisions logged by session, and fog-of-war publishing of what the players have learned into their own space | The DM space, the one that holds the others | 3.8.0 |
-| [GM Beyond](src/GM%20Beyond.md) | D&D Beyond characters: a live roster from public character data, and an import that writes a character's whole sheet into a page, for GM Sheets to draw | The DM space | 2.1.0 |
-| [GM Book](src/GM%20Book.md) | Compiles the adventure into DM and player editions of one manuscript, for Homebrewery to render as a 5e book | The adventure space | 1.13.0 |
-| [GM Party](src/GM%20Party.md) | Numbers, hand-outs, fights and DCs that follow the party's size and level: your table's on the page, the general rule in print | The adventure space | 1.4.0 |
-| [GM Bestiary](src/GM%20Bestiary.md) | Creature pages that point at official stat blocks: a compendium link on the page, the book and its entry in print | The adventure space | 1.2.0 |
-| [GM Maps](src/GM%20Maps.md) | Encounter maps written as a grid of characters with a legend, drawn as a scaled plan with its own key, sized to the party | The adventure space | 1.3.0 |
-| [GM Sheets](src/GM%20Sheets.md) | Character sheets drawn from a character page's frontmatter, on the wiki and a page to themselves in the book | The adventure space | 1.3.0 |
-| [Chapter Navigation](src/Chapter%20Navigation.md) | Previous, contents and next links above and below every chapter or scene page, read from the index | Each space with chapters or scenes to page through | 1.1.1 |
-| [Space Switcher](src/Space%20Switcher.md) | A strip across the top of every page that names the space you are in and links to your others, nested ones included | Every space | 1.0.1 |
-| [Appearances](src/Appearances.md) | Lists the chapters that name a page in their frontmatter, grouped by book | The space of the book's chapters and people | 1.0.0 |
-| [RecurringTasks](src/RecurringTasks.md) | Adds each day's recurring tasks to the daily note from a master list, and rolls over the ones left open | Any space | 1.1.0 |
+| [GM Kit](src/GM%20Kit.md) | Play state kept out of the adventure: who the party met, where they went, what they found and its uses, rolls and decisions logged by session, each character's hit points, slots and rests, and fog-of-war publishing of what the players have learned into their own space, with a preview before and a report after, and a recap of each session for the players | The DM space, the one that holds the others | 3.9.0 |
+| [GM Beyond](src/GM%20Beyond.md) | D&D Beyond characters: an import that writes a character's whole sheet into a page, for GM Sheets to draw, a refresh that says what it changes before it writes, one for the whole party, and a roster read from the pages | The DM space | 2.2.0 |
+| [GM Book](src/GM%20Book.md) | Compiles the adventure into DM and player editions of one manuscript, for Homebrewery to render as a 5e book | The adventure space | 1.14.0 |
+| [GM Party](src/GM%20Party.md) | Numbers, hand-outs, fights and DCs that follow the party's size and level: your table's on the page, the general rule in print | The adventure space | 1.5.0 |
+| [GM Bestiary](src/GM%20Bestiary.md) | Creature pages that point at official stat blocks: a compendium link on the page, the book and its entry in print | The adventure space | 1.3.0 |
+| [GM Maps](src/GM%20Maps.md) | Encounter maps written as a grid of characters with a legend, drawn as a scaled plan with its own key, sized to the party | The adventure space | 1.4.0 |
+| [GM Sheets](src/GM%20Sheets.md) | Character sheets drawn from a character page's frontmatter, on the wiki and a page to themselves in the book | The adventure space | 1.4.0 |
+| [Chapter Navigation](src/Chapter%20Navigation.md) | Previous, contents and next links above and below every chapter or scene page, read from the index | Each space with chapters or scenes to page through | 1.2.0 |
+| [Space Switcher](src/Space%20Switcher.md) | A strip across the top of every page that names the space you are in and links to your others, nested ones included | Every space | 1.1.0 |
+| [Appearances](src/Appearances.md) | Lists the chapters that name a page in their frontmatter, grouped by book | The space of the book's chapters and people | 1.1.0 |
+| [RecurringTasks](src/RecurringTasks.md) | Adds each day's recurring tasks to the daily note from a master list, and rolls over the ones left open | Any space | 1.2.0 |
 | [Storie Check](src/Storie%20Check.md) | A health check: every copy of every library in the space and its version, which of them the tab runs and whether it is stale, GM Book's printers, and whether the small libraries' settings are the shape they read | The adventure space, or any other with these libraries to check | 1.0.0 |
 
 The campaign libraries expect a DM space that holds the others as folders, each a space of its own as well: the adventure, your notes on it, the book it adapts, and the players' space. [`Repositories/storie.md`](Repositories/storie.md) says where each goes in more words, and each library's own page says how to set it up.

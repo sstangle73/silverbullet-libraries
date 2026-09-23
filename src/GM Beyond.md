@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Beyond"
 description: "D&D Beyond characters in SilverBullet: a live roster from public character data, and an import that turns a character's link into a full character page, with every number on the sheet worked out from D&D Beyond's raw data, ready for GM Sheets to draw."
 author: "Steven Storie"
-version: "2.1.0"
+version: "2.2.0"
 ---
 
 # GM Beyond
@@ -70,7 +70,7 @@ A character that can't be fetched, sent with no class, or whose page can't be re
 
 A tab reads GM Beyond when it opens. If the space's copy changes after that, from another tab, a sync or `Library: Install`, the tab would go on importing and refreshing with the one it read. `gmb.stale()` says so, nothing while they agree, and otherwise
 
-    This tab runs GM Beyond 2.1.0, but the space has 2.2.0: reload it (System: Reload, Ctrl-Alt-R) first.
+    This tab runs GM Beyond 2.2.0, but the space has 2.3.0: reload it (System: Reload, Ctrl-Alt-R) first.
 
 It reads the `version` of every page named `Library/Storie/GM Beyond`, at any depth, from the index, and it never fails. While it says so, nothing GM Beyond writes is written, an import, a refresh or an *Undo*: each shows that line instead, and an imported page's bar starts with *⟳ Reload this tab* and the two versions.
 
@@ -114,6 +114,18 @@ is fetched from D&D Beyond as the roster is shown, as before, and so is any char
 
 Link to monsters and rules content in anything you publish; don't mirror it. SRD material is open, the rest isn't. The import copies a character's rules text into your own space for your own table, which is why its pages belong in a space only you can read.
 
+## Changes in 2.2
+
+**A refresh says what it changes, and asks.** Before it writes, one question lists the level, hit points, AC and spell DC, every other number that moves, what it adds and takes away, and the keys you edited by hand that it would write over. `ask = false`, in the settings, leaves the question out, except for a level that drops. `keep: [ac, hp]` on a page leaves those keys as you wrote them.
+
+**GM: Refresh the Party** refreshes every imported character in one go, skipping one that can't be fetched, has no class or would drop a level, with one notification and one *Undo*. The roster reads the imported pages rather than fetching each time.
+
+**What a player chose comes in**: invocations, metamagic, maneuvers, fighting styles, ancestries and a feat's choices, and custom senses, speeds, languages, tools and skills. Agonizing Blast and Devil's Sight are applied. `jack_of_all_trades` is written either way, and a skill only where it differs from GM Sheets' sum.
+
+**A tab behind its space writes nothing.** `gmb.version` and `gmb.stale()` say when the tab runs another GM Beyond than the space holds, and until it reloads, no import, refresh or *Undo* writes. See *A tab behind its space*.
+
+New page keys: `jack_of_all_trades`, `ddb_refreshed` and `ddb_written`.
+
 ## Changes in 2.1
 
 **What a player writes stays words.** Every name is one line and escaped for Markdown, rules text comes in with any tag, link or `${...}` in it escaped, and a frontmatter value never holds a line break or a raw `<` or `>`. See *Importing a character*.
@@ -129,7 +141,7 @@ Link to monsters and rules content in anything you publish; don't mirror it. SRD
 ```space-lua
 -- priority: 10
 gmb = gmb or {}
-gmb.version = "2.1.0"
+gmb.version = "2.2.0"
 
 gmb.endpoint = "https://character-service.dndbeyond.com/character/v5/character/"
 gmb.sheetLink = "https://www.dndbeyond.com/characters/"

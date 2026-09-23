@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.8.0"
+version: "3.9.0"
 ---
 
 # GM Kit
@@ -76,9 +76,9 @@ On a person's page, `GM: Mark Met` marks that person. Anywhere else it opens a l
 
 A tab runs the Lua it loaded, and only *System: Reload* (`Ctrl-Alt-R`) runs the space's Lua again. Install a newer GM Kit, from this tab or on another device, and the tab indexes the new page at once while it still runs the old code, which could write the play state in a shape the new code doesn't read, or without a fix the new code makes. So a tab that is behind writes nothing. Every mark and unmark, use and refund, reveal and unreveal, publish and preview, roll, decision, recap and new session, and every *Undo*, stops before it asks anything, with a warning and a *Reload* button:
 
-    This tab runs GM Kit 3.8.0, but the space has 3.9.0: reload it (System: Reload, Ctrl-Alt-R) first.
+    This tab runs GM Kit 3.9.0, but the space has 3.10.0: reload it (System: Reload, Ctrl-Alt-R) first.
 
-The bar says so first, with *Reload* beside it: "⟳ Reload this tab: GM Kit 3.9.0 is installed, this tab runs 3.8.0".
+The bar says so first, with *Reload* beside it: "⟳ Reload this tab: GM Kit 3.10.0 is installed, this tab runs 3.9.0".
 
 GM Kit finds its own page in the index by the end of its name, `Library/Storie/GM Kit`, so a copy in a space held as a folder counts as well, and a tab is behind when any copy's `version` differs from its own. `gm.version` is the version the tab runs, and `gm.stale()` says what to do, or gives `nil` while the tab is current. It is one question to the index, and never an error: an index it can't read says nothing. A button of your own that writes through GM Kit's own functions, `gm.write` or `gm.patch` say, can ask `gm.refuse()` first, which gives `true`, with the warning, on a tab that is behind.
 
@@ -329,6 +329,20 @@ A link in a players' copy to an adventure page they won't have, hidden, private,
 
 An embed of a page they won't have, or of a section of one they don't get, `![[World/People/The Warden#What They Want]]`, is left out of the copy, and the report names it. Links in code and in `${...}` stay as they are.
 
+## Changes in 3.9
+
+**A character's page counts what runs out at the table.** A page of `type: pc` gets a bar of its own: hit points and temporary hit points, death saves at 0, spell slots, Pact Magic, resources with uses, Hit Point Dice and Heroic Inspiration, with a Short Rest and a Long Rest by the 2024 rules. What has gone is play state, in `State/Characters/<name>`, and the character's page is never written to, so a refresh from D&D Beyond keeps what the table has done. See *Characters*.
+
+**See what publishing will send before it goes.** *Preview publishing*, the eye in the header, writes `State/Publish Preview`: the new copies and what each is made of, the lines each changed copy changes, what is kept back and why, and the copies publishing would delete. Publishing keeps its last five on `State/Publish Report`, and its notification offers *Open report*. See *Before and after publishing*.
+
+**A recap for the players.** *GM: Draft Recap* drafts `Sessions/Session N Recap` from what the session recorded, naming only what the players may know, for you to edit; its bar, or *GM: Publish Recap*, sends it to `Player/Sessions/Session N`. See *The players' recap*.
+
+**A tab behind its GM Kit writes nothing.** A GM Kit installed since the tab opened, from this tab or another device, is in the index at once, while the tab runs the code it loaded. Until the tab reloads, every action, command and *Undo* says so, with a *Reload* button, and writes nothing, and the bar says so first. See *A tab that is behind*.
+
+**A bar reads each page once while it draws**, and a click, a notification's action or a write reads the space afresh. Without GM Party, *Who rolled?* leaves out a character marked `retired: true`, as GM Party does.
+
+New functions: `gm.stale`, `gm.refuse`, `gm.previewPublish`, `gm.publishPlan`, `gm.draftRecap`, `gm.publishRecap`, `gm.characterBar`, `gm.topBar`, `gm.character`, `gm.track`, and one for each change to a character, `gm.damage`, `gm.heal`, `gm.temporary`, `gm.deathSave`, `gm.slot`, `gm.pact`, `gm.hitDie`, `gm.resource`, `gm.inspiration`, `gm.shortRest` and `gm.longRest`; and the settings `previewPage`, `publishReportPage`, `recapFolder`, `recapType`, `recapDraftType`, `characterType` and `longRestDice`.
+
 ## Changes in 3.8
 
 **DM-only text in every form it is written.** A DM Only heading counts at any level and in any case, `### DM only` and `## DM-Only` as well as `## DM Only`, and runs to the next heading of its level or above; a callout counts when its type's first word is `dm`, `> **DM only**` included; any element whose class list holds `dm` counts, a `<div class="dm">` too; and the stretch markers count anywhere in a line. **Publishing fails closed**: a copy that still holds a DM-only mark after all that is kept back and named, never sent. GM Book shares the same code, so the player edition does the same.
@@ -440,7 +454,7 @@ Buttons: the GM bar, the header buttons, pickers, and *Undo*. Marking someone me
 gm = gm or {}
 -- The version this code is, as the page's frontmatter says: gm.stale()
 -- holds it to the copies of GM Kit the space has.
-gm.version = "3.8.0"
+gm.version = "3.9.0"
 
 gm.config = {
   sessionPage     = "Session Table",

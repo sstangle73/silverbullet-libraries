@@ -41,8 +41,8 @@ test("beyond: a tab behind its space says so, and writes nothing", "dm", functio
   local page = gmb.import("1001")
   local imported = lastNotification()
   local before = H.pages[page]
-  beyondAt(BEYOND, "2.2.0")
-  local said = "This tab runs GM Beyond " .. gmb.version .. ", but the space has 2.2.0: " ..
+  beyondAt(BEYOND, "2.99.0")
+  local said = "This tab runs GM Beyond " .. gmb.version .. ", but the space has 2.99.0: " ..
     "reload it (System: Reload, Ctrl-Alt-R) first."
   eq(gmb.stale(), said)
   local writes, fetched = #H.writes, #H.fetched
@@ -66,7 +66,7 @@ test("beyond: a tab behind its space says so, and writes nothing", "dm", functio
   local bar = gmb.bar(page)
   local first = bar.html.children[1]
   eq(first.attrs.class, "gmb-stale")
-  eq(textOf(first), "⟳ Reload this tab: it runs GM Beyond " .. gmb.version .. ", and the space has 2.2.0 " ..
+  eq(textOf(first), "⟳ Reload this tab: it runs GM Beyond " .. gmb.version .. ", and the space has 2.99.0 " ..
     "(System: Reload, Ctrl-Alt-R).")
   eq(list(buttonsOf(bar.html)), "Refresh from D&D Beyond")
   click(bar, "Refresh from D&D Beyond")
@@ -81,19 +81,19 @@ test("beyond: a tab behind its space says so, and writes nothing", "dm", functio
 end)
 
 test("beyond: a copy in any folder counts, and each version is named, lowest first", "dm", function()
-  beyondAt("Old/Library/Storie/GM Beyond", "2.10.0")
-  beyondAt("Adventure/" .. BEYOND, "2.2.0")
+  beyondAt("Old/Library/Storie/GM Beyond", "2.100.0")
+  beyondAt("Adventure/" .. BEYOND, "2.99.0")
   -- a copy of the same version says nothing, and neither does a page merely named like it
   beyondAt("Backup/" .. BEYOND, gmb.version)
   H.pages["Library/Storie/GM Beyond Notes"] = '---\nversion: "9.9.9"\n---\n'
-  eq(gmb.stale(), "This tab runs GM Beyond " .. gmb.version .. ", but the space has 2.2.0 and 2.10.0: " ..
+  eq(gmb.stale(), "This tab runs GM Beyond " .. gmb.version .. ", but the space has 2.99.0 and 2.100.0: " ..
     "reload it (System: Reload, Ctrl-Alt-R) first.")
   -- a version is words from a page: the bar shows it as words
   beyondAt("Old/Library/Storie/GM Beyond", "<b>3</b>")
   serve("bram")
   H.pages["Characters/Bram Holloway"] = "---\ntype: pc\nddb: 1001\n---\n"
   local html = gmb.bar("Characters/Bram Holloway").html.outerHTML
-  has(html, "and the space has 2.2.0 and &lt;b&gt;3&lt;/b&gt; (System")
+  has(html, "and the space has 2.99.0 and &lt;b&gt;3&lt;/b&gt; (System")
   hasnt(html, "<b>3")
 end)
 

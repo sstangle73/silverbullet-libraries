@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Bestiary"
 description: "Creature pages that point at official stat blocks: the reference links to a compendium on the page, and cites the book and its entry in print. Wires those pages to GM Party's fights."
 author: "Steven Storie"
-version: "1.2.0"
+version: "1.3.0"
 ---
 
 # GM Bestiary
@@ -87,9 +87,13 @@ The reference on the page is a widget: HTML with the compendium link, and a Mark
 
 A tab reads its libraries when it opens. If the space's GM Bestiary changes after that, from another tab, a sync or `Library: Install`, the tab goes on running the one it read. `bestiary.stale()` says so: nothing while the two agree, and otherwise
 
-    This tab runs GM Bestiary 1.2.0, but the space has 1.3.0: reload it (System: Reload, Ctrl-Alt-R).
+    This tab runs GM Bestiary 1.3.0, but the space has 1.4.0: reload it (System: Reload, Ctrl-Alt-R).
 
 It reads the `version` of every page named `Library/Storie/GM Bestiary`, at any depth, from the index, and it never fails. GM Book asks before it builds. A reference on the page shows a line of its own over it, *⟳ Reload this tab*, with the two versions: on the page only, never in print or in the players' copies.
+
+## Changes in 1.3
+
+**A tab behind its space says so.** `bestiary.version` and `bestiary.stale()` say when the tab runs another GM Bestiary than the space holds, and a reference says so on a line of its own over it, on the page alone, never in print. See *A tab behind its space*.
 
 ## Changes in 1.2
 
@@ -104,7 +108,7 @@ A creature page's `cr` can list several CRs, for a creature with a stat block fo
 ```space-lua
 -- priority: 10
 bestiary = bestiary or {}
-bestiary.version = "1.2.0"
+bestiary.version = "1.3.0"
 
 bestiary.config = {
   type      = "monster",              -- the page type that describes a creature

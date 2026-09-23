@@ -813,13 +813,13 @@ test("sheets: the version this tab runs is its page's", "dm", function()
 end)
 
 test("sheets: a tab behind its space says so over the sheet, on the page alone", "dm", function()
-  sheetsAt("Adventure/" .. SHEETS, "1.4.0")
-  eq(sheets.stale(), "This tab runs GM Sheets " .. sheets.version .. ", but the space has 1.4.0: " ..
+  sheetsAt("Adventure/" .. SHEETS, "1.99.0")
+  eq(sheets.stale(), "This tab runs GM Sheets " .. sheets.version .. ", but the space has 1.99.0: " ..
     "reload it (System: Reload, Ctrl-Alt-R).")
   page(TAMSIN, RANGER)
   local w = sheets.draw()
   has(w.html, '<div class="gmsheets"><p class="gmsheets-stale">⟳ Reload this tab: it runs GM Sheets ' ..
-    sheets.version .. ", and the space has 1.4.0 (System: Reload, Ctrl-Alt-R).</p>", "first, over the sheet")
+    sheets.version .. ", and the space has 1.99.0 (System: Reload, Ctrl-Alt-R).</p>", "first, over the sheet")
   hasnt(w.markdown, "Reload", "never in the Markdown face, which prints and goes to the players")
   hasnt(sheets.printed.draw(), "Reload", "nor in print")
   -- over a sheet that can't be drawn as well
@@ -828,8 +828,8 @@ test("sheets: a tab behind its space says so over the sheet, on the page alone",
   eq(gone.markdown, "*No page Party/Nobody.*")
   -- another copy, at any depth, and a version is a page's text, never HTML
   sheetsAt("Old/Library/Storie/GM Sheets", "<b>2</b>")
-  has(sheets.stale(), "but the space has 1.4.0 and <b>2</b>:")
-  has(sheets.draw().html, "the space has 1.4.0 and &lt;b&gt;2&lt;/b&gt; (System")
+  has(sheets.stale(), "but the space has 1.99.0 and <b>2</b>:")
+  has(sheets.draw().html, "the space has 1.99.0 and &lt;b&gt;2&lt;/b&gt; (System")
   hasnt(sheets.draw().html, "<b>2")
 end)
 

@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Sheets"
 description: "Character sheets drawn from a character page's frontmatter: a page drawn like a sheet, on the wiki and as a page of its own in the printed book, then the features, spells and equipment in full. The page gives the choices, and the sheet does the SRD's sums."
 author: "Steven Storie"
-version: "1.3.0"
+version: "1.4.0"
 ---
 
 # GM Sheets
@@ -158,7 +158,7 @@ The sheet is Wizards of the Coast's, and its only terms are that you may print a
 
 A tab reads its libraries when it opens. If the space's GM Sheets changes after that, from another tab, a sync or `Library: Install`, the tab goes on running the one it read, and draws with it. `sheets.stale()` says so: nothing while the two agree, and otherwise
 
-    This tab runs GM Sheets 1.3.0, but the space has 1.4.0: reload it (System: Reload, Ctrl-Alt-R).
+    This tab runs GM Sheets 1.4.0, but the space has 1.5.0: reload it (System: Reload, Ctrl-Alt-R).
 
 It reads the `version` of every page named `Library/Storie/GM Sheets`, at any depth, from the index, and it never fails. GM Book asks before it builds. A sheet on the page shows a line over it, *⟳ Reload this tab*, with the two versions: on the page only, never in print or in the players' copies.
 
@@ -169,6 +169,20 @@ It reads the `version` of every page named `Library/Storie/GM Sheets`, at any de
     })
 
 `extras` are more keys to show beside the class and species, each with the label to draw over it. `width` is the drawn page's width in px, both columns of a book page, and `height` the most it may be.
+
+## Changes in 1.4
+
+**Jack of All Trades.** Half the Proficiency Bonus, rounded down, on each skill with neither proficiency nor Expertise, and so on a passive score built on one: for a Bard of level 2 or more, or a character with the feature, and settled either way by `jack_of_all_trades`. A passive score takes 5 off for Disadvantage, as it adds 5 for Advantage.
+
+**A number written where the sum differs is named** over the sheet, on the page only: *Initiative +6 as written; the sum is +4.* The sheet shows the number written, as before. A page imported from D&D Beyond has its numbers from there, and gets none.
+
+**A retired character's sheet says RETIRED** beside the level, in words.
+
+**On a phone** the sheet scrolls sideways in its own frame, and *Fit to screen* shows the whole page at once.
+
+**A tab behind its space says so** over the sheet, on the page alone. See *A tab behind its space*.
+
+New functions: `sheets.stale`, `sheets.classLevel`, `sheets.jackOfAllTrades`, `sheets.rolls` and `sheets.differences`.
 
 ## Changes in 1.3
 
@@ -185,7 +199,7 @@ It reads the `version` of every page named `Library/Storie/GM Sheets`, at any de
 ```space-lua
 -- priority: 10
 sheets = sheets or {}
-sheets.version = "1.3.0"
+sheets.version = "1.4.0"
 
 sheets.config = {
   extras = {},     -- more keys to show beside the class and species

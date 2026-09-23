@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/Appearances"
 description: "Lists the chapters that name the current page in their frontmatter, grouped by book, for a wiki about a book or a series."
 author: "Steven Storie"
-version: "1.0.0"
+version: "1.1.0"
 ---
 
 # Appearances
@@ -65,11 +65,15 @@ SilverBullet checks these settings against their shape, declared in the last blo
 
 `kb.version` is the version of the Lua the tab runs, and `kb.stale()` says in words when a copy of this page, at any depth, holds another: nil while every copy matches. Storie Check lists both, for every library in the space.
 
+## Changes in 1.1
+
+**Its version, and settings with a shape.** `kb.version` and `kb.stale()`: see *Its version*. The settings are declared with `config.define`, so a setting of the wrong shape is named where it is set, and the list shows what it can.
+
 ## Implementation
 
 ```space-lua
 kb = kb or {}
-kb.version = "1.0.0"
+kb.version = "1.1.0"
 
 -- Nil while this tab runs the Lua that every copy of this page holds, or
 -- else what differs, in words: a copy that holds a newer version, which

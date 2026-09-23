@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/Chapter Navigation"
 description: "Previous, contents and next links above and below every chapter page, read from the index, with an optional link to a companion page for the same chapter."
 author: "Steven Storie"
-version: "1.1.1"
+version: "1.2.0"
 ---
 
 # Chapter Navigation
@@ -86,6 +86,10 @@ SilverBullet checks these settings against their shape, declared in the last blo
 
 `chapterNav.version` is the version of the Lua the tab runs, and `chapterNav.stale()` says in words when a copy of this page, at any depth, holds another: nil while every copy matches. Storie Check lists both, for every library in the space.
 
+## Changes in 1.2
+
+**Its version, and settings with a shape.** `chapterNav.version` and `chapterNav.stale()` say when a copy of this page holds another version: see *Its version*. The settings are declared with `config.define`, so a setting of the wrong shape is named where it is set, and the bars read what they can of it: `types = "chapter"` counts as a list of one.
+
 ## Changes in 1.1.1
 
 The contents link goes only to a page of exactly that name: a page elsewhere whose name merely ends the same way no longer takes it over.
@@ -99,7 +103,7 @@ Types of its own, as above. A folder's own page now stands in as its contents pa
 ```space-lua
 -- priority: -1
 chapterNav = chapterNav or {}
-chapterNav.version = "1.1.1"
+chapterNav.version = "1.2.0"
 
 -- Nil while this tab runs the Lua that every copy of this page holds, or
 -- else what differs, in words: a copy that holds a newer version, which

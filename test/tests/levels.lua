@@ -10,7 +10,7 @@ end
 -- The visible text, less the note a number shows only while it has focus.
 local function live(w)
   assert(type(w.html) == "string", "a GM Party widget's html should be text")
-  local shown = (w.html:gsub('<span[^>]- class="gmparty%-tip"[^>]*>.-</span>', ""))
+  local shown = (w.html:gsub('<span[^>]- class="gmparty%-notebox"[^>]*>.-</span>', ""))
   return unescape((shown:gsub("<[^>]*>", "")))
 end
 local function attr(w, name)

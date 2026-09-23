@@ -1,7 +1,7 @@
 ---
 tags: meta/repository
 name: Repository/Storie
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Storie Library Repository
@@ -41,12 +41,12 @@ description: "A manager for recurring tasks"
 name: "GM Kit"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Kit.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Kit.md
-description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so they stay publishable. Mark NPCs met or dead, places visited, items found and their uses left; log decisions."
+description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so they stay publishable. Mark NPCs met or dead, places visited, items found and their uses left; log rolls and decisions; count each character's hit points, slots and rests; preview what publishing sends, and recap each session for the players."
 ---
 name: "GM Beyond"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Beyond.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Beyond.md
-description: "D&D Beyond characters: a live roster from public character data, and an import that writes a character's whole sheet into a page, every number worked out from the raw data, for GM Sheets to draw."
+description: "D&D Beyond characters: an import that writes a character's whole sheet into a page, every number worked out from the raw data, for GM Sheets to draw; a refresh that says what it changes before it writes, one for the whole party, and a roster read from the pages."
 ---
 name: "GM Book"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/GM%20Book.md

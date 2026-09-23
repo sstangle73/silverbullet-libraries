@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/Space Switcher"
 description: "A strip across the top of every page that names the space you are in and links to your other spaces, for a server with several SilverBullet spaces."
 author: "Steven Storie"
-version: "1.0.1"
+version: "1.1.0"
 ---
 
 # Space Switcher
@@ -62,6 +62,10 @@ A space that keeps to itself has a shorter list on purpose. Start its block with
 
 `spaceSwitcher.version` is the version of the Lua the tab runs, and `spaceSwitcher.stale()` says in words when a copy of this page, at any depth, holds another: nil while every copy matches. Storie Check lists both, for every library in the space.
 
+## Changes in 1.1
+
+**A newer version waits for a reload**, and the strip says so. `spaceSwitcher.version` and `spaceSwitcher.stale()`: see *Its version*. The settings are declared with `config.define`, so a setting of the wrong shape is named where it is set, and one space without a list's braces counts as a list of one.
+
 ## Changes in 1.0.1
 
 These docs say to install and update the page from inside each space it serves, never with *Library: Update All* from a space that holds others.
@@ -71,7 +75,7 @@ These docs say to install and update the page from inside each space it serves, 
 ```space-lua
 -- priority: 20
 spaceSwitcher = spaceSwitcher or {}
-spaceSwitcher.version = "1.0.1"
+spaceSwitcher.version = "1.1.0"
 
 -- Nil while this tab runs the Lua that every copy of this page holds, or
 -- else what differs, in words: a copy that holds a newer version, which

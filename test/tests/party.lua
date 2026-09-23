@@ -70,12 +70,12 @@ end
 -- only while it has focus, and one of its attributes.
 local function live(w)
   assert(type(w.html) == "string", "a GM Party widget's html should be text")
-  local shown = (w.html:gsub('<span[^>]- class="gmparty%-tip"[^>]*>.-</span>', ""))
+  local shown = (w.html:gsub('<span[^>]- class="gmparty%-notebox"[^>]*>.-</span>', ""))
   return unescape((shown:gsub("<[^>]*>", "")))
 end
 -- The note a number shows while it has focus, as text.
-local function tip(w)
-  return unescape(w.html:match('<span[^>]- class="gmparty%-tip"[^>]*>(.-)</span>') or "")
+local function noteBox(w)
+  return unescape(w.html:match('<span[^>]- class="gmparty%-notebox"[^>]*>(.-)</span>') or "")
 end
 local function attr(w, name)
   return unescape(w.html:match(" " .. name .. '="([^"]*)"') or "")
@@ -152,28 +152,28 @@ test("party: a number's note shows on a tap or from the keyboard, not only on ho
   useParty(6, 9)
   for _, w in ipairs({ party.n(), party.N(1), party.count { "wick", plus = 1 }, party.dc(15), party.each(5, "find") }) do
     has(w.html, ' tabindex="0"', "the number takes focus, from a tap or the keyboard")
-    ok(tip(w) ~= "", "a box for the note: " .. w.html)
-    eq(tip(w), attr(w, "title"), "the same note as the tooltip a mouse shows")
-    has(w.html, '<span aria-hidden="true" class="gmparty-tip">', "a screen reader has the tooltip, not the box as well")
+    ok(noteBox(w) ~= "", "a box for the note: " .. w.html)
+    eq(noteBox(w), attr(w, "title"), "the same note as the tooltip a mouse shows")
+    has(w.html, '<span aria-hidden="true" class="gmparty-notebox">', "a screen reader has the tooltip, not the box as well")
   end
-  eq(tip(party.n()), "The party's size: six for this party of six, counted from the character pages. Prints as “five”.")
+  eq(noteBox(party.n()), "The party's size: six for this party of six, counted from the character pages. Prints as “five”.")
   eq(live(party.n()), "six", "the box isn't part of the number")
   eq(party.n().markdown, "six", "nor of what tables, Copy and the players' copies get")
   local style = SRC["GM Party"]:match("```space%-style\n(.-)\n```")
-  local box = style:match("\n%.gmparty%-tip%s*(%b{})")
+  local box = style:match("\n%.gmparty%-notebox%s*(%b{})")
   ok(box, "a rule for the note's box")
   has(box, "display: none;", "hidden until the number has focus")
   has(box, "position: absolute;", "over the text, not pushing it aside")
   has(box, "max-width: min(24em, calc(100vw - 32px));", "never wider than the screen")
-  local shown = style:match("%.gmparty%-n:focus > %.gmparty%-tip,%s*%.gmparty%-each:focus > %.gmparty%-tip%s*(%b{})")
+  local shown = style:match("%.gmparty%-n:focus > %.gmparty%-notebox,%s*%.gmparty%-each:focus > %.gmparty%-notebox%s*(%b{})")
   ok(shown, "the box shows while the number has focus")
   has(shown, "display: block;")
   local touch = style:match("@media %(hover: none%)%s*(%b{})")
-  ok(touch and touch:find(".gmparty-n:hover > .gmparty-tip", 1, true), "and on a tap's hover, where a tap gives no focus")
+  ok(touch and touch:find(".gmparty-n:hover > .gmparty-notebox", 1, true), "and on a tap's hover, where a tap gives no focus")
   -- at 375px the box sits across the foot of the screen inside a 16px margin
   local phone = style:match("@media screen and %(max%-width: 600px%)%s*(%b{})")
   ok(phone, "a rule for a phone")
-  local fixed = phone:match("%.gmparty%-tip%s*(%b{})")
+  local fixed = phone:match("%.gmparty%-notebox%s*(%b{})")
   ok(fixed, "for the note's box")
   for _, want in ipairs({ "position: fixed;", "left: 16px;", "right: 16px;", "bottom: 16px;", "max-width: none;" }) do
     has(fixed, want)
@@ -666,13 +666,13 @@ test("party: the version this tab runs is its page's", "adventure", function()
 end)
 
 test("party: a tab behind its space says so, and how to catch up", "adventure", function()
-  atVersion(OWN, "1.5.0")
-  eq(party.stale(), "This tab runs GM Party " .. party.version .. ", but the space has 1.5.0: " ..
+  atVersion(OWN, "1.99.0")
+  eq(party.stale(), "This tab runs GM Party " .. party.version .. ", but the space has 1.99.0: " ..
     "reload it (System: Reload, Ctrl-Alt-R).")
   -- a fight says so over its box, on the page alone
   local w = party.fight(BARROW)
   ok(w.html:find('<div class="gmparty-stale">', 1, true) == 1, "first, over the fight: " .. w.html:sub(1, 80))
-  has(live(w), "⟳ Reload this tab: it runs GM Party " .. party.version .. ", and the space has 1.5.0 " ..
+  has(live(w), "⟳ Reload this tab: it runs GM Party " .. party.version .. ", and the space has 1.99.0 " ..
     "(System: Reload, Ctrl-Alt-R).")
   eq(w.markdown, party.fightPrint(BARROW), "never in the Markdown face, which tables and the players' copies take")
   eq(party.printed.fight(BARROW), party.fightPrint(BARROW), "nor in print")
@@ -708,11 +708,11 @@ test("party: whether the tab is behind is read at most every two seconds", "adve
   withClock(function(clock)
     party.refresh()
     eq(party.stale(), nil)
-    H.pages[OWN] = (SRC["GM Party"]:gsub('\nversion: "[^"]*"\n', '\nversion: "1.5.0"\n', 1))
+    H.pages[OWN] = (SRC["GM Party"]:gsub('\nversion: "[^"]*"\n', '\nversion: "1.99.0"\n', 1))
     clock.now = clock.now + 1
     eq(party.stale(), nil, "kept for two seconds")
     clock.now = clock.now + 1
-    has(party.stale(), "1.5.0", "then read again")
+    has(party.stale(), "1.99.0", "then read again")
     H.pages[OWN] = SRC["GM Party"]
     party.refresh()
     eq(party.stale(), nil, "and at once after a refresh")

@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/RecurringTasks"
 description: "Generates recurring tasks based on a master list and handles daily rollovers."
 author: "Steven Storie"
-version: "1.1.0"
+version: "1.2.0"
 ---
 
 # Recurring Task Manager
@@ -115,6 +115,10 @@ actionButton.define {
 
 `recurringTasks.version` is the version of the Lua the tab runs, and `recurringTasks.stale()` says in words when a copy of this page, at any depth, holds another: nil while every copy matches. Storie Check lists both, for every library in the space.
 
+## Changes in 1.2
+
+**Its version.** `recurringTasks.version` and `recurringTasks.stale()` say when a copy of this page holds another version: see *Its version*.
+
 ## Changes in 1.1
 
 **Works with SilverBullet 2.x.** Completed tasks are read from the index, so the `completion` strategy finally sees when a task was last ticked, and counts from the daily note it was ticked in. If the index can't be read, a notification names the completion tasks left out that day instead of failing silently. Settings are read with `config.get`.
@@ -134,7 +138,7 @@ actionButton.define {
 -- are given, so it can be checked without a space. recurringTasks.generate
 -- does the reading and writing.
 recurringTasks = recurringTasks or {}
-recurringTasks.version = "1.1.0"
+recurringTasks.version = "1.2.0"
 local rt = recurringTasks
 
 -- Nil while this tab runs the Lua that every copy of this page holds, or

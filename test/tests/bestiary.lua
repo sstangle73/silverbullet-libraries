@@ -291,12 +291,12 @@ test("bestiary: the version this tab runs is its page's", "adventure", function(
 end)
 
 test("bestiary: a tab behind its space says so over a reference, on the page alone", "adventure", function()
-  bestiaryAt(OWN, "1.3.0")
-  eq(bestiary.stale(), "This tab runs GM Bestiary " .. bestiary.version .. ", but the space has 1.3.0: " ..
+  bestiaryAt(OWN, "1.99.0")
+  eq(bestiary.stale(), "This tab runs GM Bestiary " .. bestiary.version .. ", but the space has 1.99.0: " ..
     "reload it (System: Reload, Ctrl-Alt-R).")
   local w = bestiary.ref(STRANGLER)
   ok(w.html:find('<span class="gmbestiary-stale">⟳ Reload this tab: it runs GM Bestiary ' .. bestiary.version ..
-    ", and the space has 1.3.0 (System: Reload, Ctrl-Alt-R).</span>", 1, true) == 1, "first: " .. w.html:sub(1, 90))
+    ", and the space has 1.99.0 (System: Reload, Ctrl-Alt-R).</span>", 1, true) == 1, "first: " .. w.html:sub(1, 90))
   has(w.html, '<span class="gmbestiary-ref">', "the reference after it")
   eq(w.markdown, "[Vine Blight](https://www.dndbeyond.com/monsters/5195252-vine-blight) — Monster Manual, *Blights*",
     "never in the Markdown face, which tables and the players' copies take")
@@ -327,9 +327,9 @@ end)
 
 test("bestiary: whether the tab is behind is read again after a refresh, and a failed look says nothing", "adventure", function()
   eq(bestiary.stale(), nil)
-  H.pages[OWN] = (SRC["GM Bestiary"]:gsub('\nversion: "[^"]*"\n', '\nversion: "1.3.0"\n', 1))
+  H.pages[OWN] = (SRC["GM Bestiary"]:gsub('\nversion: "[^"]*"\n', '\nversion: "1.99.0"\n', 1))
   bestiary.refresh()
-  has(bestiary.stale(), "1.3.0")
+  has(bestiary.stale(), "1.99.0")
   local real = index.pages
   index.pages = function() error("index gone") end
   local good, err = pcall(function()

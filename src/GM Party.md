@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Party"
 description: "Numbers, hand-outs, fights and DCs that follow the party's size and level: live for your table in SilverBullet, and as general rules when the adventure is printed. Encounter math from the 2024 rules in the SRD 5.2.1."
 author: "Steven Storie"
-version: "1.4.0"
+version: "1.5.0"
 ---
 
 # GM Party
@@ -228,7 +228,7 @@ Baked Sections alone couldn't do this: they bake whole blocks, never a number in
 
 A tab reads its libraries when it opens. If the space's GM Party changes after that, from another tab, a sync or `Library: Install`, the tab goes on running the one it read. `party.stale()` says so: nothing while the two agree, and otherwise
 
-    This tab runs GM Party 1.4.0, but the space has 1.5.0: reload it (System: Reload, Ctrl-Alt-R).
+    This tab runs GM Party 1.5.0, but the space has 1.6.0: reload it (System: Reload, Ctrl-Alt-R).
 
 It reads the `version` of every page named `Library/Storie/GM Party`, at any depth, from the index, so a copy in a space the DM space holds counts too, and it never fails. GM Book asks before it builds. A fight on the page shows a line over its box, *⟳ Reload this tab*, with the two versions; it is HTML, so it never prints and never reaches the players' copies.
 
@@ -243,6 +243,14 @@ It reads the `version` of every page named `Library/Storie/GM Party`, at any dep
 The XP Budget per Character and Experience Points by Challenge Rating tables below come from the SRD 5.2.1. A book that prints them carries the same statement:
 
 This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+## Changes in 1.5
+
+**`retired: true` takes a character out of the party altogether**: out of the count, the level, the fights and the hand-outs, and named as retired in the summary, so a page marked by mistake is seen. `away: true` still only sits a character out of tonight.
+
+**A number's note on a tap.** The note a number carries shows on a tap as well as a hover, since a phone has no hover.
+
+**A tab behind its space says so.** `party.version` and `party.stale()` say when the tab runs another GM Party than the space holds, and a fight says so over its box, on the page alone, never in print. See *A tab behind its space*.
 
 ## Changes in 1.4
 
@@ -277,7 +285,7 @@ A count can name the item whose uses it is, and `party.value` gives the number b
 ```space-lua
 -- priority: 10
 party = party or {}
-party.version = "1.4.0"
+party.version = "1.5.0"
 
 party.config = {
   book     = 5,  -- the size of the party the adventure is written for
@@ -579,7 +587,7 @@ local function face(live, note, class, markdown)
     html = dom.span {
       class = class or "gmparty-n", title = note, tabindex = "0",
       dom.span { __rawText = live },
-      dom.span { class = "gmparty-tip", ["aria-hidden"] = "true", __rawText = note },
+      dom.span { class = "gmparty-notebox", ["aria-hidden"] = "true", __rawText = note },
     }.outerHTML,
     markdown = markdown or live,
     display = "inline",
@@ -1645,7 +1653,7 @@ end
   outline-offset: 2px;
 }
 
-.gmparty-tip {
+.gmparty-notebox {
   display: none;
   position: absolute;
   left: 0;
@@ -1668,16 +1676,16 @@ end
   cursor: auto;
 }
 
-.gmparty-n:focus > .gmparty-tip,
-.gmparty-each:focus > .gmparty-tip {
+.gmparty-n:focus > .gmparty-notebox,
+.gmparty-each:focus > .gmparty-notebox {
   display: block;
 }
 
 /* A touch screen with no hover, where a tap may not give a span focus:
    the tap's hover shows the note as well. */
 @media (hover: none) {
-  .gmparty-n:hover > .gmparty-tip,
-  .gmparty-each:hover > .gmparty-tip {
+  .gmparty-n:hover > .gmparty-notebox,
+  .gmparty-each:hover > .gmparty-notebox {
     display: block;
   }
 }
@@ -1685,7 +1693,7 @@ end
 /* On a phone the box sits across the foot of the screen, inside a 16px
    margin, rather than under the number, where it could run off the edge. */
 @media screen and (max-width: 600px) {
-  .gmparty-tip {
+  .gmparty-notebox {
     position: fixed;
     left: 16px;
     right: 16px;
