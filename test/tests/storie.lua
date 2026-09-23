@@ -114,6 +114,23 @@ test("storie: each library's Lua, current, stale, older, not running or not here
      "loaded, an older library without a version: update it from inside its own space")
 end)
 
+test("storie: a GM library's newer copy asks for a reload, though its stale() gives words alone", "adventure", function()
+  local copy = "Library/Storie/GM Book"
+  local text = H.pages[copy]
+  H.pages[copy] = withVersion(text, gmbook.version .. ".1")
+  local report = storie.check()
+  local book = entry(report, "GM Book")
+  eq(book.mark, "stale")
+  eq(book.text, (gmbook.stale()))
+  eq(report.reload, true)
+  has(storie.markdown(report), "- ⟳ **GM Book** " .. gmbook.version .. ": This tab runs GM Book")
+  -- an older one: update it
+  H.pages[copy] = withVersion(text, "0.0.1")
+  report = storie.check()
+  eq(entry(report, "GM Book").mark, "warn")
+  eq(report.reload, false)
+end)
+
 test("storie: another library's stand-in table is no library of its own", "dm", function()
   -- GM Maps makes gmbook, to register its printer, where GM Book isn't
   -- installed; GM Bestiary makes party

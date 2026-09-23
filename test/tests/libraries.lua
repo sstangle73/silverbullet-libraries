@@ -194,7 +194,7 @@ local function loadEveryLibrary()
   return names
 end
 
-test("libraries: each names its version as its frontmatter does, or is listed until it does", "dm", function()
+test("libraries: each names its version as its frontmatter does, and has stale()", "dm", function()
   local missing = {}
   for _, lib in ipairs(loadEveryLibrary()) do
     local ns = namespaceOf(SRC[lib])
@@ -208,9 +208,7 @@ test("libraries: each names its version as its frontmatter does, or is listed un
       eq(type(t.stale), "function", lib .. ": " .. ns .. ".stale")
     end
   end
-  if #missing > 0 then
-    REPORT[#REPORT + 1] = "libraries without <ns>.version yet: " .. table.concat(missing, ", ")
-  end
+  eq(table.concat(missing, ", "), "", "libraries without <ns>.version")
 end)
 
 -- A copy of the library's page in the space, one there already or one put

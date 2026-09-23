@@ -132,6 +132,18 @@ local function shown(v)
   return tostring(v)
 end
 
+-- Whether version a comes before version b, by the numbers in them: 1.9
+-- before 1.10.
+local function before(a, b)
+  local x, y = {}, {}
+  for n in string.gmatch(shown(a), "%d+") do x[#x + 1] = tonumber(n) end
+  for n in string.gmatch(shown(b), "%d+") do y[#y + 1] = tonumber(n) end
+  for i = 1, math.max(#x, #y) do
+    if (x[i] or 0) ~= (y[i] or 0) then return (x[i] or 0) < (y[i] or 0) end
+  end
+  return false
+end
+
 -- Text for a Markdown page, its punctuation escaped with backslashes, so
 -- nothing in a name or a message reads as Markdown or as ${...}.
 local function md(text)
@@ -224,6 +236,13 @@ function storie.check()
       if type(t.stale) == "function" then
         local fine, m, r = pcall(t.stale)
         if fine then message, reload = m, r else message = "its stale() failed: " .. tostring(m) end
+        -- the GM libraries' stale() gives its words alone: a reload helps
+        -- when a copy here holds a newer version than the tab runs
+        if fine and m ~= nil and r == nil then
+          for _, c in ipairs(here) do
+            if c.version ~= nil and before(t.version, c.version) then reload = true end
+          end
+        end
       end
       if message == nil then
         entry.mark, entry.text = "ok", "current"
