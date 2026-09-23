@@ -165,6 +165,41 @@ test("stale: every button on a bar refuses", "dm", function()
   end
 end)
 
+test("stale: a character's bar says so first, and every change to a character refuses", "dm", function()
+  local bram = "Party/Bram"
+  H.pages[bram] = table.concat({
+    "---", "type: pc", "level: 3", "hp: 20", "hit_dice: 3d10", "slots: [2]",
+    "pact_slots: 1", "resources:", "  - {name: Second Wind, uses: 1, reset: Short Rest}", "---", "",
+    "# Bram", "",
+  }, S_NL)
+  H.current = bram
+  ok(gm.damage(bram, 5))
+  local hurt = lastNotification()
+  local record = H.pages["State/Characters/Bram"]
+  install("9.9.9")
+  local bar = gm.characterBar(bram)
+  eq(textOf(bar.html.children[1]), "⟳ Reload this tab: GM Kit 9.9.9 is installed, this tab runs " .. gm.version)
+  eq(buttonsOf(bar.html)[1], "Reload")
+  refused("damage", function() eq(gm.damage(bram), false) end)
+  refused("heal", function() eq(gm.heal(bram), false) end)
+  refused("temporary", function() eq(gm.temporary(bram), false) end)
+  refused("a death save", function() eq(gm.deathSave(bram, false), false) end)
+  refused("a slot", function() eq(gm.slot(bram, 1, true), false) end)
+  refused("a pact slot", function() eq(gm.pact(bram, true), false) end)
+  refused("a Hit Point Die", function() eq(gm.hitDie(bram, true), false) end)
+  refused("a resource", function() eq(gm.resource(bram, "used_second_wind", true), false) end)
+  refused("inspiration", function() eq(gm.inspiration(bram, true), false) end)
+  refused("a Short Rest", function() eq(gm.shortRest(bram), false) end)
+  refused("a Long Rest", function() eq(gm.longRest(bram), false) end)
+  refused("undo the damage", function() runAction(hurt, "Undo") end)
+  for _, label in ipairs(buttonsOf(bar.html)) do
+    if label ~= "Reload" then
+      refused(label .. " on Bram's bar", function() click(bar, label) end)
+    end
+  end
+  eq(H.pages["State/Characters/Bram"], record, "what was recorded stays recorded")
+end)
+
 test("stale: an Undo from before the new version came refuses too", "dm", function()
   gm.mark(S_WARDEN, "met")
   local met = lastNotification()

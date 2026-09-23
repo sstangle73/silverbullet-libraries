@@ -22,7 +22,7 @@ One DM space containing the others as subfolders, each bind-mounted as its own S
       State/       play state, written by this library
       Sessions/    decision logs, written by this library
 
-People, places, factions and items are the adventure pages inside a `People/`, `Places/`, `Factions/` or `Items/` folder, at any depth. Scenes are named by their type instead, because an adventure keeps its scenes under its acts: see *Scenes*.
+People, places, factions and items are the adventure pages inside a `People/`, `Places/`, `Factions/` or `Items/` folder, at any depth. Scenes are named by their type instead, because an adventure keeps its scenes under its acts: see *Scenes*. So are the party's characters, pages of `type: pc` outside the adventure, such as `Party/Bram`: see *Characters*.
 
 ## Buttons
 
@@ -30,9 +30,11 @@ People, places, factions and items are the adventure pages inside a `People/`, `
 
 **A session's own notes.** A page in `Sessions/` gets a bar of its own instead: the scene before, the scene the session is on, and the scene after. See *Scenes*. A session's recap draft gets one that says whether the players have it, with the button that sends it: see *The players' recap*.
 
+**A character's page.** A page of `type: pc` gets a bar of its own too: hit points, spell slots, resources and Hit Point Dice as they stand, with buttons to spend them and get them back, and a Short Rest and a Long Rest. See *Characters*.
+
 **The header.** Five buttons: the session table, *Log a decision*, *Log a roll*, *Preview publishing* (an eye) and *Publish to players*.
 
-**Notifications.** Marking, unmarking, revealing, unrevealing, logging a roll and starting a session each come with *Undo*. A reveal also offers *Publish now* and *Preview*, and a publish *Open report*. *Undo* takes back what its own action did and nothing else, so a mark, a use, a decision or a reveal made since stays made: undoing the reveal of one part leaves a part revealed after it. It only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
+**Notifications.** Marking, unmarking, revealing, unrevealing, logging a roll, starting a session and every change to a character each come with *Undo*. A reveal also offers *Publish now* and *Preview*, and a publish *Open report*. *Undo* takes back what its own action did and nothing else, so a mark, a use, a decision or a reveal made since stays made: undoing the reveal of one part leaves a part revealed after it. It only lives as long as the notification; afterwards *Unmark* is what takes a mark off.
 
 **Taking a page back.** *Unreveal* takes a page off the revealed list and deletes the copy the players were sent, so a page revealed or published by mistake is gone from the Player space at once. *Undo* puts both back, and so does revealing it and publishing again. A page that isn't revealed but that the players still have a copy of, say one hidden before 2.4, shows ◐ on its bar, with *Delete their copy*.
 
@@ -91,6 +93,37 @@ An item is an adventure page in an `Items/` folder. Marking it found records the
 That page's bar gets a row for the item, "Quiver: six arrows here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 arrows left", with *Use an arrow* and *Refund an arrow*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses. *Unmark found* takes the find back, uses and all, so finding it again counts them afresh.
 
 **Rules in a scene.** A page that shows an item's rules with `![[World/Items/Quiver#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
+
+## Characters
+
+A character's page, of `type: pc` as GM Party and GM Sheets have it, gets a bar of its own for what runs out at the table:
+
+    Session 3   22 of 28 hit points   +5 temporary   [Damage…] [Heal…] [Temporary…]
+    Level 1 slots   ●●○○ 2 of 4 left   [Spend] [Regain]
+    Second Wind   ●○ 1 of 2 left · Short Rest   [Use] [Regain]
+    Hit Point Dice   ●●●○○ 3 of 5 left · 3d10 + 2d6   [Spend] [Regain]
+    Heroic Inspiration   ◇ No   [Give]
+    Rest   [Short Rest…] [Long Rest]
+
+There is a row for each level of spell slots, one for Pact Magic, one for each resource with uses, and one for the Hit Point Dice. The circles are for the eye, filled for what is left; the count beside them is in words, and a screen reader reads the words and skips the circles. Past twelve there are words alone. At 0 hit points the bar says "▲ Dying", "■ Stable" or "† Dead", and while the character is dying it has a row of death saves, "✓○○ 1 of 3 successes · ✗✗○ 2 of 3 failures", with *Success* and *Failure*. Each button's name for a screen reader says what it acts on, *Spend a level 1 slot*.
+
+*Damage…*, *Heal…* and *Temporary…* ask how many. The dice row's *Spend* and *Regain* count dice and nothing more; *Short Rest…* is what spends them for hit points. Every change comes with *Undo*, which takes the same amount back off the character as they stand then, so a change made since stays made.
+
+**The 2024 rules, kept for you.**
+
+- Damage comes off temporary hit points first. At 0 hit points damage is a failed death save, and damage as much as the hit point maximum kills: taken at 0, or left over on the way down to it.
+- Three death saves made and the character is stable, three failed and they are dead. Becoming stable, or regaining hit points, starts the death saves afresh, so a stable character who takes damage is dying again with one failure. A 1 on the die is two failures, and so is a critical hit at 0: press *Failure* once more. A 20 regains 1 hit point: *Heal…* 1.
+- Temporary hit points don't add up: given more, a character keeps the higher. *Temporary…* with 0 takes them away.
+- A rest needs at least 1 hit point.
+- *Short Rest…* brings back Pact Magic's slots and each resource whose `reset` names a Short Rest. A character who is hurt and has Hit Point Dice left is asked how many they spend, then how many hit points they rolled: the player rolls, adding their Constitution modifier to each die, and GM Kit takes the total.
+- *Long Rest* brings back all hit points, every spell slot, Pact Magic's, each resource whose `reset` names a Short or a Long Rest, and every Hit Point Die spent, and temporary hit points end. With `gm.config.longRestDice = "half"` it gives back half the dice, rounded down and at least one, as the 2014 rules had it.
+- A resource whose `reset` is anything else, *Dawn* say, comes back only by its own *Regain*. No rest touches Heroic Inspiration, which is yours to give.
+
+**The most of each is the page's**, read as GM Sheets reads it: `hp`; `slots`, `[4, 3, 2]` or `{1: 4, 2: 3}`; `pact_slots` and `pact_level`; `resources`, each `{name: Second Wind, uses: 2, reset: Short Rest}`; and `hit_dice`, `3d10` or `3d6 + 2d10`, or else as many dice as the `level`. With GM Sheets loaded, its sums give the level and the Constitution modifier. A page whose frontmatter doesn't parse as YAML counts only its plain keys, and its bar says so. Names from the page show as they are written, never as Markdown or HTML.
+
+**What has changed is play state**, in `State/Characters/<name>`: what has gone since the character was last whole, hit points lost, slots, uses and dice spent. A character whose page gains hit points at a new level has them at once, and one who is whole has nothing recorded. The character's page is never written to, so a refresh from D&D Beyond through GM Beyond keeps what the table has done. Each change goes into the record's own log, "Session 3: took 6 damage, 22 of 28 hit points left", as an item's uses do; the session's log is left to its scenes, rolls and decisions.
+
+`gm.config.characterType` names the type, `pc`. A character's page inside the adventure folder keeps the adventure's bar.
 
 ## Scenes
 
@@ -192,6 +225,7 @@ Players rarely learn all of a page at once. They meet the Warden and see a tall 
 - `State/People/<name>`, `State/Places/<name>`: met, dead, visited, with a log
 - `State/Items/<name>`: found, the uses left of those found, and where, with a log
 - `State/Scenes/<act>/<scene>`: planned, started and finished, with a log; the act comes too, so scenes numbered alike in two acts stay apart
+- `State/Characters/<name>`: what a character has lost or spent, with a log, as `type: character-state` with a `subject` that links the page, which finds the record again for a character renamed since: `hp_lost`, `temp_hp`, `slot_1_used` to `slot_9_used`, `pact_used`, `used_<resource>` (Second Wind's is `used_second_wind`), `hit_dice_spent`, `death_successes`, `death_failures` and `inspiration: true`, each left out while there is nothing to say. It isn't a `state-record`, so the lists of the adventure's play state leave it out
 - A page's rolls, on its own play state: `roll_wisdom_perception: 15`, the lowest number of the highest band reached, or `passed` or `failed` for a DC, with `roll_wisdom_perception_session`, the session that reached it, and `roll_wisdom_perception_where: the_bank`, the section the check sits in (`top` above any heading), so a check added later, above it or anywhere, keeps clear of its rolls. Another check of that name takes `roll_wisdom_perception_2`, and a second in the same section is `the_bank_2`. A roll logged before 3.8 has no `_where` and is read by its check's place among the page's checks of that name, until the next roll on the page pins it to its section
 - Each log line names its session and links to it
 - `Sessions/Session N`: the scenes under `## Scenes`, the rolls under `## Rolls`, the decisions under `## Decisions`, one line each, and a roll's rungs under its line
@@ -432,6 +466,12 @@ gm.config = {
   recapFolder     = "Sessions/",
   recapType       = "recap",
   recapDraftType  = "recap-draft",
+  -- A character's page, whose bar counts what runs out in play: GM Party's
+  -- and GM Sheets' `pc`.
+  characterType   = "pc",
+  -- The Hit Point Dice a Long Rest gives back: "all" of them, by the 2024
+  -- rules, or "half", rounded down and at least one, as the 2014 rules had.
+  longRestDice    = "all",
   -- Page types whose page itself holds what only the DM may see, so they
   -- are never revealed or published: GM Maps keeps a map's creatures, and
   -- everything hidden on it, in the map block on its page.
@@ -1118,6 +1158,74 @@ function gm.print(text, page)
   return text
 end
 
+------------------------------------------------------------ what a bar reads
+-- A bar asks about the same pages from several places: the page itself for
+-- its type, its parts, its items and its checks, and the revealed list for
+-- each of its rows. While one is drawn, gm.cache keeps what it has read, so
+-- each page is read once, each look at whether a page is there is made once,
+-- and each scan of the index is made once. It lives only while a bar is
+-- drawn (gm.rendering), and it goes the moment GM Kit writes or deletes a
+-- page, or reads one to change it (gm.read), so nothing that changes the
+-- space decides by what a bar read.
+gm.cache = nil
+
+-- Opens the cache for a bar being drawn, and gives back what closes it, for
+-- a to-be-closed local: `local render <close> = gm.rendering()`. A bar drawn
+-- while another's cache is open shares it, and gets nil; `fresh` opens a new
+-- one all the same, as each draw of a page's bars does. Closing lets go of
+-- the cache only while it is still the one open.
+function gm.rendering(fresh)
+  if gm.cache and not fresh then return nil end
+  local mine = { exists = {}, pages = {}, scans = {} }
+  gm.cache = mine
+  return setmetatable({}, { __close = function()
+    if gm.cache == mine then gm.cache = nil end
+  end })
+end
+
+-- SilverBullet's space as GM Kit's code from here on uses it: a page read
+-- while a bar is drawn is read once, and a write or a delete lets go of the
+-- cache before it and after it, so nothing read before a change is read
+-- after it. Everything else is SilverBullet's own.
+local sbSpace = space
+local space = setmetatable({
+  readPage = function(page)
+    local c = gm.cache
+    local text = c and c.pages[page]
+    if text then return text end
+    text = sbSpace.readPage(page)
+    if c and gm.cache == c then
+      c.pages[page] = text
+      c.exists[page] = true
+    end
+    return text
+  end,
+  writePage = function(page, text)
+    gm.cache = nil
+    local meta = sbSpace.writePage(page, text)
+    gm.cache = nil
+    return meta
+  end,
+  deletePage = function(page)
+    gm.cache = nil
+    sbSpace.deletePage(page)
+    gm.cache = nil
+  end,
+}, { __index = sbSpace })
+
+-- A scan of the index made once while a bar is drawn: `make` runs it, and
+-- what it gives is kept under `key` until the cache goes.
+local function scanOnce(key, make)
+  local c = gm.cache
+  if not c then return make() end
+  local found = c.scans[key]
+  if found == nil then
+    found = make()
+    if gm.cache == c then c.scans[key] = found end
+  end
+  return found
+end
+
 -- Whether there is a page of exactly this name. space.pageExists can't say:
 -- it answers the way a link resolves, so a page whose path only ends that
 -- way counts, and it reads a list of pages that can be seconds behind a
@@ -1128,11 +1236,16 @@ function gm.exists(page)
   if not page or page:find("^%.") or page:find("/%.%.?/") or page:find("/%.%.?$") then
     return false
   end
+  -- while a bar is drawn, each page is asked about once (gm.cache)
+  local c = gm.cache
+  if c and c.exists[page] ~= nil then return c.exists[page] end
   local ok, err = pcall(space.getPageMeta, page)
-  if ok then return true end
-  local why = tostring(err)
-  if why:find("Not found", 1, true) or why:find("isn't readable", 1, true) then return false end
-  error(err, 0)
+  if not ok then
+    local why = tostring(err)
+    if not (why:find("Not found", 1, true) or why:find("isn't readable", 1, true)) then error(err, 0) end
+  end
+  if c and gm.cache == c then c.exists[page] = ok end
+  return ok
 end
 
 -- For what a bar, a table or a picker shows: the client's own list first,
@@ -1145,10 +1258,12 @@ function gm.seen(page)
   return (space.pageExists(page) or gm.written[page] == true) and gm.exists(page)
 end
 
--- Reads a page, saving it first if it is open so no typing is lost.
+-- Reads a page, saving it first if it is open so no typing is lost. A page
+-- read to be changed is read from the space itself, and a bar's cache goes.
 function gm.read(page)
+  gm.cache = nil
   if editor.getCurrentPage() == page then editor.save() end
-  return space.readPage(page)
+  return sbSpace.readPage(page)
 end
 
 -- The pages GM Kit has written since the space loaded, which the client's
@@ -1169,8 +1284,16 @@ function gm.refresh()
 end
 
 -- Actions become buttons on the notification: { { name = "Undo", run = fn } }.
+-- Each decides by the space as it is, not by what a bar read.
 function gm.notify(message, actions, kind)
   local options
+  for _, action in ipairs(actions or {}) do
+    local run = action.run
+    action.run = function(...)
+      gm.cache = nil
+      return run(...)
+    end
+  end
   if actions then options = { timeout = 10000, actions = actions } end
   editor.flashNotification(message, kind or "info", options)
 end
@@ -1189,27 +1312,31 @@ local LIBRARY = "Library/Storie/GM Kit"
 
 -- The version of a copy of GM Kit in the space that isn't the version this
 -- tab runs, the first such copy by name, or nil. One question to the
--- index, and nil on any error, so the check can never stop what it guards.
+-- index, once while a bar is drawn, and nil on any error, so the check can
+-- never stop what it guards.
 local function installedVersion()
-  local ok, found = pcall(function()
-    local own, tail = LIBRARY, "/" .. LIBRARY
-    local rows = query[[
-      from p = index.pages()
-      where p.name == own or p.name:endsWith(tail)
-      order by p.name
-      select { name = p.name, version = p.version }
-    ]]
-    for _, row in ipairs(rows) do
-      local v = row.version
-      if type(v) == "number" then
-        v = v == math.floor(v) and string.format("%d", v) or tostring(v)
+  local found = scanOnce("stale", function()
+    local ok, v = pcall(function()
+      local own, tail = LIBRARY, "/" .. LIBRARY
+      local rows = query[[
+        from p = index.pages()
+        where p.name == own or p.name:endsWith(tail)
+        order by p.name
+        select { name = p.name, version = p.version }
+      ]]
+      for _, row in ipairs(rows) do
+        local v = row.version
+        if type(v) == "number" then
+          v = v == math.floor(v) and string.format("%d", v) or tostring(v)
+        end
+        if type(v) == "string" and v ~= "" and v ~= gm.version then return v end
       end
-      if type(v) == "string" and v ~= "" and v ~= gm.version then return v end
-    end
-    return nil
+      return nil
+    end)
+    -- false, not nil, so a current tab is kept as the answer too
+    return ok and v or false
   end)
-  if ok then return found end
-  return nil
+  return found or nil
 end
 
 -- What a bar says of a stale tab, with a glyph and the words.
@@ -1761,7 +1888,7 @@ function gm.isAdventurePage(page)
     and not rel:startsWith("Build/")
 end
 
-function gm.adventurePages()
+local function listAdventurePages()
   local prefix = gm.config.adventureFolder
   local names = query[[
     from p = index.pages()
@@ -1773,6 +1900,14 @@ function gm.adventurePages()
   for _, name in ipairs(names) do
     if gm.isAdventurePage(name) then out[#out + 1] = name end
   end
+  return out
+end
+
+-- The adventure's pages by name, from one scan while a bar is drawn: a list
+-- of the caller's own.
+function gm.adventurePages()
+  local out = {}
+  for i, name in ipairs(scanOnce("adventure", listAdventurePages)) do out[i] = name end
   return out
 end
 
@@ -1800,6 +1935,21 @@ local function privateSet()
   return set
 end
 
+-- Every indexed page's type, by name: one scan that answers gm.isPrivate
+-- for every page a bar asks about.
+local function indexedTypes()
+  local rows = query[[
+    from p = index.pages()
+    where p.type ~= nil
+    select { name = p.name, type = p.type }
+  ]]
+  local out = {}
+  for _, row in ipairs(rows) do
+    if out[row.name] == nil then out[row.name] = row.type end
+  end
+  return out
+end
+
 -- A page of one of the private types, which only the DM may ever see. The
 -- page's own frontmatter is asked, which is right the moment it is written,
 -- and so is the index, which reads YAML the way GM Maps sees the page:
@@ -1808,6 +1958,10 @@ function gm.isPrivate(page)
   local set = privateSet()
   local t = gm.pageType(page)
   if t and set[t] then return true end
+  if gm.cache then
+    local of = scanOnce("types", indexedTypes)[page]
+    return type(of) == "string" and set[of] == true
+  end
   local indexed = query[[
     from p = index.pages()
     where p.name == page and p.type ~= nil
@@ -2043,7 +2197,7 @@ end
 -- Every scene in the adventure, in the order it is meant to be played:
 -- by `book_order` where the scenes carry one, and by name where they
 -- don't, so an adventure that never compiles to a book still orders.
-function gm.scenes()
+local function listScenes()
   local t = gm.config.sceneType
   local rows = query[[
     from p = index.pages()
@@ -2059,6 +2213,14 @@ function gm.scenes()
   end)
   local out = {}
   for i, row in ipairs(rows) do out[i] = row.name end
+  return out
+end
+
+-- The scenes in order, from one scan while a bar is drawn: a list of the
+-- caller's own.
+function gm.scenes()
+  local out = {}
+  for i, name in ipairs(scanOnce("scenes", listScenes)) do out[i] = name end
   return out
 end
 
@@ -2743,6 +2905,856 @@ function gm.pickItem(label, help, pages, notes)
   return gm.pick(label, help, pages, notes)
 end
 
+------------------------------------------------------------------ characters
+-- A character's page, of gm.config.characterType (GM Party's and GM Sheets'
+-- `pc`), gets a bar for what changes at the table: hit points and temporary
+-- hit points, death saves at 0, each level of spell slots, Pact Magic, each
+-- resource with uses, Hit Point Dice and Heroic Inspiration, with a Short
+-- Rest and a Long Rest. The most of each is the page's own, and the page is
+-- never written to. What has gone since the character was last whole is
+-- play state, in State/Characters/<name>: hit points lost, temporary hit
+-- points, slots, uses and dice spent, death saves, inspiration held. A key
+-- at 0 is left out, so a character who is whole has none.
+
+-- A character's record is not a state-record: the lists of the adventure's
+-- play state, and the records found by their subjects, leave it out.
+local CHARACTER_RECORD = "character-state"
+
+-- A whole number from a page: 5, 5.0 or "5"; nil for anything else.
+local function whole(v)
+  if type(v) == "number" then
+    if v ~= v or v == math.huge or v == -math.huge then return nil end
+    return math.floor(v)
+  end
+  if type(v) == "string" then
+    local digits = v:match("^%s*(%d+)%s*$")
+    if digits then return math.floor(tonumber(digits)) end
+  end
+  return nil
+end
+
+-- Whether a value from a page is a map, {1: 4} or {name: Rage}, and not a
+-- list: YAML keys a map by text, and pairs is the one safe look at a map
+-- straight from yaml.parse in SilverBullet.
+local function isMap(v)
+  if type(v) ~= "table" then return false end
+  for k in pairs(v) do
+    if type(k) == "string" then return true end
+  end
+  return false
+end
+
+-- A character's frontmatter, parsed as YAML the way GM Sheets reads it; or,
+-- where that can't be done, its lines, each value as text, and true.
+local function characterData(text)
+  local head = text:match("^%-%-%-\r?\n(.-)\r?\n%-%-%-")
+  if head and yaml and yaml.parse then
+    local ok, d = pcall(yaml.parse, head)
+    if ok and type(d) == "table" then return d end
+    return gm.frontmatter(text), true
+  end
+  return gm.frontmatter(text)
+end
+
+-- Spell slots by level, as GM Sheets reads them: a list, [4, 3, 2], a map
+-- keyed by level, {1: 4, 2: 3}, or one number for level 1; the list as text
+-- too. Each level with a slot, lowest first, with the most there are.
+local function slotLevels(v)
+  local by = {}
+  if type(v) == "string" then
+    local inner = v:match("^%s*%[(.*)%]%s*$")
+    if inner then
+      local i = 0
+      for item in (inner .. ","):gmatch("([^,]*),") do
+        i = i + 1
+        by[i] = whole(item)
+      end
+    else
+      by[1] = whole(v)
+    end
+  elseif type(v) == "number" then
+    by[1] = whole(v)
+  elseif isMap(v) then
+    for k, n in pairs(v) do
+      local l = whole(k)
+      if l then by[l] = whole(n) end
+    end
+  elseif type(v) == "table" then
+    for i, n in ipairs(v) do by[i] = whole(n) end
+  end
+  local out = {}
+  for l = 1, 9 do
+    if by[l] and by[l] > 0 then out[#out + 1] = { level = l, most = by[l] } end
+  end
+  return out
+end
+
+-- How many Hit Point Dice "3d6 + 2d10" is, 5; a number as itself.
+local function diceCount(v)
+  if type(v) ~= "string" then return whole(v) end
+  local n = 0
+  for count in v:gmatch("(%d+)%s*[dD]%s*%d") do n = n + math.floor(tonumber(count)) end
+  if n > 0 then return n end
+  return whole(v)
+end
+
+-- A resource's key in the play state: Second Wind's is used_second_wind.
+local function resourceKey(name)
+  local s = (name:lower():gsub("[^%w]+", "_"))
+  s = (s:gsub("^_+", ""))
+  s = (s:gsub("_+$", ""))
+  if s == "" then s = "resource" end
+  return "used_" .. s
+end
+
+-- What a character's page gives the tracker: the most of each thing that
+-- runs out in play. `hp`; `dice`, { most, text }; `slots`, { level, most }
+-- for each level; `pact`, { most, level }; `resources`, { name, most,
+-- reset, key } for each; and `level` and `con`, the Constitution modifier,
+-- by GM Sheets' sums where GM Sheets is loaded; and `unparsed` when the
+-- frontmatter isn't YAML, which leaves only its plain keys to count. `text`
+-- is the page's, read from the space when not given.
+function gm.character(page, text)
+  local d, unparsed = characterData(text or space.readPage(page))
+  local sums
+  if sheets and sheets.values then
+    local ok, v = pcall(sheets.values, d)
+    if ok and type(v) == "table" then sums = v end
+  end
+  local c = { page = page, name = gm.name(page), slots = slotLevels(d.slots), resources = {},
+              unparsed = unparsed }
+  c.level = whole(sums and sums.level) or whole(d.level)
+  c.con = sums and type(sums.mods) == "table" and whole(sums.mods.con) or nil
+  if c.con == nil and whole(d.con) then c.con = math.floor((whole(d.con) - 10) / 2) end
+  local hp = whole(d.hp)
+  if hp and hp > 0 then c.hp = hp end
+  local dice = diceCount(d.hit_dice) or c.level
+  if dice and dice > 0 then
+    c.dice = { most = dice, text = type(d.hit_dice) == "string" and (d.hit_dice:match("^%s*(.-)%s*$")) or nil }
+  end
+  local pact = whole(d.pact_slots)
+  if pact and pact > 0 then c.pact = { most = pact, level = whole(d.pact_level) } end
+  local taken = {}
+  if type(d.resources) == "table" and not isMap(d.resources) then
+    for _, r in ipairs(d.resources) do
+      local name = type(r) == "table" and r.name
+      local most = type(r) == "table" and whole(r.uses)
+      if type(name) == "string" and name:find("%S") and most and most > 0 then
+        name = ((name:gsub("%s+", " ")):match("^%s*(.-)%s*$"))
+        local base = resourceKey(name)
+        local key, n = base, 1
+        while taken[key] do
+          n = n + 1
+          key = base .. "_" .. int(n)
+        end
+        taken[key] = true
+        c.resources[#c.resources + 1] = {
+          name = name, most = most, key = key,
+          reset = type(r.reset) == "string" and r.reset or nil,
+        }
+      end
+    end
+  end
+  return c
+end
+
+-- Where a character's play state goes: State/Characters/<name>.
+function gm.characterPath(page)
+  return gm.config.stateFolder .. "Characters/" .. gm.name(page)
+end
+
+-- The characters' records, each with the page its subject links: read from
+-- the index, once while a bar is drawn.
+local function characterRecords()
+  local want = CHARACTER_RECORD
+  local rows = query[[
+    from p = index.pages()
+    where p.type == want and p.subject ~= nil
+    order by p.name
+    select { name = p.name, subject = p.subject }
+  ]]
+  local out = {}
+  for _, row in ipairs(rows) do
+    local target = type(row.subject) == "string" and row.subject:match("%[%[([^%]|#]+)")
+    if target then out[#out + 1] = { name = row.name, page = target } end
+  end
+  return out
+end
+
+-- Where a character's play state is, and whether it is there: its own path,
+-- or else the record whose subject links the page, for a character renamed
+-- since, as SilverBullet rewrites the link. A bar asks the cheap way; an
+-- action, `exact`, asks the space.
+function gm.characterState(page, exact)
+  local function there(path)
+    if exact then return gm.exists(path) end
+    return gm.seen(path)
+  end
+  local path = gm.characterPath(page)
+  if there(path) then return path, true end
+  for _, row in ipairs(scanOnce("characters", characterRecords)) do
+    if row.name ~= path and ("/" .. page):endsWith("/" .. row.page) and there(row.name) then
+      return row.name, true
+    end
+  end
+  return path, false
+end
+
+-- A character's play state as numbers, by key: what has gone of each
+-- thing, and 1 for Heroic Inspiration held.
+local function tracked(text)
+  local out = {}
+  for k, v in pairs(gm.frontmatter(text or "")) do
+    if k == "inspiration" then
+      out[k] = v == "true" and 1 or 0
+    else
+      out[k] = whole(v)
+    end
+  end
+  return out
+end
+
+-- A key of the play state, 0 where it isn't there.
+local function got(st, key)
+  return st[key] or 0
+end
+
+-- What a character's record starts as.
+local function characterRecord(page)
+  return "---\ntype: " .. CHARACTER_RECORD .. "\nsubject: \"[[" .. page .. "]]\"\n---\n\n# " ..
+    gm.name(page) .. "\n\nPlay state for [[" .. page .. "]]: what has gone since the character " ..
+    "was last whole, kept by GM Kit.\n\n## Log\n\n"
+end
+
+-- A key set in a record's text: a number, `true` for inspiration held, or
+-- the key taken off at 0.
+local function setTracked(text, key, n)
+  if n == 0 then return gm.clearFrontmatter(text, key) end
+  return gm.setFrontmatter(text, key, key == "inspiration" and "true" or int(n))
+end
+
+-- The most a key of the play state can hold, by the page as it is; nil
+-- where the page doesn't say, as for temporary hit points.
+local function mostOf(c, key)
+  if key == "hp_lost" then return c.hp end
+  if key == "death_successes" or key == "death_failures" then return 3 end
+  if key == "inspiration" then return 1 end
+  if key == "hit_dice_spent" then return c.dice and c.dice.most end
+  if key == "pact_used" then return c.pact and c.pact.most end
+  for _, s in ipairs(c.slots) do
+    if key == "slot_" .. int(s.level) .. "_used" then return s.most end
+  end
+  for _, r in ipairs(c.resources) do
+    if r.key == key then return r.most end
+  end
+  return nil
+end
+
+-- A name from the page in the log's Markdown: whatever Markdown or
+-- SilverBullet would read as markup escaped, so it stays words.
+local function logName(s)
+  s = (s:gsub("[\\`*_{}%[%]<>#|$]", "\\%0"))
+  return (s:gsub("&(#?%w+;)", "\\&%1"))
+end
+
+-- "A, B and C".
+local function andList(parts)
+  if #parts < 2 then return parts[1] or "" end
+  return table.concat(parts, ", ", 1, #parts - 1) .. " and " .. parts[#parts]
+end
+
+-- "22 of 28 hit points", with `lost` of them gone.
+local function hpWords(c, lost)
+  return int(math.max(c.hp - lost, 0)) .. " of " .. int(c.hp) .. " hit points"
+end
+
+-- Changes a character's play state, with Undo. `change(st, c)` works out
+-- the change from the state as it is and the page: `to`, the keys it sets
+-- and to what, 0 taking one off; `line`, what it did, for the notification
+-- and, after its session, the record's log, which takes `log` instead where
+-- a name from the page needs escaping there; and `undone`, what Undo says
+-- it took back. It gives nil, and why, when there is nothing to change.
+-- Undo takes the same amounts back off the record as it is then, within
+-- what the page allows, so a change made since stays made.
+function gm.track(page, change)
+  if gm.refuse() then return false end
+  local c = gm.character(page, gm.read(page))
+  local path, there = gm.characterState(page, true)
+  local before = there and gm.read(path) or nil
+  local st = tracked(before)
+  local result, why = change(st, c)
+  if not result then
+    if why then gm.notify(c.name .. " " .. why .. ".") end
+    return false
+  end
+  local keys, moved = {}, {}
+  for key, n in pairs(result.to) do
+    if n ~= got(st, key) then
+      keys[#keys + 1] = key
+      moved[key] = n - got(st, key)
+    end
+  end
+  table.sort(keys)
+  if #keys == 0 then return false end
+  local created = not before and characterRecord(page) or nil
+  local text = before or created
+  for _, key in ipairs(keys) do text = setTracked(text, key, result.to[key]) end
+  local line = gm.sessionLink(gm.currentSession(), true) .. ": " .. (result.log or result.line)
+  gm.write(path, gm.appendItem(text, line))
+  gm.refresh()
+  gm.notify(c.name .. ": " .. result.line .. ".", {
+    { name = "Undo", run = function()
+      if gm.refuse() then return end
+      if not gm.exists(path) then return end
+      local now = gm.read(path)
+      local ok, fresh = pcall(gm.character, page)
+      local back = tracked(now)
+      for _, key in ipairs(keys) do
+        local n = got(back, key) - moved[key]
+        local most = mostOf(ok and fresh or c, key)
+        if most and n > most then n = most end
+        if n < 0 then n = 0 end
+        now = setTracked(now, key, n)
+      end
+      now = (gm.removeItem(now, line))
+      if created and now == created then
+        space.deletePage(path)
+      else
+        gm.write(path, now)
+      end
+      gm.refresh()
+      gm.notify("Undone: " .. c.name .. "'s " .. result.undone)
+    end },
+  })
+  return true
+end
+
+-- Damage: temporary hit points first, then hit points. At 0 hit points it
+-- is a failed death save; and it kills when it is as much as the hit point
+-- maximum, whether at 0 already or left over on the way down to it.
+local function damageChange(amount)
+  return function(st, c)
+    if not c.hp then return nil, "has no hit points on the page to count" end
+    local lost, temp = got(st, "hp_lost"), got(st, "temp_hp")
+    local fails, oks = got(st, "death_failures"), got(st, "death_successes")
+    if lost >= c.hp and fails >= 3 then return nil, "is dead" end
+    local soaked = math.min(temp, amount)
+    local rest = amount - soaked
+    local to = { temp_hp = temp - soaked }
+    local line = "took " .. int(amount) .. " damage"
+    if soaked > 0 then line = line .. ", " .. int(soaked) .. " of it temporary" end
+    if lost >= c.hp then
+      if rest == 0 then
+        line = line .. ", still at 0 hit points"
+      elseif rest >= c.hp then
+        to.death_failures = 3
+        line = line .. " at 0 hit points, as much as their hit point maximum: dead"
+      else
+        -- a stable character damaged is dying again, from no saves at all
+        if oks >= 3 then
+          to.death_successes = 0
+          fails = 0
+        end
+        local n = math.min(fails + 1, 3)
+        to.death_failures = n
+        line = line .. " at 0 hit points: a death save failed, " .. int(n) .. " of 3" ..
+               (n >= 3 and ", dead" or "")
+      end
+    elseif lost + rest >= c.hp then
+      to.hp_lost = c.hp
+      if lost + rest - c.hp >= c.hp then
+        to.death_failures = 3
+        line = line .. ", down to 0 hit points with as much again left over: dead"
+      else
+        line = line .. ", down to 0 hit points"
+      end
+    else
+      to.hp_lost = lost + rest
+      line = line .. ", " .. hpWords(c, lost + rest) .. " left"
+    end
+    return { to = to, line = line, undone = int(amount) .. " damage" }
+  end
+end
+
+-- Healing, up to the hit point maximum. A character brought back from 0
+-- starts their death saves afresh.
+local function healChange(amount)
+  return function(st, c)
+    if not c.hp then return nil, "has no hit points on the page to count" end
+    local lost = got(st, "hp_lost")
+    if lost <= 0 then return nil, "has all " .. int(c.hp) .. " hit points already" end
+    local to = { hp_lost = math.max(lost - amount, 0) }
+    local line = "healed " .. int(amount) .. ", " .. hpWords(c, to.hp_lost)
+    if lost >= c.hp then
+      local dead = got(st, "death_failures") >= 3
+      to.death_successes, to.death_failures = 0, 0
+      line = line .. (dead and ", back from the dead" or ", conscious again")
+    end
+    return { to = to, line = line, undone = "healing of " .. int(amount) }
+  end
+end
+
+-- Temporary hit points, which don't add up: a character keeps the higher.
+-- 0 takes them away.
+local function temporaryChange(amount)
+  return function(st, c)
+    local temp = got(st, "temp_hp")
+    if amount == 0 then
+      if temp == 0 then return nil, "has no temporary hit points" end
+      return { to = { temp_hp = 0 }, line = "lost " .. int(temp) .. " temporary hit points",
+               undone = "lost temporary hit points" }
+    end
+    if amount <= temp then
+      return nil, "keeps the " .. int(temp) .. " temporary hit points they have: temporary " ..
+                  "hit points don't add up, and a character keeps the higher"
+    end
+    return { to = { temp_hp = amount },
+             line = "gained " .. int(amount) .. " temporary hit points" ..
+                    (temp > 0 and (", in place of " .. int(temp)) or ""),
+             undone = "temporary hit points" }
+  end
+end
+
+-- A death save, made or failed, at 0 hit points: three made is stable,
+-- which the play state keeps as three made and the failures gone, as the
+-- rules have them start again; three failed is dead.
+local function deathSaveChange(made)
+  return function(st, c)
+    if not c.hp or got(st, "hp_lost") < c.hp then return nil, "isn't at 0 hit points" end
+    local oks, fails = got(st, "death_successes"), got(st, "death_failures")
+    if fails >= 3 then return nil, "is dead" end
+    if oks >= 3 then return nil, "is stable" end
+    if made then
+      local n = oks + 1
+      return { to = { death_successes = n, death_failures = n >= 3 and 0 or fails },
+               line = "made a death save, " .. int(n) .. " of 3" .. (n >= 3 and ": stable" or ""),
+               undone = "death save made" }
+    end
+    local n = fails + 1
+    return { to = { death_failures = n },
+             line = "failed a death save, " .. int(n) .. " of 3" .. (n >= 3 and ": dead" or ""),
+             undone = "death save failed" }
+  end
+end
+
+-- One of something the page counts spent, or one back: `key` in the play
+-- state, and `name`, "level 1 slot", "Pact Magic slot" or "Hit Point Die".
+local function countChange(key, name, spend)
+  return function(st, c)
+    local most = mostOf(c, key)
+    local many = name == "Hit Point Die" and "Hit Point Dice" or (name .. "s")
+    if not most or most < 1 then return nil, "has no " .. many .. " on the page to count" end
+    local used = got(st, key)
+    if spend and used >= most then return nil, "has no " .. many .. " left" end
+    if not spend and used <= 0 then
+      return nil, "has all " .. int(most) .. " " .. (most == 1 and name or many) .. " already"
+    end
+    local n = used + (spend and 1 or -1)
+    local did = spend and "spent" or "regained"
+    return { to = { [key] = n },
+             line = a(name) .. " " .. did .. ", " .. int(most - n) .. " of " .. int(most) .. " left",
+             undone = did .. " " .. name }
+  end
+end
+
+-- One use of a resource the page lists used, or one back.
+local function resourceChange(key, spend)
+  return function(st, c)
+    local r
+    for _, x in ipairs(c.resources) do
+      if x.key == key then r = x end
+    end
+    if not r then return nil, "has no such resource on the page" end
+    local used = got(st, key)
+    if spend and used >= r.most then return nil, "has no uses of " .. r.name .. " left" end
+    if not spend and used <= 0 then return nil, "has every use of " .. r.name .. " already" end
+    local n = used + (spend and 1 or -1)
+    local tail = (spend and " used, " or " regained, ") .. int(r.most - n) .. " of " .. int(r.most) .. " left"
+    return { to = { [key] = n }, line = r.name .. tail, log = logName(r.name) .. tail,
+             undone = (spend and "use of " or "regained ") .. r.name }
+  end
+end
+
+-- Heroic Inspiration given, or used.
+local function inspirationChange(give)
+  return function(st, c)
+    local has = got(st, "inspiration") > 0
+    if give and has then return nil, "has Heroic Inspiration already" end
+    if not give and not has then return nil, "has no Heroic Inspiration to use" end
+    return { to = { inspiration = give and 1 or 0 },
+             line = give and "gained Heroic Inspiration" or "used Heroic Inspiration",
+             undone = give and "Heroic Inspiration" or "use of Heroic Inspiration" }
+  end
+end
+
+-- When a resource comes back: "short" for a reset that names a Short Rest,
+-- which a Long Rest brings back too, "long" for one that names a Long Rest,
+-- and nil for any other, such as Dawn, which only its own button brings back.
+local function resetOf(r)
+  local s = (r.reset or ""):lower()
+  if s:find("short", 1, true) then return "short" end
+  if s:find("long", 1, true) then return "long" end
+  return nil
+end
+
+-- A rest, by the 2024 rules. It needs at least 1 hit point. Either rest
+-- brings back Pact Magic's slots and each resource whose reset names a
+-- Short Rest. A Long Rest brings back all hit points, every spell slot,
+-- each resource whose reset names a Long Rest and the Hit Point Dice spent
+-- (half of them, at least one, with gm.config.longRestDice "half"), and
+-- temporary hit points end. A Short Rest can spend `spend` Hit Point Dice
+-- for `regained` hit points.
+local function restChange(long, spend, regained)
+  return function(st, c)
+    local what = long and "Long Rest" or "Short Rest"
+    local lost = got(st, "hp_lost")
+    if c.hp and lost >= c.hp then
+      return nil, "has 0 hit points, and a " .. what .. " needs at least 1: heal them first"
+    end
+    local to, back, backLog, parts, logParts = {}, {}, {}, {}, {}
+    local function restore(key, name, logged)
+      if got(st, key) > 0 then
+        to[key] = 0
+        back[#back + 1] = name
+        backLog[#backLog + 1] = logged or name
+      end
+    end
+    local spent = got(st, "hit_dice_spent")
+    if long then
+      if c.hp and lost > 0 then
+        to.hp_lost = 0
+        back[#back + 1] = "all " .. int(c.hp) .. " hit points"
+        backLog[#backLog + 1] = back[#back]
+      end
+      local slots = false
+      for _, s in ipairs(c.slots) do
+        local key = "slot_" .. int(s.level) .. "_used"
+        if got(st, key) > 0 then
+          to[key] = 0
+          slots = true
+        end
+      end
+      if slots then
+        back[#back + 1] = "every spell slot"
+        backLog[#backLog + 1] = back[#back]
+      end
+    end
+    if c.pact then restore("pact_used", "Pact Magic's slots") end
+    for _, r in ipairs(c.resources) do
+      local when = resetOf(r)
+      if when == "short" or (long and when == "long") then restore(r.key, r.name, logName(r.name)) end
+    end
+    if long and spent > 0 then
+      local regain = spent
+      if gm.config.longRestDice == "half" and c.dice then
+        regain = math.min(spent, math.max(1, math.floor(c.dice.most / 2)))
+      end
+      to.hit_dice_spent = spent - regain
+      back[#back + 1] = int(regain) .. " Hit Point " .. (regain == 1 and "Die" or "Dice")
+      backLog[#backLog + 1] = back[#back]
+    end
+    if not long and (spend or 0) > 0 and c.dice then
+      spend = math.min(spend, c.dice.most - spent)
+      if spend > 0 then
+        to.hit_dice_spent = spent + spend
+        local words = int(spend) .. " Hit Point " .. (spend == 1 and "Die" or "Dice") ..
+                      " spent for " .. int(regained or 0) .. " hit points"
+        if c.hp then
+          to.hp_lost = math.max(lost - (regained or 0), 0)
+          words = words .. ", " .. hpWords(c, to.hp_lost)
+        end
+        parts[#parts + 1] = words
+        logParts[#logParts + 1] = words
+      end
+    end
+    if #back > 0 then
+      parts[#parts + 1] = andList(back) .. " back"
+      logParts[#logParts + 1] = andList(backLog) .. " back"
+    end
+    if long and got(st, "temp_hp") > 0 then
+      to.temp_hp = 0
+      parts[#parts + 1] = "temporary hit points gone"
+      logParts[#logParts + 1] = parts[#parts]
+    end
+    if #parts == 0 then return nil, "has nothing for a " .. what .. " to bring back" end
+    return { to = to, line = what .. ": " .. table.concat(parts, "; "),
+             log = what .. ": " .. table.concat(logParts, "; "), undone = what }
+  end
+end
+
+-- A whole number asked for: `empty` for an answer left empty, nil when the
+-- question is cancelled, and nil with a warning for anything else.
+local function askNumber(question, default, empty)
+  local answer = editor.prompt(question, default or "")
+  if answer == nil then return nil end
+  if not answer:find("%S") then return empty end
+  local n = whole(answer)
+  if not n then gm.notify("“" .. answer .. "” isn't a whole number", nil, "warning") end
+  return n
+end
+
+-- An amount given, as a whole number, or else asked for.
+local function amountOf(amount, question)
+  if amount == nil then return askNumber(question) end
+  return whole(amount)
+end
+
+-- Damage to a character, asked for when not given.
+function gm.damage(page, amount)
+  if gm.refuse() then return false end
+  amount = amountOf(amount, "How much damage does " .. gm.name(page) .. " take?")
+  if not amount or amount < 1 then return false end
+  return gm.track(page, damageChange(amount))
+end
+
+-- Healing for a character, asked for when not given.
+function gm.heal(page, amount)
+  if gm.refuse() then return false end
+  amount = amountOf(amount, "How many hit points does " .. gm.name(page) .. " regain?")
+  if not amount or amount < 1 then return false end
+  return gm.track(page, healChange(amount))
+end
+
+-- Temporary hit points for a character, asked for when not given.
+function gm.temporary(page, amount)
+  if gm.refuse() then return false end
+  local name = gm.name(page)
+  amount = amountOf(amount, "How many temporary hit points does " .. name .. " gain? They don't " ..
+    "add up: " .. name .. " keeps the higher. 0 takes them away.")
+  if not amount then return false end
+  return gm.track(page, temporaryChange(amount))
+end
+
+-- A death save at 0 hit points: `made`, or failed.
+function gm.deathSave(page, made)
+  return gm.track(page, deathSaveChange(made))
+end
+
+-- A spell slot of `level` spent, or one regained.
+function gm.slot(page, level, spend)
+  level = whole(level)
+  if not level then return false end
+  return gm.track(page, countChange("slot_" .. int(level) .. "_used", "level " .. int(level) .. " slot", spend))
+end
+
+-- A Pact Magic slot spent, or one regained.
+function gm.pact(page, spend)
+  return gm.track(page, countChange("pact_used", "Pact Magic slot", spend))
+end
+
+-- A Hit Point Die spent, or one regained, with no hit points: a Short Rest
+-- spends them for hit points.
+function gm.hitDie(page, spend)
+  return gm.track(page, countChange("hit_dice_spent", "Hit Point Die", spend))
+end
+
+-- A use of a resource used, or one regained, by its key in the play state.
+function gm.resource(page, key, spend)
+  return gm.track(page, resourceChange(key, spend))
+end
+
+-- Heroic Inspiration given, or used.
+function gm.inspiration(page, give)
+  return gm.track(page, inspirationChange(give))
+end
+
+-- A Long Rest.
+function gm.longRest(page)
+  return gm.track(page, restChange(true))
+end
+
+-- "adding +2 to each for Constitution", for the dice a Short Rest spends.
+local function conWords(c)
+  if not c.con then return ", adding their Constitution modifier to each" end
+  return ", adding " .. (c.con < 0 and "-" or "+") .. int(math.abs(c.con)) .. " to each for Constitution"
+end
+
+-- A Short Rest. A character who is hurt and has Hit Point Dice left is asked
+-- how many they spend, then how many hit points they rolled: the player
+-- rolls the dice, and GM Kit takes the total. `spend` and `regained` answer
+-- for them.
+function gm.shortRest(page, spend, regained)
+  if gm.refuse() then return false end
+  if spend ~= nil then
+    spend, regained = whole(spend) or 0, whole(regained) or 0
+  else
+    spend, regained = 0, 0
+    local c = gm.character(page, gm.read(page))
+    local path, there = gm.characterState(page, true)
+    local st = tracked(there and gm.read(path) or nil)
+    local lost = got(st, "hp_lost")
+    local left = c.dice and (c.dice.most - got(st, "hit_dice_spent")) or 0
+    if c.hp and lost > 0 and lost < c.hp and left > 0 then
+      spend = askNumber("How many Hit Point Dice does " .. c.name .. " spend? " .. int(left) .. " of " ..
+        int(c.dice.most) .. " left" .. (c.dice.text and (", " .. c.dice.text) or "") .. "; 0 for none.", "0", 0)
+      if spend == nil then return false end
+      if spend > left then spend = left end
+      if spend > 0 then
+        regained = askNumber("How many hit points does " .. c.name .. " regain? Roll " ..
+          (spend == 1 and "the die" or ("the " .. int(spend) .. " dice")) .. conWords(c) .. ".")
+        if regained == nil then return false end
+      end
+    end
+  end
+  return gm.track(page, restChange(false, spend, regained))
+end
+
+-- Whether a page could be a character's, before it is read: not the
+-- adventure's, which has a bar of its own, a session's log, GM Kit's play
+-- state, the players' copies, a library, an index or the session table.
+local function mayBeCharacter(page)
+  local c = gm.config
+  if type(page) ~= "string" or page == "" then return false end
+  if page == c.sessionPage or page == "index" or page == "CONFIG" then return false end
+  for _, folder in ipairs({ c.adventureFolder, c.sessionsFolder, c.stateFolder, c.playerFolder, "Library/" }) do
+    if page:startsWith(folder) then return false end
+  end
+  return not page:find("/Library/", 1, true)
+end
+
+-- A button on a character's bar: its words, and what a screen reader says
+-- of it, where the words lean on the row they sit in. What it says starts
+-- with, or holds, the words, so a voice naming the button finds it.
+local function trackButton(label, said, run)
+  return dom.button {
+    class = "sb-button",
+    ["aria-label"] = said,
+    onclick = function()
+      -- a click decides by the space as it is, not by what a bar read
+      gm.cache = nil
+      local ok, err = pcall(run)
+      if not ok then editor.flashNotification("GM Kit: " .. tostring(err), "error") end
+    end,
+    __rawText = label,
+  }
+end
+
+-- Words on a character's bar, as they are: what the page gives stays words.
+local function trackWords(text)
+  return dom.span { class = "gmkit-bar-note", __rawText = text }
+end
+
+-- Circles for the eye, `full` for each of `filled` and `open` for the rest
+-- up to `most`: a screen reader skips them for the count in words beside
+-- them. Past twelve there are words alone.
+local function circles(filled, most, full, open)
+  if most > 12 then return nil end
+  return dom.span { class = "gmkit-pips", ["aria-hidden"] = "true",
+                    __rawText = string.rep(full or "●", filled) .. string.rep(open or "○", most - filled) }
+end
+
+-- A row of a character's bar: its name, and its parts.
+local function trackRow(name, parts)
+  local spec = { class = "gmkit-item", dom.strong { __rawText = name } }
+  for _, part in ipairs(parts) do spec[#spec + 1] = part end
+  return dom.div(spec)
+end
+
+-- A row for something the page counts: what is left of it, in circles and
+-- in words, and the buttons that spend one and bring one back.
+local function countRow(name, used, most, after, spend, regain)
+  local left = most - math.min(math.max(used, 0), most)
+  local parts = {}
+  parts[#parts + 1] = circles(left, most)
+  parts[#parts + 1] = trackWords(int(left) .. " of " .. int(most) .. " left" .. (after or ""))
+  if left > 0 then parts[#parts + 1] = spend end
+  if left < most then parts[#parts + 1] = regain end
+  return trackRow(name, parts)
+end
+
+-- The bar across the top of a character's page: what the character has
+-- left of everything that runs out in play, and the buttons that change it.
+function gm.characterBar(page)
+  page = page or editor.getCurrentPage()
+  if not mayBeCharacter(page) then return nil end
+  local render <close> = gm.rendering()
+  if not gm.seen(page) then return nil end
+  local text = space.readPage(page)
+  if gm.frontmatter(text).type ~= gm.config.characterType then return nil end
+  local c = gm.character(page, text)
+  local path, stated = gm.characterState(page)
+  local st = stated and tracked(space.readPage(path)) or {}
+  local spec = { class = "gmkit-bar" }
+  local function add(x) spec[#spec + 1] = x end
+  -- a stale tab says so first, since every button after it refuses to act
+  local stale = installedVersion()
+  if stale then
+    add(trackWords(reloadNote(stale)))
+    add(gm.button("Reload", reloadTab))
+  end
+  add(dom.strong { "Session " .. gm.currentSession() })
+  local button = trackButton
+  local counted = false
+  if c.hp then
+    counted = true
+    local lost = math.min(math.max(got(st, "hp_lost"), 0), c.hp)
+    local temp = got(st, "temp_hp")
+    add(trackWords(hpWords(c, lost)))
+    if temp > 0 then add(trackWords("+" .. int(temp) .. " temporary")) end
+    local oks, fails = got(st, "death_successes"), got(st, "death_failures")
+    if lost >= c.hp then
+      add(trackWords(fails >= 3 and "† Dead" or (oks >= 3 and "■ Stable" or "▲ Dying")))
+    end
+    add(button("Damage…", "Damage to " .. c.name .. "…", function() gm.damage(page) end))
+    if lost > 0 then add(button("Heal…", "Heal " .. c.name .. "…", function() gm.heal(page) end)) end
+    add(button("Temporary…", "Temporary hit points for " .. c.name .. "…", function() gm.temporary(page) end))
+    if lost >= c.hp and fails < 3 and oks < 3 then
+      add(trackRow("Death saves", {
+        circles(oks, 3, "✓", "○"), trackWords(int(oks) .. " of 3 successes"),
+        circles(fails, 3, "✗", "○"), trackWords(int(fails) .. " of 3 failures"),
+        button("Success", "Death save success", function() gm.deathSave(page, true) end),
+        button("Failure", "Death save failure", function() gm.deathSave(page, false) end),
+      }))
+    end
+  end
+  for _, s in ipairs(c.slots) do
+    counted = true
+    local l = int(s.level)
+    add(countRow("Level " .. l .. " slots", got(st, "slot_" .. l .. "_used"), s.most, nil,
+      button("Spend", "Spend a level " .. l .. " slot", function() gm.slot(page, s.level, true) end),
+      button("Regain", "Regain a level " .. l .. " slot", function() gm.slot(page, s.level, false) end)))
+  end
+  if c.pact then
+    counted = true
+    add(countRow("Pact Magic" .. (c.pact.level and (", level " .. int(c.pact.level)) or ""),
+      got(st, "pact_used"), c.pact.most, nil,
+      button("Spend", "Spend a Pact Magic slot", function() gm.pact(page, true) end),
+      button("Regain", "Regain a Pact Magic slot", function() gm.pact(page, false) end)))
+  end
+  for _, r in ipairs(c.resources) do
+    counted = true
+    add(countRow(r.name, got(st, r.key), r.most, r.reset and (" · " .. r.reset) or nil,
+      button("Use", "Use " .. r.name, function() gm.resource(page, r.key, true) end),
+      button("Regain", "Regain " .. r.name, function() gm.resource(page, r.key, false) end)))
+  end
+  if c.dice then
+    counted = true
+    add(countRow("Hit Point Dice", got(st, "hit_dice_spent"), c.dice.most,
+      c.dice.text and (" · " .. c.dice.text) or nil,
+      button("Spend", "Spend a Hit Point Die", function() gm.hitDie(page, true) end),
+      button("Regain", "Regain a Hit Point Die", function() gm.hitDie(page, false) end)))
+  end
+  local held = got(st, "inspiration") > 0
+  add(trackRow("Heroic Inspiration", {
+    trackWords(held and "◆ Yes" or "◇ No"),
+    held and button("Use", "Use Heroic Inspiration", function() gm.inspiration(page, false) end)
+      or button("Give", "Give Heroic Inspiration", function() gm.inspiration(page, true) end),
+  }))
+  local rest = {
+    button("Short Rest…", "A Short Rest for " .. c.name, function() gm.shortRest(page) end),
+    button("Long Rest", "A Long Rest for " .. c.name, function() gm.longRest(page) end),
+  }
+  if stated then rest[#rest + 1] = dom.span { class = "gmkit-bar-note", "[[" .. path .. "|Play state]]" } end
+  add(trackRow("Rest", rest))
+  if c.unparsed then
+    add(trackWords("⚠ The page's frontmatter doesn't parse as YAML, so only its plain keys count"))
+  end
+  if not counted then
+    add(trackWords("Nothing on the page to count: give it hp, hit_dice, slots, pact_slots or resources"))
+  end
+  return widget.new { display = "block", html = dom.div(spec) }
+end
+
 ------------------------------------------------------------------ rolls
 -- A roll is logged against a check a page sets, read from the page as the
 -- DM has it. A check is a paragraph that names one, "Wisdom (Perception)",
@@ -3377,9 +4389,12 @@ function gm.rollers()
       return out
     end
   end
+  -- without GM Party, every character's page, less those retired, as GM
+  -- Party would have it
+  local want = gm.config.characterType
   local pcs = query[[
     from p = index.pages()
-    where p.type == "pc"
+    where p.type == want and p.retired ~= true
     order by p.name
     select p.name
   ]]
@@ -5324,6 +6339,8 @@ function gm.button(label, run, primary)
   return dom.button {
     class = primary and "sb-button-primary" or "sb-button",
     onclick = function()
+      -- a click decides by the space as it is, not by what a bar read
+      gm.cache = nil
       local ok, err = pcall(run)
       if not ok then editor.flashNotification("GM Kit: " .. tostring(err), "error") end
     end,
@@ -5523,6 +6540,7 @@ end
 function gm.sessionBar(page)
   page = page or editor.getCurrentPage()
   if not page or not page:startsWith(gm.config.sessionsFolder) then return nil end
+  local render <close> = gm.rendering()
   gm.freshStates()
   local t = gm.pageType(page)
   if t == gm.config.recapDraftType then return gm.recapBar(page) end
@@ -5535,11 +6553,19 @@ function gm.sessionBar(page)
   }
 end
 
+-- The bar at the top of the page open, whichever kind it is, drawn from a
+-- cache of its own: each draw reads the space afresh, and once.
+function gm.topBar()
+  local render <close> = gm.rendering(true)
+  return gm.sessionBar() or gm.characterBar() or gm.bar()
+end
+
 -- The bar across the top of an adventure page: what the players can see,
 -- what the party has done, and a button for each thing not yet recorded.
 function gm.bar(page)
   page = page or editor.getCurrentPage()
   if not gm.isAdventurePage(page) then return nil end
+  local render <close> = gm.rendering()
   gm.freshStates()
   local kind = gm.kind(page)
   local can = kind and gm.kinds[kind] or {}
@@ -5914,7 +6940,7 @@ actionButton.define {
 event.listen {
   name = "hooks:renderTopWidgets",
   run = function()
-    local ok, bar = pcall(function() return gm.sessionBar() or gm.bar() end)
+    local ok, bar = pcall(function() return gm.topBar() end)
     if ok then return bar end
     print("GM Kit: " .. tostring(bar))
   end

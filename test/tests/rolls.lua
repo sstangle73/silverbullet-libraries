@@ -329,6 +329,17 @@ test("rolls: who rolled is asked once there are characters, the party first", "d
   eq(#H.filterBoxes, asked + 2)
 end)
 
+test("rolls: without GM Party, every character's page rolls, less those retired", "dm", function()
+  H.pages["Party/Bram"] = "---\ntype: pc\nlevel: 3\n---\n\n# Bram\n"
+  H.pages["Party/Wren"] = "---\ntype: pc\nlevel: 3\nretired: true\n---\n\n# Wren\n"
+  H.pages["Party/Ash"] = "---\ntype: pc\nlevel: 3\naway: true\n---\n\n# Ash\n"
+  local real = party
+  party = nil
+  local good, err = pcall(function() eq(list(gm.rollers()), "Ash | Bram") end)
+  party = real
+  if not good then error(err, 0) end
+end)
+
 test("rolls: no character pages, nobody is asked who", "dm", function()
   useMill()
   eq(#gm.rollers(), 0)
