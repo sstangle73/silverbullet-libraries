@@ -13,6 +13,7 @@ A strip across the top of every page that says which space you are in and takes 
 - **Every space you list** gets a tab with its name, and an icon and colour of its own. The one you are in is filled in; the others link to their home pages.
 - **Nested spaces.** Where one space is also a folder of another, *This page in …* at the right opens the page you are on in the other space.
 - **A space can keep to itself.** List only that space in its own settings: its strip shows just its own tab, and a link you choose, such as the server's list of spaces.
+- **A newer version waits for a reload.** When a copy of this page holds a newer version than the one the tab runs, as after an update in another tab, the strip says *⟳ New version: reload* until you run `System: Reload`.
 
 Every tab writes its name out, so its colour is never the only cue. The default colours are violet, sky, orange, yellow and pink, which stay distinct for red-green colour blindness and in grayscale.
 
@@ -43,6 +44,8 @@ Beside `spaces`, a `directory` puts a link at the right of the strip:
 
 `/.dashboard` is the multi-space server's list of spaces. At an address that isn't one of the listed spaces, the strip stays hidden.
 
+SilverBullet checks these settings against their shape, declared in the last `space-lua` block on this page. A `config.set("spaceSwitcher", ...)` of the wrong shape, a space without a `url` or a misspelt key such as `colour`, raises where it is written, in the browser's console, and the rest of that block doesn't run, so give the settings a block of their own. The strip still draws what it can: one space written without the list's braces counts as a list of that one. Storie Check lists what is wrong.
+
 ## This page in …
 
 From a space that holds others as folders, a page inside one of those folders opens in that space. From a space that is a folder of another, any page opens in that other space. The link appears only when both spaces are in the list.
@@ -55,6 +58,10 @@ Install and update each space's copy from inside that space. SilverBullet writes
 
 A space that keeps to itself has a shorter list on purpose. Start its block with `-- priority: 1`: blocks load highest priority first, and a block without one counts as 0, so in the space that holds it, the full list loads later and replaces the short one. Give every space its `color` in that case: a default colour goes by place in the list, and the short list's places differ.
 
+## Its version
+
+`spaceSwitcher.version` is the version of the Lua the tab runs, and `spaceSwitcher.stale()` says in words when a copy of this page, at any depth, holds another: nil while every copy matches. Storie Check lists both, for every library in the space.
+
 ## Changes in 1.0.1
 
 These docs say to install and update the page from inside each space it serves, never with *Library: Update All* from a space that holds others.
@@ -64,14 +71,77 @@ These docs say to install and update the page from inside each space it serves, 
 ```space-lua
 -- priority: 20
 spaceSwitcher = spaceSwitcher or {}
+spaceSwitcher.version = "1.0.1"
+
+-- Nil while this tab runs the Lua that every copy of this page holds, or
+-- else what differs, in words: a copy that holds a newer version, which
+-- System: Reload loads, or an older one, to update from inside its own
+-- space. The copies are the library pages the index names
+-- Library/Storie/Space Switcher, at any depth. It never raises: what it
+-- can't find out, it doesn't report.
+function spaceSwitcher.stale()
+  local ok, found = pcall(function()
+    local lib, running = "Library/Storie/Space Switcher", spaceSwitcher.version
+    local function shown(v)
+      if type(v) == "number" and v == math.floor(v) then return string.format("%d", v) end
+      return tostring(v)
+    end
+    local function before(a, b)
+      local x, y = {}, {}
+      for n in string.gmatch(shown(a), "%d+") do x[#x + 1] = tonumber(n) end
+      for n in string.gmatch(shown(b), "%d+") do y[#y + 1] = tonumber(n) end
+      for i = 1, math.max(#x, #y) do
+        if (x[i] or 0) ~= (y[i] or 0) then return (x[i] or 0) < (y[i] or 0) end
+      end
+      return false
+    end
+    local copies = query[[
+      from p = index.pages("meta/library")
+      where p.name == lib or string.endsWith(p.name, "/" .. lib)
+      order by p.name
+    ]]
+    local newer, older = {}, {}
+    for _, p in ipairs(copies) do
+      if p.version == nil then
+        older[#older + 1] = p.name .. " has no version"
+      elseif p.version ~= running and before(running, p.version) then
+        newer[#newer + 1] = p.name .. " holds " .. shown(p.version)
+      elseif p.version ~= running then
+        older[#older + 1] = p.name .. " holds " .. shown(p.version) .. ", an older version"
+      end
+    end
+    if #newer + #older == 0 then return nil end
+    local advice = "Run System: Reload."
+    if #older > 0 then
+      advice = #newer > 0 and "Run System: Reload, and update the older copy from inside its own space."
+        or "Update the older copy from inside its own space."
+    end
+    local reload = #newer > 0
+    for _, o in ipairs(older) do newer[#newer + 1] = o end
+    return { text = "Space Switcher " .. running .. " is running; " .. table.concat(newer, "; ") .. ". " .. advice,
+             reload = reload }
+  end)
+  if ok and found then return found.text, found.reload end
+  return nil
+end
 
 -- Fills for spaces without a colour of their own, in list order. Violet, sky,
 -- orange, yellow and pink stay apart for red-green colour blindness and in
 -- grayscale; two blues or two reds would not.
 spaceSwitcher.palette = { "#311b92", "#4fc3f7", "#e65100", "#fff176", "#ad1457" }
 
+-- The spaces, as a list of tables. One space written without the list's
+-- braces, spaces = { name = ..., url = ... }, is a list of that one, and an
+-- entry that isn't a table is left out. The schema below reports either.
 function spaceSwitcher.spaces()
-  return config.get("spaceSwitcher.spaces", {})
+  local spaces = config.get("spaceSwitcher.spaces", {})
+  if type(spaces) ~= "table" then return {} end
+  if spaces[1] == nil and spaces.url ~= nil then return { spaces } end
+  local out = {}
+  for _, space in ipairs(spaces) do
+    if type(space) == "table" then out[#out + 1] = space end
+  end
+  return out
 end
 
 function spaceSwitcher.origin()
@@ -90,9 +160,11 @@ local function slashed(path)
   return path .. "/"
 end
 
--- A space's home, ending in a slash as SilverBullet's base URI does.
+-- A space's home, ending in a slash as SilverBullet's base URI does. A url
+-- that isn't text counts as none.
 function spaceSwitcher.address(space)
-  return slashed(spaceSwitcher.resolve(space.url or "/"))
+  local url = type(space.url) == "string" and space.url or "/"
+  return slashed(spaceSwitcher.resolve(url))
 end
 
 -- The folder a space is served from inside another; "" for none.
@@ -205,6 +277,14 @@ function spaceSwitcher.html(page)
   for i, space in ipairs(spaceSwitcher.spaces()) do
     parts[#parts + 1] = tab(space, i, i == at)
   end
+  -- A copy of this page holds a newer version than the tab runs: say so,
+  -- in words, with what differs in the title. An older copy elsewhere is
+  -- no reason to reload, so it is left to Storie Check to report.
+  local stale, reload = spaceSwitcher.stale()
+  if stale and reload then
+    links[#links + 1] = '<span class="space-switcher-stale" title="' .. escape(stale) ..
+      '">⟳ New version: reload</span>'
+  end
   local other, otherPage
   if page then other, otherPage = spaceSwitcher.counterpart(here, page) end
   if other then
@@ -213,7 +293,7 @@ function spaceSwitcher.html(page)
       escape(otherPage) .. " in the " .. name .. ' space">This page in ' .. name .. " ↗</a>"
   end
   local directory = config.get("spaceSwitcher.directory", nil)
-  if directory and directory.url then
+  if type(directory) == "table" and type(directory.url) == "string" then
     local title = directory.title and (' title="' .. escape(directory.title) .. '"') or ""
     links[#links + 1] = '<a href="' .. escape(spaceSwitcher.resolve(directory.url)) .. '"' .. title ..
       ">" .. escape(directory.name or "All spaces") .. " ↗</a>"
@@ -237,6 +317,39 @@ view.define {
     print("Space Switcher: " .. tostring(html))
   end,
 }
+```
+
+The shape of the settings, for SilverBullet's `config.define`. This block loads ahead of any `CONFIG` page's, so SilverBullet checks each `config.set("spaceSwitcher", ...)` against it as it runs.
+
+```space-lua
+-- priority: 50
+-- Ahead of every CONFIG block, which counts as 0 without a priority of its
+-- own: a config.set of the wrong shape then raises where it is written, and
+-- Storie Check reads the same schema. The strip still draws what it can.
+spaceSwitcher = spaceSwitcher or {}
+local text = { type = "string" }
+spaceSwitcher.schema = {
+  type = "object",
+  properties = {
+    spaces = {
+      type = "array",
+      items = {
+        type = "object",
+        properties = { name = text, url = text, folder = text, icon = text, color = text, textColor = text },
+        required = { "url" },
+        additionalProperties = false,
+      },
+    },
+    directory = {
+      type = "object",
+      properties = { name = text, url = text, title = text },
+      required = { "url" },
+      additionalProperties = false,
+    },
+  },
+  additionalProperties = false,
+}
+config.define("spaceSwitcher", spaceSwitcher.schema)
 ```
 
 ```space-style
@@ -299,6 +412,14 @@ a.space-switcher-tab:focus-visible {
 .space-switcher-links a {
   padding: 2px 4px;
   color: var(--editor-link-color);
+}
+
+/* A newer version waits for a reload: words and a dashed ring, no colour. */
+.space-switcher-stale {
+  padding: 1px 8px;
+  border: 1px dashed currentColor;
+  border-radius: 999px;
+  font-weight: 600;
 }
 
 /* On a phone, five spaces fit on one row. */

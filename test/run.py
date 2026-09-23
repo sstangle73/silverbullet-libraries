@@ -296,7 +296,10 @@ def build(pages=None, shuffle=False):
     space-lua blocks in load order, each as { name = "<page> #<n>", ref =
     "<page>@<offset>", page, index, offset, priority, source }. SRC holds
     each library as src/ has it, INSTALL the folders install.json puts it
-    in, and REPOSITORY the page Library: Install reads.
+    in, REPOSITORY the page Library: Install reads, and README and
+    LICENSE the repository's own README.md and LICENSE. __library_blocks
+    gives a library's blocks the same way, as a copy at
+    Library/Storie/<name> would load them, for mocks.lua's loadLibrary.
     """
     # Lua's %s, %a and string.lower ask the C library, which follows the
     # locale: Python sets LC_CTYPE from the system at startup, and on Windows
@@ -317,12 +320,25 @@ def build(pages=None, shuffle=False):
     g.FIXTURES = to_lua(L, fixtures)
     g.LIBS = to_lua(L, libs)
     g.SHUFFLED = shuffle
-    g.SRC = to_lua(L, src_pages())
+    src = src_pages()
+    g.SRC = to_lua(L, src)
+
+    # The blocks of a library no space installs, as a space holding just
+    # Library/Storie/<name> would load them, for loadLibrary() in mocks.lua.
+    def library_blocks(name):
+        found = {"Library/Storie/" + name: src[name]}
+        return to_lua(L, [dict(b, name=f"{b['page']} #{b['index']}", source=transpile(b["source"]))
+                          for b in load_order(found, shuffle)])
+    g.__library_blocks = library_blocks
     g.INSTALL = to_lua(L, install_map())
     # the query rewrite, for a test that loads a library no space installs
     g.transpile = transpile
     repository = TEST.parent / "Repositories" / "storie.md"
     g.REPOSITORY = read_page(repository) if repository.exists() else None
+    readme = TEST.parent / "README.md"
+    g.README = read_page(readme) if readme.exists() else None
+    licence = TEST.parent / "LICENSE"
+    g.LICENSE = read_page(licence) if licence.exists() else None
     # For the harness's own tests: the names of a set of pages' blocks in
     # load order, as a space holding just those pages would load them.
     g.__load_order = lambda found: to_lua(L, [b["ref"] for b in load_order(dict(found.items()))])

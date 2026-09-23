@@ -5,9 +5,42 @@ NIL = setmetatable({}, { __tostring = function() return "NIL" end })
 
 function string.startsWith(s, p) return s:sub(1, #p) == p end
 function string.endsWith(s, p) return p == "" or s:sub(-#p) == p end
+
+-- The tables config.get hands back as JavaScript objects rather than arrays:
+-- what a table with no list part becomes on its way into SilverBullet's
+-- config (see jsify, below). Space Lua reads a JavaScript object's fields as
+-- a table's, but table.includes throws on one.
+local JS_OBJECTS = setmetatable({}, { __mode = "k" })
+
+-- As SilverBullet 2.11's (client/space_lua/stdlib/table.ts): false for a
+-- value JavaScript counts as false (nil, false, 0, ""), a search of every
+-- value of a Lua table, its named keys' as well as its list's, and an error
+-- for anything else: a string, a number, or a JavaScript object, such as
+-- config.get gives for a table of named keys.
 function table.includes(t, v)
-  for _, x in ipairs(t) do if x == v then return true end end
+  if t == nil or t == false or t == 0 or t == "" then return false end
+  if type(t) ~= "table" or JS_OBJECTS[t] then
+    error("Cannot use includes on a non-table or non-array value", 2)
+  end
+  for _, x in pairs(t) do
+    if x == v then return true end
+  end
   return false
+end
+
+-- Space Lua's string.rep counts with JavaScript's < and <=, and a float
+-- that holds a whole number is an object to JavaScript: string.rep("a", 4 / 2)
+-- gives "" there, where Lua 5.4 gives "aa", and a count of 2.5 gives three
+-- copies where Lua 5.4 raises. Either hides a count that went wrong, so a
+-- float count is an error here.
+local rep = string.rep
+function string.rep(s, n, sep)
+  if math.type(n) == "float" then
+    local gives = (n == math.floor(n) or n <= 0) and '""' or (math.ceil(n) .. " copies")
+    error("string.rep: a count of " .. tostring(n) .. " is a float, which Space Lua repeats as " ..
+          gives .. "; make it a whole number", 2)
+  end
+  return rep(s, n, sep)
 end
 
 local function fresh()
@@ -19,6 +52,11 @@ local function fresh()
     reloads = 0, saves = 0, refreshes = 0, commands = {}, listeners = {}, printed = {},
     views = {}, viewOrder = {}, prefix = "/dm/", files = {}, modified = {},
     responses = {}, fetched = {},
+    -- What the mocks saw that SilverBullet lets pass but gets wrong, such as
+    -- a config.set that loses keys: a test with any left at its end fails.
+    warnings = {},
+    -- config.define's schemas, as Config.schemas holds them
+    schemas = { type = "object", properties = {} },
     config = {
       actionButtons = {
         { icon = "home", description = "Go to the index page", command = "Navigate: Home", priority = 3 },
@@ -88,6 +126,31 @@ function space.getFileMeta(name)
   return { name = name, contentType = f.contentType or "application/octet-stream",
            lastModified = f.lastModified or 1000 }
 end
+-- A file's contents, as 2.11 gives them: bytes, never text, which
+-- encoding.utf8Decode makes text. Bytes here are { bytes = text }; a test
+-- gives a file its contents as H.files[path].data, text or bytes. A page
+-- reads as its text, as bytes.
+function space.readFile(name)
+  if H.failMeta and H.failMeta[name] then error(H.failMeta[name]) end
+  if name:endsWith(".md") and H.pages[name:sub(1, -4)] ~= nil then
+    return { bytes = H.pages[name:sub(1, -4)] }
+  end
+  local f = H.files[name]
+  if f == nil or f.data == nil then error("Not found: " .. name) end
+  if type(f.data) == "string" then return { bytes = f.data } end
+  return f.data
+end
+-- 2.11's encoding library, for the bytes above.
+encoding = {
+  utf8Decode = function(data)
+    assert(type(data) == "table" and type(data.bytes) == "string", "utf8Decode needs bytes")
+    return data.bytes
+  end,
+  utf8Encode = function(s)
+    assert(type(s) == "string", "utf8Encode needs a string")
+    return { bytes = s }
+  end,
+}
 function freezeFileList()
   H.known = {}
   for n in pairs(H.pages) do H.known[n] = true end
@@ -123,6 +186,9 @@ local function parseValue(v)
 end
 
 -- Parsed frontmatter by page text: the parse is the slow part of a query.
+-- A dotted key is a path, as SilverBullet's cleanupJSON reads it
+-- (plug-api/lib/json.ts): the share.uri, share.hash and share.mode that
+-- Library: Install writes read as one table, share.
 local PARSED = {}
 local function frontmatterOf(text)
   local fm = PARSED[text]
@@ -131,25 +197,48 @@ local function frontmatterOf(text)
   local head = text:match("^%-%-%-\n(.-)\n%-%-%-")
   if head then
     for line in (head .. "\n"):gmatch("([^\n]*)\n") do
-      local k, v = line:match("^([%w_%-]+):%s*(.-)%s*$")
-      if k and k ~= "name" then fm[k] = parseValue(v) end
+      local k, v = line:match("^([%w_%-%.]+):%s*(.-)%s*$")
+      if k and k ~= "name" then
+        local target, parts = fm, {}
+        for part in k:gmatch("[^%.]+") do parts[#parts + 1] = part end
+        for i = 1, #parts - 1 do
+          if type(target[parts[i]]) ~= "table" then target[parts[i]] = {} end
+          target = target[parts[i]]
+        end
+        target[parts[#parts]] = parseValue(v)
+      end
     end
   end
   PARSED[text] = fm
   return fm
 end
 
+-- Whether a page's frontmatter tags hold this tag: a list, or one tag alone.
+local function tagged(fm, tag)
+  local tags = fm.tags
+  if type(tags) == "table" then
+    for _, t in ipairs(tags) do if t == tag then return true end end
+    return false
+  end
+  return tags == tag
+end
+
 index = {}
-function index.pages()
+-- index.pages(tag), as SilverBullet 2.11 has it: every page, or with a tag,
+-- the pages that carry it as well, such as "meta/library".
+function index.pages(tag)
   local out = {}
   for name, text in pairs(H.pages) do
-    local obj = { name = name }
-    for k, v in pairs(frontmatterOf(text)) do obj[k] = v end
-    -- As in SilverBullet's indexPage: the page's own attributes win over its
-    -- frontmatter, so a frontmatter "size" reads as the size in bytes.
-    obj.name, obj.size, obj.perm, obj.contentType = name, #text, "rw", "text/markdown"
-    obj.created, obj.lastModified, obj.tag = "2026-09-18T00:00:00", "2026-09-18T00:00:00", "page"
-    out[#out + 1] = obj
+    local fm = frontmatterOf(text)
+    if tag == nil or tagged(fm, tag) then
+      local obj = { name = name }
+      for k, v in pairs(fm) do obj[k] = v end
+      -- As in SilverBullet's indexPage: the page's own attributes win over its
+      -- frontmatter, so a frontmatter "size" reads as the size in bytes.
+      obj.name, obj.size, obj.perm, obj.contentType = name, #text, "rw", "text/markdown"
+      obj.created, obj.lastModified, obj.tag = "2026-09-18T00:00:00", "2026-09-18T00:00:00", "page"
+      out[#out + 1] = obj
+    end
   end
   table.sort(out, function(a, b) return a.name < b.name end)
   return out
@@ -273,42 +362,288 @@ local function getPath(t, path)
   end
   return t
 end
+-- The keys of a table in a fixed order, numbers first: pairs() promises
+-- none, and a message or a check that depends on it would differ run to run.
+local function sortedKeys(t)
+  local keys = {}
+  for k in pairs(t) do keys[#keys + 1] = k end
+  table.sort(keys, function(a, b)
+    if type(a) ~= type(b) then return type(a) == "number" end
+    return a < b
+  end)
+  return keys
+end
+
+-- The named keys of a table that also has a list part: what LuaTable.toJS
+-- drops, since a table with a list part becomes a JavaScript array.
+local function droppedKeys(v)
+  if type(v) ~= "table" or #v == 0 then return {} end
+  local out = {}
+  for _, k in ipairs(sortedKeys(v)) do
+    if math.type(k) ~= "integer" or k < 1 or k > #v then out[#out + 1] = tostring(k) end
+  end
+  return out
+end
+
 -- What a Lua table becomes on its way into SilverBullet's config
 -- (LuaTable.toJS): with an array part it keeps only that, so a table that
--- mixes a list and named keys loses the keys. Functions pass through.
-local function jsify(v)
+-- mixes a list and named keys loses the keys, and the mocks warn, which
+-- fails the test. A table with no list part, an empty one included, is a
+-- JavaScript object, which table.includes throws on. Functions pass through.
+local function jsify(v, where, call)
   if type(v) ~= "table" then return v end
   local out = {}
   if #v > 0 then
-    for i = 1, #v do out[i] = jsify(v[i]) end
+    local lost = droppedKeys(v)
+    if #lost > 0 then
+      H.warnings[#H.warnings + 1] = (call or "config.set") .. ": " .. where ..
+        " mixes a list with named keys (" .. table.concat(lost, ", ") ..
+        "), and SilverBullet keeps only the list"
+    end
+    for i = 1, #v do out[i] = jsify(v[i], where .. "[" .. i .. "]", call) end
   else
-    for k, x in pairs(v) do out[k] = jsify(x) end
+    for k, x in pairs(v) do out[k] = jsify(x, where .. "." .. tostring(k), call) end
+    JS_OBJECTS[out] = true
   end
   return out
+end
+
+-------------------------------------------------------------- jsonschema
+-- jsonschema.validateObject as SilverBullet 2.11 has it
+-- (client/plugos/syscalls/jsonschema.ts): @cfworker/json-schema's validate,
+-- draft 7, stopping at a property's first failure, over the value as
+-- JavaScript sees it, and its errors in the same words, the wrappers of
+-- properties left out, each at its path ("spaces.0.url": a list counts from
+-- 0 there). The keywords the libraries' schemas and widget.new's use: type,
+-- enum, anyOf, required, properties, additionalProperties and items. Where
+-- two properties fail, SilverBullet reports the first as the schema was
+-- written, and this the first by name: Lua keeps no order of keys.
+
+-- A value's type as JavaScript sees it once the table is converted: a
+-- table with a list part is an array, any other an object, and a function
+-- null (stripFunctions).
+local function jsType(v)
+  if v == nil or type(v) == "function" then return "null" end
+  if type(v) == "table" then return #v > 0 and "array" or "object" end
+  return type(v)
+end
+
+local function jsonText(v)
+  if type(v) == "string" then return '"' .. v .. '"' end
+  if type(v) == "table" then
+    local parts = {}
+    for i, x in ipairs(v) do parts[i] = jsonText(x) end
+    return "[" .. table.concat(parts, ",") .. "]"
+  end
+  return tostring(v)
+end
+
+local function pointer(at, key)
+  local escaped = tostring(key):gsub("~", "~0"):gsub("/", "~1")
+  return at .. "/" .. escaped
+end
+
+local function validate(value, schema, at, errors)
+  if schema == true then return true end
+  if schema == false then
+    errors[#errors + 1] = { at = at, keyword = "false", error = "False boolean schema." }
+    return false
+  end
+  local before, kind = #errors, jsType(value)
+  local want = schema.type
+  local function typeError(expected)
+    errors[#errors + 1] = { at = at, keyword = "type",
+      error = 'Instance type "' .. kind .. '" is invalid. Expected "' .. expected .. '".' }
+  end
+  if type(want) == "table" then
+    local fine = false
+    for _, w in ipairs(want) do
+      if w == kind or (w == "integer" and kind == "number" and value % 1 == 0) then fine = true end
+    end
+    if not fine then typeError(table.concat(want, '", "')) end
+  elseif want == "integer" then
+    if kind ~= "number" or value % 1 ~= 0 then typeError("integer") end
+  elseif want ~= nil and kind ~= want then
+    typeError(want)
+  end
+  if schema.enum then
+    local found = false
+    for _, e in ipairs(schema.enum) do
+      if e == value then found = true end
+    end
+    if not found then
+      errors[#errors + 1] = { at = at, keyword = "enum",
+        error = "Instance does not match any of " .. jsonText(schema.enum) .. "." }
+    end
+  end
+  if schema.anyOf then
+    local any, sub = false, {}
+    for _, s in ipairs(schema.anyOf) do
+      local e = {}
+      if validate(value, s, at, e) then any = true end
+      for _, x in ipairs(e) do sub[#sub + 1] = x end
+    end
+    if not any then
+      errors[#errors + 1] = { at = at, keyword = "anyOf", error = "Instance does not match any subschemas." }
+      for _, x in ipairs(sub) do errors[#errors + 1] = x end
+    end
+  end
+  if kind == "object" then
+    for _, key in ipairs(schema.required or {}) do
+      if value[key] == nil then
+        errors[#errors + 1] = { at = at, keyword = "required",
+          error = 'Instance does not have required property "' .. key .. '".' }
+      end
+    end
+    local evaluated, stop = {}, false
+    for _, key in ipairs(sortedKeys(schema.properties or {})) do
+      if value[key] ~= nil then
+        local e = {}
+        if validate(value[key], schema.properties[key], pointer(at, key), e) then
+          evaluated[key] = true
+        else
+          errors[#errors + 1] = { at = at, keyword = "properties", error = 'Property "' .. key .. '" does not match schema.' }
+          for _, x in ipairs(e) do errors[#errors + 1] = x end
+          stop = true
+          break
+        end
+      end
+    end
+    if not stop and schema.additionalProperties ~= nil then
+      for _, key in ipairs(sortedKeys(value)) do
+        if not evaluated[key] then
+          local e = {}
+          if not validate(value[key], schema.additionalProperties, pointer(at, key), e) then
+            errors[#errors + 1] = { at = at, keyword = "additionalProperties",
+              error = 'Property "' .. tostring(key) .. '" does not match additional properties schema.' }
+            for _, x in ipairs(e) do errors[#errors + 1] = x end
+          end
+        end
+      end
+    end
+  elseif kind == "array" and schema.items ~= nil then
+    for i = 1, #value do
+      local e = {}
+      if not validate(value[i], schema.items, pointer(at, i - 1), e) then
+        errors[#errors + 1] = { at = at, keyword = "items", error = "Items did not match schema." }
+        for _, x in ipairs(e) do errors[#errors + 1] = x end
+        break
+      end
+    end
+  end
+  return #errors == before
+end
+
+-- The errors as SilverBullet words them: each at its path, dotted, and the
+-- "Property ... does not match schema." wrappers left out.
+local function formatErrors(errors)
+  local leaves = {}
+  for _, e in ipairs(errors) do
+    if e.keyword ~= "properties" then leaves[#leaves + 1] = e end
+  end
+  if #leaves == 0 then leaves = errors end
+  local out = {}
+  for _, e in ipairs(leaves) do
+    local path = e.at == "#" and "" or (e.at:sub(3):gsub("/", "."))
+    out[#out + 1] = path ~= "" and (path .. ": " .. e.error) or e.error
+  end
+  return table.concat(out, ", ")
+end
+
+jsonschema = {}
+function jsonschema.validateObject(schema, value)
+  if value == nil then return 'Instances of "undefined" type are not supported.' end
+  local errors = {}
+  if validate(value, schema, "#", errors) then return nil end
+  return formatErrors(errors)
+end
+
+-------------------------------------------------------------- config
+
+-- config.define's rule for a schema (client/config.ts, isValidJsonSchema)
+local SCHEMA_TYPES = { string = true, number = true, integer = true, boolean = true,
+                       object = true, array = true, null = true }
+
+local function splitPath(path)
+  local parts = {}
+  for part in path:gmatch("[^%.]+") do parts[#parts + 1] = part end
+  return parts
+end
+
+-- The schema that governs a path, as Config.getSchemaAtPath finds it: one
+-- defined there, with a type.
+local function schemaAt(parts, last)
+  local current = H.schemas
+  for i = 1, last do
+    if not current.properties or not current.properties[parts[i]] then return nil end
+    current = current.properties[parts[i]]
+  end
+  return current.type and current or nil
 end
 
 config = {}
 function config.get(path, default)
   local v = getPath(H.config, path)
-  if v == nil then return default end
+  -- the default crosses into JavaScript as well, and comes back as it went
+  if v == nil then return jsify(default, path, "config.get's default") end
   return v
 end
+function config.has(path)
+  return getPath(H.config, path) ~= nil
+end
 -- Like Config.set: a dotted path creates the tables on the way and replaces
--- whatever is at the end of it.
+-- whatever is at the end of it. Then, as there, the value is checked against
+-- the schema config.define gave its path, or the nearest one above it, and a
+-- value of the wrong shape raises, with the value already set.
 function config.set(path, value)
   if type(path) == "table" then
     for k, v in pairs(path) do config.set(k, v) end
     return
   end
-  local parts = {}
-  for part in path:gmatch("[^%.]+") do parts[#parts + 1] = part end
+  local parts = splitPath(path)
   local t = H.config
   for i = 1, #parts - 1 do
     if type(t[parts[i]]) ~= "table" then t[parts[i]] = {} end
     t = t[parts[i]]
   end
-  t[parts[#parts]] = jsify(value)
+  t[parts[#parts]] = jsify(value, path)
+  for i = #parts, 1, -1 do
+    local schema = schemaAt(parts, i)
+    if schema then
+      local at = table.concat(parts, ".", 1, i)
+      local v = getPath(H.config, at)
+      if v ~= nil then
+        local err = jsonschema.validateObject(schema, v)
+        if err then error("Validation error for " .. at .. ":> " .. err, 2) end
+      end
+      break
+    end
+  end
 end
+-- Like Config.define: the schema goes in at its path, replacing any there.
+function config.define(key, schema)
+  local kind = type(schema) == "table" and schema.type
+  if schema == nil or (type(schema) ~= "table" and type(schema) ~= "boolean") then
+    error("Invalid schema for key " .. tostring(key) .. ": schema must be an object or boolean", 2)
+  end
+  for _, t in ipairs(type(kind) == "table" and kind or { kind or nil }) do
+    if not SCHEMA_TYPES[t] then
+      error("Invalid schema for key " .. tostring(key) .. ": schema.type must be one of " ..
+            "string, number, integer, boolean, object, array, null", 2)
+    end
+  end
+  local parts = splitPath(key)
+  local current = H.schemas
+  for i = 1, #parts - 1 do
+    current.properties[parts[i]] = current.properties[parts[i]] or { type = "object", properties = {} }
+    current = current.properties[parts[i]]
+  end
+  current.properties[parts[#parts]] = schema
+  if type(schema) == "table" and schema.default ~= nil and not config.has(key) then
+    config.set(key, schema.default)
+  end
+end
+function config.getSchemas() return H.schemas end
 
 actionButton = {}
 function actionButton.define(spec)
@@ -333,10 +668,33 @@ function dispatch(name)
   return out
 end
 
+-- SilverBullet 2.11's widgetSchema (Library/Std/APIs/Widget), which its
+-- widget.new checks each spec against with jsonschema.validateObject and
+-- raises on: markdown a string, html a string or a DOM node, cssClasses a
+-- list of strings (an empty table is a JavaScript object, not a list),
+-- display "block" or "inline", events a table, sandbox a boolean, script a
+-- string.
+local WIDGET_SCHEMA = {
+  type = "object",
+  properties = {
+    markdown = { type = "string" },
+    html = { anyOf = { { type = "object" }, { type = "string" } } },
+    cssClasses = { type = "array", items = { type = "string" } },
+    display = { type = "string", enum = { "block", "inline" } },
+    events = { type = "object", additionalProperties = true },
+    sandbox = { type = "boolean" },
+    script = { type = "string" },
+  },
+}
+
 widget = {}
 function widget.new(spec)
+  local err = jsonschema.validateObject(WIDGET_SCHEMA, spec)
+  if err then error("widget.new: " .. err, 2) end
+  -- SilverBullet passes a key it doesn't know, and ignores it; a misspelt
+  -- one is a bug all the same, so the mocks stop it.
   local allowed = { markdown = true, html = true, cssClasses = true, display = true,
-                    events = true, sandbox = true, script = true }
+                    events = true, sandbox = true, script = true, _isWidget = true }
   for k in pairs(spec) do assert(allowed[k], "widget.new: unknown key " .. tostring(k)) end
   spec._isWidget = true
   return spec
@@ -616,29 +974,99 @@ local function clearPlay(layout, pages)
   end
 end
 
+-------------------------------------------------------------- globals
+
+-- The globals as the harness left them: the mocks, run.py's tables, the
+-- framework and every test file, taken once they are all loaded and before
+-- any library runs (runAll takes it, or the first reset). reset() puts it
+-- back, so every global a library made is gone, and so is any a test left.
+-- The mocks' own tables are put back field by field as well, so a mock a
+-- test replaced and failed to restore is the harness's own again.
+local SNAPSHOT
+local RESTORED = { "space", "index", "editor", "config", "actionButton", "command", "event",
+  "widget", "dom", "markdown", "net", "yaml", "spacelua", "codeWidget", "system", "js",
+  "icon", "view", "jsonschema", "string", "table", "math", "os" }
+
+function snapshotGlobals()
+  if SNAPSHOT then return end
+  SNAPSHOT = { globals = {}, fields = {} }
+  for k, v in pairs(_G) do SNAPSHOT.globals[k] = v end
+  for _, name in ipairs(RESTORED) do
+    local t = _G[name]
+    if type(t) == "table" then
+      local copy = {}
+      for k, v in pairs(t) do copy[k] = v end
+      SNAPSHOT.fields[name] = copy
+    end
+  end
+end
+
+local function restoreGlobals()
+  for k in pairs(_G) do
+    if SNAPSHOT.globals[k] == nil then _G[k] = nil end
+  end
+  for k, v in pairs(SNAPSHOT.globals) do _G[k] = v end
+  for name, copy in pairs(SNAPSHOT.fields) do
+    local t = SNAPSHOT.globals[name]
+    for k in pairs(t) do
+      if copy[k] == nil then t[k] = nil end
+    end
+    for k, v in pairs(copy) do t[k] = v end
+  end
+end
+
+-- Space Lua has no utf8 table, so a library that reaches for it while it
+-- loads fails there: it is nil here too while the blocks run.
+local function withoutUtf8(fn)
+  local lib = utf8
+  utf8 = nil
+  local good, err = pcall(fn)
+  utf8 = lib
+  if not good then error(err, 0) end
+end
+
+-- Blocks as reset() and loadLibrary() run them: each a chunk of its own,
+-- in the order given, so a local in one block is never seen in the next.
+local function runBlocks(blocks)
+  withoutUtf8(function()
+    for _, lib in ipairs(blocks) do
+      local chunk, err = load(lib.source, "=" .. lib.name)
+      if chunk then
+        local good, e = pcall(chunk)
+        if not good then chunk, err = nil, tostring(e) end
+      end
+      if not chunk then error("load " .. lib.name .. " (" .. tostring(lib.ref) .. "): " .. err, 0) end
+    end
+  end)
+end
+
+-- A library from src/ that no space installs, such as RecurringTasks, run
+-- into the current space as a copy at Library/Storie/<name> would run: its
+-- blocks in SilverBullet's order, through the query rewrite, by run.py.
+function loadLibrary(name)
+  assert(SRC[name], "src/ has no " .. tostring(name))
+  local blocks = __library_blocks(name)
+  assert(#blocks > 0, name .. " has no space-lua block")
+  runBlocks(blocks)
+end
+
 function reset(layout)
-  -- What the libraries printed outlives a reset in the middle of a test, for
-  -- runAll to check at its end; runAll clears H before each test.
-  local printed = H and H.printed
-  H = fresh()
-  H.printed = printed or H.printed
-  H.prefix = "/" .. layout .. "/"
+  snapshotGlobals()
+  -- What the libraries printed, and what the mocks warned of, outlive a
+  -- reset in the middle of a test, for runAll to check at its end; runAll
+  -- clears H before each test.
+  local printed, warnings = H and H.printed, H and H.warnings
   -- Every library global goes, so nothing a library remembered in one
   -- space is still there in the next. A library that caches the pages it
   -- found (GM Party, GM Bestiary, GM Maps) would otherwise answer the DM
   -- space with what it read in Adventure, and the two builds would differ.
-  gm, gmbook, spaceSwitcher, chapterNav, kb, gmb, party, bestiary, maps, sheets, recurringTasks =
-    nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
+  restoreGlobals()
+  H = fresh()
+  H.printed = printed or H.printed
+  H.warnings = warnings or H.warnings
+  H.prefix = "/" .. layout .. "/"
   for name, text in pairs(FIXTURES[layout]) do H.pages[name] = text end
   clearPlay(layout, H.pages)
-  -- Each block a chunk of its own, in SilverBullet's order (run.py), so a
-  -- local in one block is never seen in the next.
-  for _, lib in ipairs(LIBS[layout]) do
-    local chunk, err = load(lib.source, "=" .. lib.name)
-    if chunk then
-      local good, e = pcall(chunk)
-      if not good then chunk, err = nil, tostring(e) end
-    end
-    if not chunk then error("load " .. lib.name .. " (" .. tostring(lib.ref) .. "): " .. err, 0) end
-  end
+  -- Each block a chunk of its own, in SilverBullet's order (run.py).
+  runBlocks(LIBS[layout])
 end

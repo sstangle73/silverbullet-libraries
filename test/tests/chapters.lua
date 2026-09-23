@@ -163,6 +163,53 @@ test("chapters: a contents page that can't be checked leaves the title unlinked"
      "[[Books/01 The Tin Crown/Chapter 03|Chapter 3 →]]")
 end)
 
+-- The raise config.set gives a setting of the wrong shape, as SilverBullet's
+-- Config.set does once config.define has declared the shape.
+local function refused(key, value)
+  local good, err = pcall(config.set, key, value)
+  ok(not good, "config.set took " .. key .. " of the wrong shape")
+  return tostring(err)
+end
+
+test("chapters: the settings' shape is declared, and a wrong one is reported where it is set", "book", function()
+  eq(config.getSchemas().properties.chapterNav, chapterNav.schema)
+  eq(refused("chapterNav", { types = "chapter" }),
+     'Validation error for chapterNav:> types: Instance type "string" is invalid. Expected "array".')
+  has(refused("chapterNav", { type = { "chapter" } }), 'Property "type" does not match additional properties schema.',
+      "a misspelt key")
+  has(refused("chapterNav", { counterparts = { chapter = { label = "Notes" } } }),
+      'counterparts.chapter: Instance does not have required property "type".')
+  has(refused("chapterNav", { perType = { scene = { numberFeild = "scene" } } }),
+      'Property "numberFeild" does not match additional properties schema.')
+  has(refused("chapterNav", { types = { "chapter", 3 } }), 'types.1: Instance type "number" is invalid.')
+  eq(refused("chapterNav.types", "chapter"),
+     'Validation error for chapterNav.types:> Instance type "string" is invalid. Expected "array".', "a path inside")
+  config.set("chapterNav", { types = { "chapter" }, contents = "Index", perType = { scene = { contents = "Act" } },
+                             counterparts = { chapter = { type = "notes", label = "Notes" } } })
+end)
+
+-- SilverBullet sets the value before it checks it, so the bar reads what
+-- was written, and draws where it can.
+test("chapters: one type written without braces still draws the bar", "book", function()
+  local page = "Books/01 The Tin Crown/Chapter 02"
+  local want = chapterNav.markdown(page)
+  refused("chapterNav", { types = "chapter" })
+  eq(config.get("chapterNav.types"), "chapter", "the value is set all the same")
+  eq(chapterNav.markdown(page), want)
+  refused("chapterNav", { types = "scene" })
+  eq(chapterNav.markdown(page), nil, "a chapter, when only scenes get the bar")
+  -- an empty list is an object to JavaScript, which table.includes throws on
+  refused("chapterNav", { types = {} })
+  eq(chapterNav.markdown(page), nil)
+  refused("chapterNav", { types = 7 })
+  eq(chapterNav.markdown(page), nil)
+  refused("chapterNav", { types = { "chapter" }, counterparts = "notes" })
+  eq(chapterNav.markdown(page), want, "a companion setting of the wrong shape adds no link")
+  refused("chapterNav", { types = { "chapter" }, counterparts = { chapter = "notes" } })
+  eq(chapterNav.markdown(page), want)
+  eq(#H.printed, 0, "nothing failed: " .. list(H.printed))
+end)
+
 test("chapters: a failure hides the bar instead of breaking the page", "dm", function()
   reset("dm")
   H.current = "Book/Books/01 The Tin Crown/Chapter 02"

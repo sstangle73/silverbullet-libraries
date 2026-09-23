@@ -16,6 +16,7 @@ About ten seconds. PyYAML stands in for SilverBullet's `yaml.parse`, which GM Sh
 | File | Holds |
 |---|---|
 | `run.py` | Loads the campaign, installs the libraries, runs the tests |
+| `coverage.py` | Runs them with a line hook, and prints each library's function and line coverage |
 | `mocks.lua` | SilverBullet 2.11's APIs, mocked for plain Lua 5.4 |
 | `framework.lua` | `test()`, the checks, and the helpers the test files share |
 | `tests/*.lua` | The tests, a file for each library or feature; `harness_*.lua` test the harness itself |
@@ -26,6 +27,17 @@ About ten seconds. PyYAML stands in for SilverBullet's `yaml.parse`, which GM Sh
 | `spacelua/` | The same libraries in SilverBullet's own Lua, and `run.py` to run them in a 2.11.0 checkout |
 | `handout_test.py` | `tools/handout.py`, which fills the 2024 character sheet: its sums held against GM Sheets' own, and a sheet filled on a stand-in |
 | `instance/` | A real SilverBullet server over the campaign |
+
+## Coverage
+
+```
+python test/coverage.py
+python test/coverage.py --only storie,switcher --missed "Storie Check,Space Switcher"
+```
+
+`coverage.py` runs the suite with a Lua line hook and prints, for each library, the functions its tests called of those it defines, and the lines they ran of those that hold code. It takes the flags `run.py` takes, `--only`, `-k`, `--src` and `--shuffle`, and `--missed` lists, for the libraries named, each function no test called and each line no test ran, by its line on the library's page. The whole suite takes about 40 seconds with the hook, some 30 more than without.
+
+A line holds code when Lua compiles an instruction to it, which is all a line hook can see: each block is compiled and its bytecode read for the lines of every function in it, called or not, and the reader is held to what Lua's own `debug.getinfo(f, "L")` says of each function a test did call; a disagreement is printed, and fails the run. A comment, a blank line, or an `else` or `end` that compiles to nothing holds none. Every copy of a library, in whichever space's folder, counts as the library, and so does one a test loads with `loadLibrary`.
 
 ## The campaign
 
@@ -47,17 +59,29 @@ test("kit: marking someone met records the session", "dm", function()
 end)
 ```
 
-Before each test, `reset()` gives it the space's pages, loads every `space-lua` block there, and clears the play state: `State/`, `Sessions/` and the players' copies, all but `State/Revealed`. The current page is `index`, since a client always has a page open. Everything a library does lands in `H`: `H.pages`, `H.notifications`, `H.commands`, `H.views`. A test answers the library's questions ahead of time with `H.picks`, `H.prompts` and `H.confirms`. A file that isn't a page, such as a printed PDF, is the test's to put in `H.files[path]`, with its `lastModified`.
+Before each test, `reset()` gives it the space's pages, loads every `space-lua` block there, and clears the play state: `State/`, `Sessions/` and the players' copies, all but `State/Revealed`. It first puts every global back as the harness left it, from a snapshot taken once all the test files are loaded and before any library runs: a global a library or a test made is gone, and a mock a test replaced (`space.readPage`, `os.time`) is the harness's own again, field by field, even if the test failed before it could put it back. The current page is `index`, since a client always has a page open. Everything a library does lands in `H`: `H.pages`, `H.notifications`, `H.commands`, `H.views`. A test answers the library's questions ahead of time with `H.picks`, `H.prompts` and `H.confirms`. A file that isn't a page, such as a printed PDF, is the test's to put in `H.files[path]`, with its `lastModified` and, for a file a library reads, its contents as `data`, text or bytes.
+
+A library no space installs, such as RecurringTasks, is the test's to load: `loadLibrary("RecurringTasks")` runs its blocks into the space as a copy at `Library/Storie/RecurringTasks` would run, in SilverBullet's order.
 
 The blocks load as SilverBullet 2.11 loads them, each a chunk of its own: highest priority first, the first `-- priority: N` anywhere in the block and none counting as 0, then by the block's name, `<page>@<offset of its fence>`, with the offset in UTF-16 code units and the names compared as JavaScript compares strings. So a page's blocks need not run in page order: GM Kit's fences sit at offsets where `"146433" < "26434"`, and its second block runs first. Code at the top of a block can't count on the page's other blocks having run. `tests/harness_order.lua` holds the harness to this, and the Space Lua suite holds the rule to SilverBullet's own indexer and sort.
 
-A library prints only when something went wrong that it chose to swallow, such as a bar that failed to draw, so a test fails if a line is left in `H.printed` at its end. A test that makes a library print on purpose takes the lines and checks them: `has(takePrinted()[1], "boom")`.
+A library prints only when something went wrong that it chose to swallow, such as a bar that failed to draw, so a test fails if a line is left in `H.printed` at its end. A test that makes a library print on purpose takes the lines and checks them: `has(takePrinted()[1], "boom")`. The mocks warn, in `H.warnings`, of what SilverBullet lets pass and then gets wrong, and a test fails on a warning left at its end in the same way; one that means to cause it takes it with `takeWarnings()`.
 
-**The mocks answer as SilverBullet does where it has bitten.** `space.pageExists` is link resolution, as it is in 2.11: an exact name, or else any page whose path ends in it. `freezeFileList()` holds the list it reads the way a real client's lags behind a write, and `settle()` catches it up. `space.getPageMeta` asks for the page itself, and `space.fileExists` and `space.getFileMeta` are exact, over pages and `H.files` alike. A query's `where` reads `0` and `""` as false, as SilverBullet's does, and its `order by` sorts stably, a nil last ascending and first descending. `editor.copyToClipboard` never fails to its caller: with `H.clipboardFails` set, it shows SilverBullet's own *Could not copy to clipboard* notification and returns.
+**The mocks answer as SilverBullet does where it has bitten.** `space.pageExists` is link resolution, as it is in 2.11: an exact name, or else any page whose path ends in it. `freezeFileList()` holds the list it reads the way a real client's lags behind a write, and `settle()` catches it up. `space.getPageMeta` asks for the page itself, and `space.fileExists` and `space.getFileMeta` are exact, over pages and `H.files` alike. `space.readFile` gives bytes, never text, as 2.11's does: `{ bytes = text }` here, which `encoding.utf8Decode` makes text. A query's `where` reads `0` and `""` as false, as SilverBullet's does, and its `order by` sorts stably, a nil last ascending and first descending. `index.pages(tag)` keeps the pages that carry the tag, and a dotted frontmatter key is a path, so the `share.uri`, `share.hash` and `share.mode` that `Library: Install` writes read as one table, `share`. `editor.copyToClipboard` never fails to its caller: with `H.clipboardFails` set, it shows SilverBullet's own *Could not copy to clipboard* notification and returns.
+
+**And they fail where Space Lua fails, or would hide a bug.** `tests/harness_mocks.lua` holds each of these to SilverBullet 2.11's source:
+
+- `utf8` is nil while the libraries load: Space Lua has none.
+- `table.includes` is SilverBullet's: it searches every value of a table, its named keys' too, gives false for nil, false, `0` and `""`, and throws on anything else, a string included.
+- `config.get` gives what SilverBullet's does, JavaScript's values: a table with a list part is an array, and any other, an empty one included, an object, which `table.includes` throws on. Its default goes the same way.
+- `string.rep` with a float count is an error. Space Lua gives `""` for a whole float, such as `4 / 2`, and three copies for 2.5, which hides the count that went wrong.
+- `config.set` warns of a table that mixes a list with named keys: SilverBullet keeps only the list.
+- `config.define` declares a schema, and each later `config.set` under it is checked, raising on a wrong shape after setting it, as `Config.set` does. `jsonschema.validateObject` words its errors as @cfworker/json-schema does, each at its path, with a list counted from 0.
+- `widget.new` checks its spec against 2.11's own widget schema: `markdown` a string, `html` a string or a node, `cssClasses` a list of strings (an empty table is an object, not a list), `display` `"block"` or `"inline"`. A key it doesn't know is an error too, though SilverBullet ignores one, since a misspelt key is a bug either way.
 
 ## SilverBullet's own Lua
 
-Plain Lua is not Space Lua: `s:gsub(...):sub(2)` works here and fails there, and `query` and `using` are keywords there. `spacelua/libraries.test.ts` runs the libraries in SilverBullet's own interpreter, with its standard library, its `widget.new` and its Markdown parser, over the same campaign. It loads every `space-lua` block the DM space holds, each on its own, in the order SilverBullet's own indexer and sort give, and fails on any that doesn't load; it loads every library in `src/` together as well, the ones the campaign doesn't install included. It drives the bar, marks, uses and Undo, a query on the Session Table, a book build, DM-only text, whose cases it reads from `tests/dmonly.lua` so the two can't drift apart, rolls, over the scene `tests/rolls.lua` writes for its own, and the party's level: a fight in versions, DCs that rise and a check that reads them, from `tests/levels.lua`.
+Plain Lua is not Space Lua: `s:gsub(...):sub(2)` works here and fails there, and `query` and `using` are keywords there. `spacelua/libraries.test.ts` runs the libraries in SilverBullet's own interpreter, with its standard library, its `widget.new`, its `Config` and `jsonschema` validator (so a widget's spec and a setting's shape are checked as SilverBullet checks them) and its Markdown parser, over the same campaign. It loads every `space-lua` block the DM space holds, each on its own, in the order SilverBullet's own indexer and sort give, and fails on any that doesn't load; it loads every library in `src/` together as well, the ones the campaign doesn't install included. It drives the bar, marks, uses and Undo, a query on the Session Table, a book build, DM-only text, whose cases it reads from `tests/dmonly.lua` so the two can't drift apart, rolls, over the scene `tests/rolls.lua` writes for its own, and the party's level: a fight in versions, DCs that rise and a check that reads them, from `tests/levels.lua`. It holds the small libraries' `version` and `stale()`, a setting of the wrong shape, which must raise in the words the plain-Lua mocks give, and Storie Check's list.
 
 It needs a SilverBullet checkout at 2.11.0, with its packages:
 

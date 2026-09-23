@@ -1,17 +1,12 @@
 ------------------------------------------------------------------ RecurringTasks
 
 -- RecurringTasks isn't one of the campaign's libraries, so no space loads it:
--- each test here loads its block from src/ itself, through run.py's own
--- query rewrite (the global transpile).
+-- each test here loads it from src/ itself, as a copy at
+-- Library/Storie/RecurringTasks would load (loadLibrary, in mocks.lua).
 
 local function loadRecurring()
   recurringTasks = nil
-  local n = 0
-  for block in SRC["RecurringTasks"]:gmatch("```space%-lua\n(.-)\n```") do
-    n = n + 1
-    assert(load(transpile(block), "=RecurringTasks #" .. n))()
-  end
-  assert(n > 0, "RecurringTasks has no space-lua block")
+  loadLibrary("RecurringTasks")
 end
 
 -- The index's tasks, the way SilverBullet 2.11 indexes them

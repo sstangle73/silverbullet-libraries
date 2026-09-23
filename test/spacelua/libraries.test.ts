@@ -18,6 +18,9 @@ import { indexSpaceLua } from "../../plugs/index/space_lua.ts";
 import { collectNodesOfType } from "../../plug-api/lib/tree.ts";
 import { parse } from "../markdown_parser/parse_tree.ts";
 import { buildExtendedMarkdownLanguage, parseMarkdown } from "../markdown_parser/parser.ts";
+import { Config } from "../config.ts";
+import { configSyscalls } from "../plugos/syscalls/config.ts";
+import { jsonschemaSyscalls } from "../plugos/syscalls/jsonschema.ts";
 import YAML from "js-yaml";
 
 const ROOT = process.env.SBLIB!;
@@ -203,7 +206,6 @@ async function setup(root: string, only?: Map<string, string>) {
   const notes: { message: string; kind: string; options: any }[] = [];
   const progress: { kind: string; percentage?: number }[] = [];
   const printed: string[] = [];
-  const store: Record<string, any> = {};
   const picks: string[] = [];
   const prompts: string[] = [];
   const opened: string[] = [];
@@ -225,20 +227,19 @@ async function setup(root: string, only?: Map<string, string>) {
     for (const [k, f] of Object.entries(fns)) t.rawSet(k, new LuaNativeJSFunction(f));
     env.set(name, t);
   };
-  const getPath = (path: string) =>
-    path.split(".").reduce((o: any, k) => (o === null || o === undefined ? undefined : o[k]), store);
-  stub("config", {
-    get: (key: string, fallback: unknown) => {
-      const v = getPath(key);
-      return v === undefined ? (fallback ?? null) : v;
-    },
-    set: (key: string, value: unknown) => {
-      const parts = key.split(".");
-      let o = store;
-      for (const p of parts.slice(0, -1)) o = o[p] ??= {};
-      o[parts.at(-1)!] = value;
-    },
-  });
+  // A namespace of SilverBullet's own syscalls, as the client exposes them
+  // to Lua: its arguments converted to JavaScript, its results as they are.
+  const syscalls = (mapping: Record<string, any>, ns: string) => {
+    const fns: Record<string, (...a: any[]) => unknown> = {};
+    for (const [name, def] of Object.entries(mapping)) {
+      if (name.startsWith(ns + ".")) fns[name.slice(ns.length + 1)] = (...a: any[]) => def.callback({}, ...a);
+    }
+    return fns;
+  };
+  // SilverBullet's own Config (client/config.ts): config.define declares a
+  // schema, and config.set checks each value against it, raising on a
+  // wrong shape after setting it.
+  stub("config", syscalls(configSyscalls(new Config()), "config"));
   stub("editor", {
     getCurrentPage: () => state.current,
     flashNotification: (message: string, kind: string, options: any) => {
@@ -300,8 +301,12 @@ async function setup(root: string, only?: Map<string, string>) {
       pages.delete(n);
     },
   });
+  // index.pages(tag): every page, or the pages that carry the tag as well
   stub("index", {
-    pages: () => [...pages].map(([name, text]) => ({ ...frontmatter(text), name })),
+    pages: (tag?: string) =>
+      [...pages]
+        .map(([name, text]) => ({ ...frontmatter(text), name }) as Record<string, any>)
+        .filter((p) => !tag || p.tags === tag || (Array.isArray(p.tags) && p.tags.includes(tag))),
   });
   stub("markdown", {
     parseMarkdown: (text: string) => parse(buildExtendedMarkdownLanguage({}), text),
@@ -330,7 +335,9 @@ async function setup(root: string, only?: Map<string, string>) {
   });
   stub("actionButton", { define: () => null });
   stub("event", { listen: () => null });
-  stub("jsonschema", { validateObject: () => null });
+  // SilverBullet's own validator: widget.new checks each spec with it, and
+  // Storie Check the small libraries' settings
+  stub("jsonschema", syscalls(jsonschemaSyscalls(), "jsonschema"));
   stub("system", {
     getURLPrefix: () => "/dm/",
     getBaseURI: () => "https://wiki.example.org/dm/",
@@ -400,11 +407,102 @@ test("every library in src/ loads, all of them in one space", async () => {
   expect(libs.size).toBeGreaterThan(10);
   const { env, commands, views, printed, order } = await setup(ROOT, libs);
   expect(order.length).toBe(ruleOrder([widgetPage(), ...libs]).length);
-  for (const name of ["gm", "gmbook", "party", "bestiary", "maps", "sheets", "gmb", "spaceSwitcher", "chapterNav", "kb"]) {
+  for (const name of ["gm", "gmbook", "party", "bestiary", "maps", "sheets", "gmb", "spaceSwitcher", "chapterNav", "kb",
+                      "recurringTasks", "storie"]) {
     expect(env.get(name), name).toBeTruthy();
   }
   expect(commands).toContain("Tasks: Generate for Today");
+  expect(commands).toContain("Storie: Check Libraries");
   expect(views).toEqual(expect.arrayContaining(["spaceSwitcher", "chapterNavTop", "chapterNavBottom"]));
+  expect(printed).toEqual([]);
+}, 60000);
+
+// A library's version as its page's frontmatter gives it.
+const versionOf = (lib: string) =>
+  readFileSync(join(ROOT, "src", lib + ".md"), "utf-8").match(/\nversion: "([^"]*)"\n/)![1];
+
+test("the small libraries name their version, and stale() finds a newer copy, in SilverBullet's own Lua", async () => {
+  const { env, run, pages, printed } = await setup(ROOT);
+  const libs: [string, string][] = [
+    ["spaceSwitcher", "Space Switcher"], ["chapterNav", "Chapter Navigation"], ["kb", "Appearances"],
+    ["storie", "Storie Check"],
+  ];
+  for (const [ns, lib] of libs) {
+    await run(`__v = ${ns}.version; __s = ${ns}.stale()`);
+    expect(env.get("__v"), ns).toBe(versionOf(lib));
+    expect(env.get("__s") ?? null, ns).toBeNull();
+  }
+  const copy = "Book/Library/Storie/Chapter Navigation";
+  pages.set(copy, pages.get(copy)!.replace(/\nversion: "[^"]*"\n/, '\nversion: "9.9.9"\n'));
+  await run(`__s, __r = chapterNav.stale()`);
+  const running = versionOf("Chapter Navigation");
+  expect(env.get("__s")).toBe(`Chapter Navigation ${running} is running; ${copy} holds 9.9.9. Run System: Reload.`);
+  expect(env.get("__r")).toBe(true);
+  pages.set(copy, pages.get(copy)!.replace('\nversion: "9.9.9"\n', '\nversion: "0.0.1"\n'));
+  await run(`__s, __r = chapterNav.stale()`);
+  expect(env.get("__s")).toBe(
+    `Chapter Navigation ${running} is running; ${copy} holds 0.0.1, an older version. ` +
+      "Update the older copy from inside its own space.",
+  );
+  expect(env.get("__r")).toBe(false);
+  expect(printed).toEqual([]);
+}, 60000);
+
+// SilverBullet's own Config and validator, which the plain-Lua suite's mocks
+// stand in for: the same words, the value set all the same, and the bars
+// reading what they can of it.
+test("a setting of the wrong shape raises where it is set, in the plain-Lua suite's words, and the bars still draw", async () => {
+  const { env, run, printed } = await setup(ROOT);
+  const P = "Book/Books/01 The Tin Crown/Chapter 02";
+  await run(`config.set("chapterNav", { types = { "chapter" } })
+__before = chapterNav.markdown("${P}")
+__ok, __err = pcall(config.set, "chapterNav", { types = "chapter" })
+__after = chapterNav.markdown("${P}")
+for _, s in ipairs(storie.check().settings) do
+  if s.key == "chapterNav" then __line = s.text end
+end
+__okEmpty = pcall(config.set, "chapterNav", { types = {} })
+__empty = chapterNav.markdown("${P}")
+__okOne = pcall(config.set, "spaceSwitcher", { spaces = { name = "DM", url = "/dm/", icon = "eye" } })
+__strip = spaceSwitcher.html("index")`);
+  expect(env.get("__ok")).toBe(false);
+  expect(env.get("__err")).toBe(
+    'Validation error for chapterNav:> types: Instance type "string" is invalid. Expected "array".',
+  );
+  expect(env.get("__before")).toContain("(2 of 3)");
+  expect(env.get("__after")).toBe(env.get("__before"));
+  expect(env.get("__line")).toBe(
+    'not the shape Chapter Navigation reads: types: Instance type "string" is invalid. Expected "array".',
+  );
+  // an empty table is a JavaScript object, which the bar reads as no types
+  expect(env.get("__okEmpty")).toBe(false);
+  expect(env.get("__empty") ?? null).toBeNull();
+  // one space without the list's braces is a list of that one
+  expect(env.get("__okOne")).toBe(false);
+  expect(env.get("__strip")).toContain('data-space="DM"');
+  expect(printed).toEqual([]);
+}, 60000);
+
+test("Storie Check lists the space's libraries, and sums them up, in SilverBullet's own Lua", async () => {
+  const { env, run, pages, notes, printed } = await setup(ROOT);
+  pages.set("Library/Storie/GM Book", pages.get("Adventure/Library/Storie/GM Book")!);
+  await run(`__md = storie.health().markdown
+__problems = table.concat(storie.check().problems, " | ")
+storie.notify()`);
+  const md: string = env.get("__md");
+  expect(md).toContain("**Storie libraries in this space:**");
+  expect(md).toContain(`- ✓ **Storie Check** ${versionOf("Storie Check")}: current`);
+  expect(md).toContain(
+    `  - [[Book/Library/Storie/Space Switcher]] ${versionOf("Space Switcher")}, ○ copied by hand: Library: Update skips it`,
+  );
+  expect(md).toContain("  - ⚠ copies at different depths");
+  expect(md).toContain("- ✓ `party`: GM Party tells GM Book how to print it");
+  expect(md).toContain("- ✓ `chapterNav`: the shape Chapter Navigation reads");
+  expect(env.get("__problems")).toContain(
+    "GM Book has copies at different depths: Adventure/Library/Storie/GM Book, Library/Storie/GM Book",
+  );
+  expect(notes.at(-1)!.kind).toBe("warning");
+  expect(notes.at(-1)!.message.startsWith("⚠ Storie libraries: ")).toBe(true);
   expect(printed).toEqual([]);
 }, 60000);
 

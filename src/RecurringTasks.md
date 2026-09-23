@@ -111,6 +111,10 @@ actionButton.define {
 }
 ```
 
+## Its version
+
+`recurringTasks.version` is the version of the Lua the tab runs, and `recurringTasks.stale()` says in words when a copy of this page, at any depth, holds another: nil while every copy matches. Storie Check lists both, for every library in the space.
+
 ## Changes in 1.1
 
 **Works with SilverBullet 2.x.** Completed tasks are read from the index, so the `completion` strategy finally sees when a task was last ticked, and counts from the daily note it was ticked in. If the index can't be read, a notification names the completion tasks left out that day instead of failing silently. Settings are read with `config.get`.
@@ -130,7 +134,60 @@ actionButton.define {
 -- are given, so it can be checked without a space. recurringTasks.generate
 -- does the reading and writing.
 recurringTasks = recurringTasks or {}
+recurringTasks.version = "1.1.0"
 local rt = recurringTasks
+
+-- Nil while this tab runs the Lua that every copy of this page holds, or
+-- else what differs, in words: a copy that holds a newer version, which
+-- System: Reload loads, or an older one, to update from inside its own
+-- space. The copies are the library pages the index names
+-- Library/Storie/RecurringTasks, at any depth. It never raises: what it
+-- can't find out, it doesn't report.
+function rt.stale()
+  local ok, found = pcall(function()
+    local lib, running = "Library/Storie/RecurringTasks", rt.version
+    local function shown(v)
+      if type(v) == "number" and v == math.floor(v) then return string.format("%d", v) end
+      return tostring(v)
+    end
+    local function before(a, b)
+      local x, y = {}, {}
+      for n in string.gmatch(shown(a), "%d+") do x[#x + 1] = tonumber(n) end
+      for n in string.gmatch(shown(b), "%d+") do y[#y + 1] = tonumber(n) end
+      for i = 1, math.max(#x, #y) do
+        if (x[i] or 0) ~= (y[i] or 0) then return (x[i] or 0) < (y[i] or 0) end
+      end
+      return false
+    end
+    local copies = query[[
+      from p = index.pages("meta/library")
+      where p.name == lib or string.endsWith(p.name, "/" .. lib)
+      order by p.name
+    ]]
+    local newer, older = {}, {}
+    for _, p in ipairs(copies) do
+      if p.version == nil then
+        older[#older + 1] = p.name .. " has no version"
+      elseif p.version ~= running and before(running, p.version) then
+        newer[#newer + 1] = p.name .. " holds " .. shown(p.version)
+      elseif p.version ~= running then
+        older[#older + 1] = p.name .. " holds " .. shown(p.version) .. ", an older version"
+      end
+    end
+    if #newer + #older == 0 then return nil end
+    local advice = "Run System: Reload."
+    if #older > 0 then
+      advice = #newer > 0 and "Run System: Reload, and update the older copy from inside its own space."
+        or "Update the older copy from inside its own space."
+    end
+    local reload = #newer > 0
+    for _, o in ipairs(older) do newer[#newer + 1] = o end
+    return { text = "RecurringTasks " .. running .. " is running; " .. table.concat(newer, "; ") .. ". " .. advice,
+             reload = reload }
+  end)
+  if ok and found then return found.text, found.reload end
+  return nil
+end
 
 -- ---------------------------------------------------------- Dates
 -- A date is a whole number of days since 1 January 1970, from the calendar

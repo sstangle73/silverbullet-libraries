@@ -80,6 +80,12 @@ All optional. Set them with `config.set("chapterNav", { ... })` in a `space-lua`
 | `contents` | `Contents` | The name of the contents page in a book's folder |
 | `perType` | none | Per type, any of the settings above but the first three |
 
+SilverBullet checks these settings against their shape, declared in the last block on this page. A `config.set("chapterNav", ...)` of the wrong shape, a misspelt key or `types = "chapter"` for `types = { "chapter" }`, raises where it is written, in the browser's console, and the rest of that `space-lua` block doesn't run, so give each library's settings a block of their own. The bar still reads what it can: one type written without braces counts as a list of that one. Storie Check lists what is wrong.
+
+## Its version
+
+`chapterNav.version` is the version of the Lua the tab runs, and `chapterNav.stale()` says in words when a copy of this page, at any depth, holds another: nil while every copy matches. Storie Check lists both, for every library in the space.
+
 ## Changes in 1.1.1
 
 The contents link goes only to a page of exactly that name: a page elsewhere whose name merely ends the same way no longer takes it over.
@@ -93,6 +99,59 @@ Types of its own, as above. A folder's own page now stands in as its contents pa
 ```space-lua
 -- priority: -1
 chapterNav = chapterNav or {}
+chapterNav.version = "1.1.1"
+
+-- Nil while this tab runs the Lua that every copy of this page holds, or
+-- else what differs, in words: a copy that holds a newer version, which
+-- System: Reload loads, or an older one, to update from inside its own
+-- space. The copies are the library pages the index names
+-- Library/Storie/Chapter Navigation, at any depth. It never raises: what it
+-- can't find out, it doesn't report.
+function chapterNav.stale()
+  local ok, found = pcall(function()
+    local lib, running = "Library/Storie/Chapter Navigation", chapterNav.version
+    local function shown(v)
+      if type(v) == "number" and v == math.floor(v) then return string.format("%d", v) end
+      return tostring(v)
+    end
+    local function before(a, b)
+      local x, y = {}, {}
+      for n in string.gmatch(shown(a), "%d+") do x[#x + 1] = tonumber(n) end
+      for n in string.gmatch(shown(b), "%d+") do y[#y + 1] = tonumber(n) end
+      for i = 1, math.max(#x, #y) do
+        if (x[i] or 0) ~= (y[i] or 0) then return (x[i] or 0) < (y[i] or 0) end
+      end
+      return false
+    end
+    local copies = query[[
+      from p = index.pages("meta/library")
+      where p.name == lib or string.endsWith(p.name, "/" .. lib)
+      order by p.name
+    ]]
+    local newer, older = {}, {}
+    for _, p in ipairs(copies) do
+      if p.version == nil then
+        older[#older + 1] = p.name .. " has no version"
+      elseif p.version ~= running and before(running, p.version) then
+        newer[#newer + 1] = p.name .. " holds " .. shown(p.version)
+      elseif p.version ~= running then
+        older[#older + 1] = p.name .. " holds " .. shown(p.version) .. ", an older version"
+      end
+    end
+    if #newer + #older == 0 then return nil end
+    local advice = "Run System: Reload."
+    if #older > 0 then
+      advice = #newer > 0 and "Run System: Reload, and update the older copy from inside its own space."
+        or "Update the older copy from inside its own space."
+    end
+    local reload = #newer > 0
+    for _, o in ipairs(older) do newer[#newer + 1] = o end
+    return { text = "Chapter Navigation " .. running .. " is running; " .. table.concat(newer, "; ") .. ". " .. advice,
+             reload = reload }
+  end)
+  if ok and found then return found.text, found.reload end
+  return nil
+end
 
 -- A setting, or what the page's own type overrides it with.
 local function setting(key, default, kind)
@@ -101,6 +160,15 @@ local function setting(key, default, kind)
     if own ~= nil then return own end
   end
   return config.get("chapterNav." .. key, default)
+end
+
+-- A setting that holds a list, as a list: one name written without the
+-- braces, types = "chapter", is a list of that one, and anything else that
+-- isn't a table is none. The schema below reports either shape.
+local function listOf(value)
+  if type(value) == "string" then return { value } end
+  if type(value) ~= "table" then return {} end
+  return value
 end
 
 -- Pages of the same type directly inside `folder`, in chapter order.
@@ -156,7 +224,12 @@ function chapterNav.markdown(name)
     cur = p
   end
   local kind = cur and cur[typeField]
-  if not kind or not table.includes(setting("types", { "chapter" }), kind) then return nil end
+  if not kind then return nil end
+  local listed = false
+  for _, t in ipairs(listOf(setting("types", { "chapter" }))) do
+    if t == kind then listed = true end
+  end
+  if not listed then return nil end
 
   local numberField = setting("numberField", "chapter", kind)
   local labelField = setting("labelField", "chapter_label", kind)
@@ -191,8 +264,9 @@ function chapterNav.markdown(name)
 
   -- The companion page, where this space has one: the page of the other type
   -- with the same book and chapter.
-  local companion = setting("counterparts", {})[kind]
-  if companion and companion.type then
+  local counterparts = setting("counterparts", {})
+  local companion = type(counterparts) == "table" and counterparts[kind] or nil
+  if type(companion) == "table" and companion.type then
     local other, bookField = companion.type, setting("bookField", "book", kind)
     local book, number = cur[bookField], cur[numberField]
     local match = query[[
@@ -232,4 +306,39 @@ view.define {
   refreshOn = { "editor:pageLoaded", "mq:emptyQueue:indexQueue" },
   content = content,
 }
+```
+
+The shape of the settings, for SilverBullet's `config.define`. This block loads ahead of any `CONFIG` page's, so SilverBullet checks each `config.set("chapterNav", ...)` against it as it runs.
+
+```space-lua
+-- priority: 50
+-- Ahead of every CONFIG block, which counts as 0 without a priority of its
+-- own: a config.set of the wrong shape then raises where it is written, and
+-- Storie Check reads the same schema. The bar still reads what it can.
+chapterNav = chapterNav or {}
+local text = { type = "string" }
+local own = {
+  numberField = text, labelField = text, labelFormat = text,
+  bookField = text, titleField = text, contents = text,
+}
+local all = {
+  types = { type = "array", items = text },
+  typeField = text,
+  counterparts = {
+    type = "object",
+    additionalProperties = {
+      type = "object",
+      properties = { type = text, label = text },
+      required = { "type" },
+      additionalProperties = false,
+    },
+  },
+  perType = {
+    type = "object",
+    additionalProperties = { type = "object", properties = own, additionalProperties = false },
+  },
+}
+for key, schema in pairs(own) do all[key] = schema end
+chapterNav.schema = { type = "object", properties = all, additionalProperties = false }
+config.define("chapterNav", chapterNav.schema)
 ```

@@ -96,6 +96,16 @@ function takePrinted()
   return lines
 end
 
+-- The same for what the mocks warned of: something SilverBullet lets pass
+-- and gets wrong, such as a config.set that mixes a list with named keys,
+-- whose keys SilverBullet drops. A test that means to cause one takes it:
+--   has(takeWarnings()[1], "mixes a list")
+function takeWarnings()
+  local lines = H.warnings
+  H.warnings = {}
+  return lines
+end
+
 -- A message that isn't valid UTF-8 would stop Python reading it back.
 local function printable(s)
   if utf8.len(s) then return s end
@@ -103,6 +113,9 @@ local function printable(s)
 end
 
 function runAll(words)
+  -- Every test file is loaded by now, and no library has run: what reset()
+  -- puts the globals back to. Taken once; a runAll inside a test keeps it.
+  snapshotGlobals()
   local passed, total, failed = 0, 0, {}
   for _, t in ipairs(T) do
     if not words or t.name:find(words, 1, true) then
@@ -116,6 +129,10 @@ function runAll(words)
         if #H.printed > 0 then
           error("a library printed, as it does only when something went wrong (a test that " ..
                 "means it to reads it with takePrinted()): " .. table.concat(H.printed, " | "), 0)
+        end
+        if #H.warnings > 0 then
+          error("the mocks warned of what SilverBullet would get wrong (a test that means it " ..
+                "to reads it with takeWarnings()): " .. table.concat(H.warnings, " | "), 0)
         end
       end)
       if good then

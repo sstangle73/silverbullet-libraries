@@ -5,7 +5,7 @@ version: 1.2.0
 ---
 
 # Storie Library Repository
-Custom SilverBullet libraries — task management, a set of tools for running tabletop RPG campaigns, a switcher for servers with several spaces, and chapter tools for a wiki about a book or a series.
+Custom SilverBullet libraries — task management, a set of tools for running tabletop RPG campaigns, a switcher for servers with several spaces, chapter tools for a wiki about a book or a series, and a health check for all of them.
 
 They are written for SilverBullet 2.11.
 
@@ -29,6 +29,7 @@ The campaign libraries expect a DM space that holds the others as folders: the a
 | Appearances | The book's space, where its chapters name the people and places in them |
 | Space Switcher | Every space. One that holds others as folders runs their copies, and needs none of its own |
 | RecurringTasks | Any space; it has nothing to do with the others |
+| Storie Check | The adventure space, or any other with Storie libraries to check. One that holds others as folders runs their copy, and checks their libraries too |
 
 ## Contents
 ```#meta/library/remote
@@ -86,5 +87,10 @@ name: "Appearances"
 uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Appearances.md
 website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Appearances.md
 description: "Lists the chapters that name the current page in their frontmatter, grouped by book, for a wiki about a book or a series."
+---
+name: "Storie Check"
+uri: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Storie%20Check.md
+website: https://github.com/sstangle73/silverbullet-libraries/blob/main/src/Storie%20Check.md
+description: "A health check for the Storie libraries in a space: every copy and its version, whether the tab runs them current, GM Book's printers, and whether the small libraries' settings are the shape they read."
 ---
 ```

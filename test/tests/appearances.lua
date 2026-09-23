@@ -70,6 +70,60 @@ test("appearances: one book, a name of its own, and a field with a single name",
   eq(kb.appearances("Nowhere"), nil)
 end)
 
+-- config.set of the wrong shape raises once the shape is declared, as
+-- SilverBullet's Config.set does, after it has set the value.
+local function refused(value)
+  local good, err = pcall(config.set, "appearances", value)
+  ok(not good, "config.set took appearances of the wrong shape")
+  return tostring(err)
+end
+
+test("appearances: the settings' shape is declared, and a wrong one is reported where it is set", "book", function()
+  eq(config.getSchemas().properties.appearances, kb.schema)
+  eq(refused({ fields = "people" }),
+     'Validation error for appearances:> fields: Instance type "string" is invalid. Expected "object".')
+  has(refused({ fields = { person = { "people", "cast" } } }),
+      'fields.person: Instance type "array" is invalid. Expected "string".')
+  has(refused({ fields = { person = "people" }, namefield = "alias" }),
+      'Property "namefield" does not match additional properties schema.', "a misspelt key")
+  config.set("appearances", { fields = { person = "people" }, nameField = "alias", chapterType = "chapter" })
+end)
+
+-- SilverBullet sets the value before it checks it; a list of the wrong
+-- shape lists nothing, quietly, rather than break the page it is on.
+test("appearances: settings of the wrong shape list nothing, and break nothing", "book", function()
+  ok(kb.appearances("People/Ada"), "Ada's list, as the CONFIG page sets it")
+  refused({ fields = "people" })
+  eq(kb.appearances("People/Ada"), nil)
+  refused({ fields = { ["kb-person"] = { "people" } } })
+  eq(kb.appearances("People/Ada"), nil)
+  eq(#H.printed, 0)
+end)
+
+-- A chapter's field that holds a map rather than a list names no one: it
+-- is walked, not handed to table.includes, which throws on one.
+test("appearances: a chapter field that isn't a list or a name names no one", "dm", function()
+  reset("dm")
+  H.pages = {
+    ["Cast/Ada"] = "---\ntype: person\n---\n",
+    ["Chapters/1"] = "---\ntype: chapter\nchapter: 1\npeople: [Ada]\n---\n",
+    ["Chapters/2"] = "---\ntype: chapter\nchapter: 2\n---\n",
+  }
+  config.set("appearances", { fields = { person = "people" } })
+  local real = index.pages
+  index.pages = function(...)
+    local out = real(...)
+    for _, p in ipairs(out) do
+      if p.name == "Chapters/2" then p.people = { lead = "Ada" } end
+    end
+    return out
+  end
+  local good, w = pcall(kb.appearances, "Cast/Ada")
+  index.pages = real
+  ok(good, tostring(w))
+  eq(w.markdown, "1 chapter.\n\n[[Chapters/1|1]]")
+end)
+
 test("appearances: books with a title or a number only", "dm", function()
   reset("dm")
   H.pages = {

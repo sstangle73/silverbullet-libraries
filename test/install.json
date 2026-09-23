@@ -1,6 +1,6 @@
 {
   "Library/Storie/": ["GM Kit", "GM Beyond"],
-  "Adventure/Library/Storie/": ["GM Book", "GM Party", "GM Bestiary", "GM Maps", "GM Sheets", "Chapter Navigation", "Space Switcher"],
+  "Adventure/Library/Storie/": ["GM Book", "GM Party", "GM Bestiary", "GM Maps", "GM Sheets", "Chapter Navigation", "Space Switcher", "Storie Check"],
   "Author/Library/Storie/": ["Chapter Navigation", "Space Switcher"],
   "Book/Library/Storie/": ["Appearances", "Chapter Navigation", "Space Switcher"],
   "Player/Library/Storie/": ["Space Switcher"]

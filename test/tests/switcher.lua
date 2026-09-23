@@ -365,6 +365,70 @@ test("switcher: any server, with its own names, folders and colours", "dm", func
   if not good then error(err, 0) end
 end)
 
+-- A copy of the page updated in another tab, or synced from another
+-- device: this tab still runs the Lua it loaded.
+test("switcher: a copy that holds a newer version asks for a reload, in words", "dm", function()
+  H.current = "index"
+  hasnt(H.views["spaceSwitcher"].content(), "space-switcher-stale")
+  local copy = "Adventure/Library/Storie/Space Switcher"
+  local text = H.pages[copy]
+  local running = spaceSwitcher.version
+  H.pages[copy] = text:gsub('\nversion: "[^"\n]*"\n', '\nversion: "' .. running .. '.1"\n', 1)
+  eq(H.views["spaceSwitcher"].content(), '<div class="space-switcher">' .. TABS.dm ..
+     '<span class="space-switcher-links"><span class="space-switcher-stale" title="Space Switcher ' .. running ..
+     " is running; " .. copy .. " holds " .. running .. '.1. Run System: Reload.">⟳ New version: reload</span>' ..
+     "</span></div>")
+  -- and beside the page link, ahead of it
+  H.current = "Adventure/index"
+  has(H.views["spaceSwitcher"].content(), "⟳ New version: reload</span><a href=")
+  -- an older copy elsewhere is no reason to reload this tab
+  H.pages[copy] = text:gsub('\nversion: "[^"\n]*"\n', '\nversion: "0.0.1"\n', 1)
+  hasnt(H.views["spaceSwitcher"].content(), "space-switcher-stale")
+  has(spaceSwitcher.stale(), "an older version")
+end)
+
+-- config.set of the wrong shape raises once the shape is declared, as
+-- SilverBullet's Config.set does, after it has set the value.
+local function refused(value)
+  local good, err = pcall(config.set, "spaceSwitcher", value)
+  ok(not good, "config.set took spaceSwitcher of the wrong shape")
+  return tostring(err)
+end
+
+test("switcher: the settings' shape is declared, and a wrong one is reported where it is set", "dm", function()
+  eq(config.getSchemas().properties.spaceSwitcher, spaceSwitcher.schema)
+  eq(refused({ spaces = "DM" }),
+     'Validation error for spaceSwitcher:> spaces: Instance type "string" is invalid. Expected "array".')
+  has(refused({ spaces = { { name = "DM" } } }), 'spaces.0: Instance does not have required property "url".')
+  has(refused({ spaces = { { url = "/dm/", colour = "#000" } } }),
+      'spaces.0: Property "colour" does not match additional properties schema.', "a misspelt key")
+  has(refused({ spaces = { { url = 5 } } }), 'spaces.0.url: Instance type "number" is invalid. Expected "string".')
+  has(refused({ spaces = {} }), 'spaces: Instance type "object" is invalid. Expected "array".',
+      "an empty list is an object to JavaScript")
+  has(refused({ spaces = { { url = "/dm/" } }, directory = "/.dashboard" }),
+      'directory: Instance type "string" is invalid. Expected "object".')
+  has(refused({ space = { { url = "/dm/" } } }), 'Property "space" does not match additional properties schema.')
+end)
+
+-- SilverBullet sets the value before it checks it, so the strip reads what
+-- was written, and draws where it can.
+test("switcher: one space written without the list's braces still draws its tab", "dm", function()
+  H.current = "index"
+  refused({ spaces = { name = "DM", url = "/dm/", icon = "eye", color = "#311b92" } })
+  eq(H.views["spaceSwitcher"].content(),
+     '<div class="space-switcher">' .. here("DM", "eye", "#311b92", "#ffffff") .. "</div>")
+  -- an entry that isn't a table is left out, and a url that isn't text is none
+  refused({ spaces = { "Adventure", { name = "DM", url = "/dm/", icon = "eye", color = "#311b92" }, { name = "Odd", url = 5 } } })
+  eq(H.views["spaceSwitcher"].content(),
+     '<div class="space-switcher">' .. here("DM", "eye", "#311b92", "#ffffff") ..
+     '<a class="space-switcher-tab" data-space="Odd" href="' .. ORIGIN .. '/" title="Go to the Odd space"><span>Odd</span></a></div>')
+  refused({ spaces = "DM" })
+  eq(H.views["spaceSwitcher"].content(), nil, "no spaces: no strip")
+  refused({ spaces = { { name = "DM", url = "/dm/", icon = "eye", color = "#311b92" } }, directory = "/.dashboard" })
+  hasnt(H.views["spaceSwitcher"].content(), "space-switcher-links", "a directory of the wrong shape: no link")
+  eq(#H.printed, 0, "nothing failed: " .. list(H.printed))
+end)
+
 test("switcher: a space without an icon or a name still draws", "dm", function()
   reset("dm")
   config.set("spaceSwitcher", { spaces = { { url = "/dm/" }, { name = "Two", url = "/two/" } } })
@@ -443,7 +507,8 @@ end)
 -- (plugs/configuration-manager/libraries.ts at 2.11.0), so Update All in a
 -- space that holds others writes their libraries again at its root.
 test("installing: each space's libraries are installed and updated from inside it", "dm", function()
-  for page, text in pairs({ ["Repositories/storie"] = REPOSITORY, ["Space Switcher"] = SRC["Space Switcher"] }) do
+  for page, text in pairs({ ["Repositories/storie"] = REPOSITORY, ["Space Switcher"] = SRC["Space Switcher"],
+                            ["README.md"] = README }) do
     has(text, "`Library: Update All`", page)
     has(text, "from inside", page)
   end

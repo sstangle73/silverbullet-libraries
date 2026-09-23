@@ -4,24 +4,10 @@
 -- prints: how many pages, when, with which Homebrewery, and the pages whose
 -- text ran past their foot. The bar says so beside Open PDF.
 
--- mocks.lua has no space.readFile yet. SilverBullet 2.11's reads any file
--- in the space as bytes, a Uint8Array that encoding.utf8Decode makes text;
--- here a file's H.files[path].data is its text, or { bytes = text } for
--- bytes, which the encoding stand-in reads.
-if not space.readFile then
-  function space.readFile(name)
-    if H.failMeta and H.failMeta[name] then error(H.failMeta[name]) end
-    local f = H.files[name]
-    if f == nil or f.data == nil then error("Not found: " .. name) end
-    return f.data
-  end
-end
-if not encoding then
-  encoding = { utf8Decode = function(data)
-    assert(type(data) == "table" and type(data.bytes) == "string", "utf8Decode needs bytes")
-    return data.bytes
-  end }
-end
+-- SilverBullet 2.11's space.readFile reads any file in the space as bytes,
+-- a Uint8Array that encoding.utf8Decode makes text; in the mocks a file's
+-- H.files[path].data is its text, or { bytes = text }, and either is read
+-- as bytes.
 
 local PRINTED = '{"edition": "dm", "pages": 83, "spills": [[14, "The ford is knee deep"], [31, "and the rest"]], ' ..
   '"printed_at": "2026-09-22T14:03:11Z", "chrome": "140.0.7339.80", "sandbox": true, ' ..
@@ -95,7 +81,7 @@ test("book: a malformed provenance never breaks the bar", "adventure", function(
   eq(#bar.html.children, 5)
 end)
 
-test("book: a provenance without its PDF says nothing, and one read as bytes says it all", "adventure", function()
+test("book: a provenance without its PDF says nothing, and one given as bytes says it all", "adventure", function()
   gmbook.compile({ "dm" })
   H.files["Build/Book DM.pdf.json"] = { lastModified = 2000, data = PRINTED }
   hasnt(textOf(gmbook.bar("Build/Book DM").html), "83 pages", "no PDF, so nothing to say it of")
