@@ -64,3 +64,7 @@ Each library keeps its own on its page, under a *Changes in* heading for each ve
 ## Licence
 
 MIT: see [LICENSE](LICENSE).
+
+## Buy me a coffee
+
+If these libraries have earned a place at your table, you can [buy me a coffee](https://buymeacoffee.com/stevenstorie). ☕
