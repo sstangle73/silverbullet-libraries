@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Bestiary"
 description: "Creature pages that point at official stat blocks: the reference links to a compendium on the page, and cites the book and its entry in print. Wires those pages to GM Party's fights."
 author: "Steven Storie"
-version: "1.3.0"
+version: "1.3.1"
 ---
 
 # GM Bestiary
@@ -35,7 +35,7 @@ A page with `type: monster` describes one creature. What it is and how it behave
 | `entry` | The entry in the book that holds that stat block, where the book files it under another name: a vine blight is under *Blights*, a raven under *Animals* |
 | `source` | The book it is in. The settings give the one to assume |
 | `cr` | Its Challenge Rating, which a fight that uses it is checked against, by value: `0.125` and `"1/8"` are the same CR. A creature with a stat block for each of several levels lists them all: `cr: ["3", "5"]` |
-| `ddb` | A link to it, for running from a screen: a web address, or its D&D Beyond id alone, `5195252`, which links to its page there. Anything else isn't linked, and the page says so |
+| `ddb` | A link to it, for running from a screen: its web address, whole. D&D Beyond's pages need the creature's name after its id, `https://www.dndbeyond.com/monsters/5195252-vine-blight`, so an id alone isn't linked, nor is anything else that isn't a web address, and the page says so |
 
 Then, wherever the reference belongs on the page:
 
@@ -91,6 +91,10 @@ A tab reads its libraries when it opens. If the space's GM Bestiary changes afte
 
 It reads the `version` of every page named `Library/Storie/GM Bestiary`, at any depth, from the index, and it never fails. GM Book asks before it builds. A reference on the page shows a line of its own over it, *⟳ Reload this tab*, with the two versions: on the page only, never in print or in the players' copies.
 
+## Changes in 1.3.1
+
+**An id alone is no link.** A `ddb` of a bare number, `5195252`, linked to `https://www.dndbeyond.com/monsters/5195252`, and D&D Beyond answers that with *Not found*: its pages need the name after the id. It isn't linked now, and the page's ⚠ says to copy the whole address from the creature's page there. A web address links as before.
+
 ## Changes in 1.3
 
 **A tab behind its space says so.** `bestiary.version` and `bestiary.stale()` say when the tab runs another GM Bestiary than the space holds, and a reference says so on a line of its own over it, on the page alone, never in print. See *A tab behind its space*.
@@ -108,7 +112,7 @@ A creature page's `cr` can list several CRs, for a creature with a stat block fo
 ```space-lua
 -- priority: 10
 bestiary = bestiary or {}
-bestiary.version = "1.3.0"
+bestiary.version = "1.3.1"
 
 bestiary.config = {
   type      = "monster",              -- the page type that describes a creature
@@ -271,21 +275,20 @@ function bestiary.find(ref)
   return all.root ~= "" and all.byName[all.root .. ref] or nil
 end
 
--- The compendium link a page's ddb gives: a web address as it stands, and
--- a bare number, the shape a character page's ddb takes, as the creature's
--- page on D&D Beyond. Anything else is no link, and the second value is
--- what was there, for the page to flag.
+-- The compendium link a page's ddb gives: a web address as it stands.
+-- Anything else is no link, and the second value is what was there, for
+-- the page to flag. The third is true for a bare number, the creature's id
+-- on D&D Beyond: its pages there need the name after the id, as
+-- /monsters/5195252-vine-blight, and the id alone opens nothing.
 function bestiary.link(ddb)
   if ddb == nil or ddb == "" then return nil end
   if type(ddb) == "number" then
-    if ddb >= 1 and ddb == math.floor(ddb) then
-      return "https://www.dndbeyond.com/monsters/" .. string.format("%d", ddb)
-    end
+    if ddb == math.floor(ddb) then return nil, string.format("%d", ddb), true end
     return nil, tostring(ddb)
   end
   local s = tostring(ddb)
   local trimmed = s:match("^%s*(.-)%s*$")
-  if trimmed:match("^%d+$") then return "https://www.dndbeyond.com/monsters/" .. trimmed end
+  if trimmed:match("^%d+$") then return nil, trimmed, true end
   if trimmed:lower():match("^https?://%S+$") then return trimmed end
   return nil, s
 end
@@ -295,7 +298,7 @@ end
 function bestiary.creature(ref)
   local p = bestiary.find(ref)
   if not p then return nil end
-  local url, unlinked = bestiary.link(p.ddb)
+  local url, unlinked, bareId = bestiary.link(p.ddb)
   return {
     page = p.name,
     title = p.name:match("([^/]+)$") or p.name,
@@ -305,6 +308,7 @@ function bestiary.creature(ref)
     cr = p.cr,
     url = url,
     unlinked = unlinked,
+    bareId = bareId == true,
   }
 end
 
@@ -358,8 +362,11 @@ local function forms(c)
   -- a ddb that is no link, flagged on the page alone: the Markdown face
   -- goes to tables and the players' copies
   if c.unlinked then
+    local why = c.bareId
+      and ". D&D Beyond needs the whole address, with the name after the id: copy it from the creature's page there."
+      or ", not a web address."
     parts[#parts + 1] = dom.span { class = "gmbestiary-unlinked",
-      __rawText = " ⚠ Not linked: ddb is " .. c.unlinked .. ", not a web address or a D&D Beyond id." }
+      __rawText = " ⚠ Not linked: ddb is " .. c.unlinked .. why }
   end
   local html = dom.span(parts).outerHTML
   local markdown = c.url and ("[" .. c.statblock .. "](" .. c.url .. ")" .. tail)

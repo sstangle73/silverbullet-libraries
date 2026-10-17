@@ -65,23 +65,31 @@ local function withDdb(value)
   return bestiary.ref(STRANGLER)
 end
 
-test("bestiary: a bare D&D Beyond id links to the creature's page there", "adventure", function()
-  -- the shape a character page's ddb takes, as a number and as text
-  for _, value in ipairs({ "5195252", '"5195252"' }) do
+test("bestiary: a bare D&D Beyond id isn't linked, since its page there needs the name too", "adventure", function()
+  -- /monsters/5195252 is D&D Beyond's Not found; /monsters/5195252-vine-blight
+  -- is the page. As a number, as text, and with spaces round it
+  for _, value in ipairs({ "5195252", '"5195252"', '" 5195252 "' }) do
     local w = withDdb(value)
-    eq(href(w), "https://www.dndbeyond.com/monsters/5195252", value)
-    eq(w.markdown, "[Vine Blight](https://www.dndbeyond.com/monsters/5195252) — Monster Manual, *Blights*", value)
-    hasnt(w.html, "⚠", value)
-    eq(bestiary.creature(STRANGLER).url, "https://www.dndbeyond.com/monsters/5195252")
+    hasnt(w.html, "href=", value)
+    has(seen(w), "⚠ Not linked: ddb is 5195252. D&D Beyond needs the whole address, with the name " ..
+      "after the id: copy it from the creature's page there.", value)
+    eq(w.markdown, "**Vine Blight** — Monster Manual, *Blights*", value .. ": the Markdown face goes to the players")
+    local c = bestiary.creature(STRANGLER)
+    eq(c.url, nil, value)
+    eq(c.bareId, true, value)
   end
   eq(bestiary.printed.ref(STRANGLER), "Vine Blight — Monster Manual, *Blights*", "print carries no URL")
+  local w = withDdb("https://www.dndbeyond.com/monsters/5195252-vine-blight")
+  eq(href(w), "https://www.dndbeyond.com/monsters/5195252-vine-blight", "the whole address links")
+  eq(bestiary.creature(STRANGLER).bareId, false)
 end)
 
 test("bestiary: a ddb that is no link isn't linked, and only the page says so", "adventure", function()
-  for _, value in ipairs({ "www.dndbeyond.com/monsters/5195252-vine-blight", '"javascript:alert(1)"', "vine blight" }) do
+  for _, value in ipairs({ "www.dndbeyond.com/monsters/5195252-vine-blight", '"javascript:alert(1)"', "vine blight",
+                           "5195252.5" }) do
     local w = withDdb(value)
     hasnt(w.html, "href=", value)
-    has(seen(w), "⚠ Not linked: ddb is " .. (value:gsub('"', "")) .. ", not a web address or a D&D Beyond id.")
+    has(seen(w), "⚠ Not linked: ddb is " .. (value:gsub('"', "")) .. ", not a web address.")
     eq(w.markdown, "**Vine Blight** — Monster Manual, *Blights*", value .. ": the Markdown face goes to the players")
     eq(bestiary.printed.ref(STRANGLER), "Vine Blight — Monster Manual, *Blights*", value)
   end
