@@ -337,3 +337,132 @@ test("kit: the Session Table and The Party list what was found", "dm", function(
     if text:find('p.type == "state-record"', 1, true) then has(text, "p.found", name) end
   end
 end)
+
+------------------------------------------------------------------ D&D Beyond and choices
+
+local RACK = "Adventure/World/Items/Rack"
+local LANTERN_DDB = "https://www.dndbeyond.com/magic-items/1-lantern"
+
+-- The links a bar draws: each as its address, its words and its target.
+local function linksOf(node, out)
+  out = out or {}
+  if type(node) ~= "table" then return out end
+  if node.tag == "a" then
+    out[#out + 1] = node.attrs.href .. " " .. textOf(node) .. " " .. tostring(node.attrs.target)
+  end
+  for _, c in ipairs(node.children or {}) do linksOf(c, out) end
+  return out
+end
+
+-- The row of an item's on a bar, by the item's name.
+local function itemRowOf(bar, name)
+  local function find(node)
+    if type(node) ~= "table" then return nil end
+    local class = node.attrs and node.attrs.class or ""
+    if node.tag == "div" and class:find("gmkit-item", 1, true)
+        and textOf(node.children[1]):find("|" .. name .. "]]", 1, true) then
+      return node
+    end
+    for _, c in ipairs(node.children or {}) do
+      local f = find(c)
+      if f then return f end
+    end
+  end
+  local found = find(bar.html or bar)
+  if not found then error("no row " .. name .. " in: " .. textOf(bar.html or bar)) end
+  return found
+end
+
+local function withDdb(page, value)
+  H.pages[page] = (H.pages[page]:gsub("^%-%-%-\n", "---\nddb: " .. value .. "\n", 1))
+end
+
+-- A rack the party chooses from: a spear and an axe, linked spear first,
+-- each in more than one way of writing a link; a head that is the spear's
+-- own, not the rack's; a bow it names that isn't there; and a club in its
+-- folder that it never links.
+local function rack()
+  H.pages[RACK] = "---\ntype: item\n---\n\n# Rack\n\n- [A spear](<Rack/Spear>), [its head](<Rack/Spear/Head>)\n" ..
+    "- [[World/Items/Rack/Axe#Rules|An axe]], or [the axe](World/Items/Rack/Axe)\n" ..
+    "- [A bow](<Rack/Bow>)\n- [The spear again](../Items/Rack/Spear)\n\n## Rules\n\n- Take one.\n"
+  H.pages[RACK .. "/Axe"] = "---\ntype: item\nddb: https://www.dndbeyond.com/magic-items/2-axe\n---\n\n# Axe\n" ..
+    "\n## Rules\n\n- Chop.\n"
+  H.pages[RACK .. "/Spear"] = "---\ntype: item\n---\n\n# Spear\n"
+  H.pages[RACK .. "/Spear/Head"] = "---\ntype: item\n---\n\n# Head\n"
+  H.pages[RACK .. "/Club"] = "---\ntype: item\n---\n\n# Club\n"
+end
+
+test("kit: an item's bar and rows link its page on D&D Beyond", "dm", function()
+  withDdb(LANTERN, LANTERN_DDB)
+  local own = gm.bar(LANTERN)
+  eq(list(linksOf(own.html)), LANTERN_DDB .. " D&D Beyond ↗ _blank")
+  eq(list(buttonsOf(own.html)), "Reveal | Reveal part… | Mark found", "a link, not a button")
+  local scene = gm.bar(SCENE2)
+  eq(list(linksOf(itemRowOf(scene, "Lantern"))), LANTERN_DDB .. " D&D Beyond ↗ _blank")
+  eq(list(buttonsOf(scene.html)), "Reveal | Mark planned | Mark started | Mark found")
+  H.current = SCENE2
+  click(gm.bar(), "Mark found")
+  eq(list(linksOf(itemRowOf(gm.bar(), "Lantern"))), LANTERN_DDB .. " D&D Beyond ↗ _blank",
+     "found, the row keeps its link")
+  hasnt(gm.publicFrontmatter(H.pages[LANTERN]), "ddb", "the players' copy never carries it")
+  eq(#linksOf(gm.bar("Adventure/Campaign/Act I/Scene 1").html), 0, "a scene with no items links nothing")
+end)
+
+test("kit: a ddb that is no web address is flagged, not linked", "dm", function()
+  eq(gm.ddbLink(LANTERN), nil, "no ddb, no link")
+  withDdb(LANTERN, "12345")
+  local url, unlinked = gm.ddbLink(LANTERN)
+  eq(url, nil)
+  eq(unlinked, "12345")
+  local bar = gm.bar(LANTERN)
+  eq(#linksOf(bar.html), 0)
+  has(textOf(bar.html), "⚠ Not linked: ddb is 12345, not a web address")
+  H.pages[LANTERN] = (H.pages[LANTERN]:gsub("ddb: 12345", 'ddb: "' .. LANTERN_DDB .. '"'))
+  eq(gm.ddbLink(LANTERN), LANTERN_DDB, "quoted, as YAML allows")
+  gm.config.ddbKey = "beyond"
+  eq(gm.ddbLink(LANTERN), nil, "another key, set in config")
+  gm.config.ddbKey = "ddb"
+end)
+
+test("kit: an item the party chooses from has a row for each choice", "dm", function()
+  rack()
+  eq(list(gm.choicesOf(RACK)), RACK .. "/Spear | " .. RACK .. "/Axe",
+     "the pages it links, in its order: one level down, there, and each once")
+  eq(#gm.choicesOf(LANTERN), 0)
+  H.pages[RACK .. "/Big Club"] = "---\ntype: item\n---\n\n# Big Club\n"
+  H.pages[RACK] = "---\ntype: item\n---\n\n# Rack\n\n- [A big club](World/Items/Rack/Big%20Club)\n"
+  eq(list(gm.choicesOf(RACK)), RACK .. "/Big Club", "a %20 in a link reads as its space")
+  H.pages[RACK .. "/Big Club"] = nil
+  rack()
+  local bar = gm.bar(RACK)
+  eq(list(buttonsOf(bar.html)), "Reveal | Reveal part… | Mark found | Mark found | Mark found")
+  local spear = itemRowOf(bar, "Spear")
+  eq(spear.attrs.class, "gmkit-item gmkit-choice")
+  eq(#linksOf(spear), 0, "the spear has no ddb")
+  eq(list(linksOf(itemRowOf(bar, "Axe"))), "https://www.dndbeyond.com/magic-items/2-axe D&D Beyond ↗ _blank")
+  H.current = RACK
+  click(itemRowOf(gm.bar(), "Axe"), "Mark found")
+  has(H.pages["State/Items/Axe"], "found: true\n")
+  eq(H.pages["State/Items/Rack"], nil, "the rack itself isn't marked")
+  eq(list(buttonsOf(itemRowOf(gm.bar(), "Axe"))), "Unmark found | Reveal")
+end)
+
+test("kit: a page that shows a chosen-from item's rules gets rows for its choices, each once", "dm", function()
+  rack()
+  local scene3 = "Adventure/Campaign/Act I/Scene 3"
+  H.pages[scene3] = "---\ntype: scene\n---\n\n# Scene 3\n\n![[World/Items/Rack/Axe#Rules]]\n\n" ..
+    "![[World/Items/Rack#Rules]]\n"
+  local bar = gm.bar(scene3)
+  local rows = {}
+  local function collect(node)
+    if type(node) ~= "table" then return end
+    local class = node.attrs and node.attrs.class or ""
+    if node.tag == "div" and class:find("gmkit-item", 1, true) then
+      rows[#rows + 1] = (textOf(node.children[1]):match("|([^%]]+)%]%]")) .. " " .. class
+    end
+    for _, c in ipairs(node.children or {}) do collect(c) end
+  end
+  collect(bar.html)
+  eq(list(rows), "Axe gmkit-item | Rack gmkit-item | Spear gmkit-item gmkit-choice",
+     "the axe's own row first, as the page shows it, and not again under the rack")
+end)

@@ -96,6 +96,17 @@ test("kit bar: the ceiling: another item row costs no scan of the index", "dm", 
   ceiling(cost, 7, 7, 3)
 end)
 
+test("kit bar: the ceiling: an item's choices cost a look each, and no scan", "dm", function()
+  local rack = "Adventure/World/Items/Rack"
+  H.pages[rack] = "---\ntype: item\nddb: https://www.dndbeyond.com/magic-items/3-rack\n---\n\n# Rack\n\n" ..
+    "- [A spear](<Rack/Spear>)\n- [An axe](<Rack/Axe>)\n"
+  H.pages[rack .. "/Spear"] = "---\ntype: item\n---\n\n# Spear\n"
+  H.pages[rack .. "/Axe"] = "---\ntype: item\nddb: https://www.dndbeyond.com/magic-items/2-axe\n---\n\n# Axe\n"
+  local cost = costOf(function() return gm.bar(rack) end)
+  eq(#gm.choicesOf(rack), 2, "two choice rows")
+  ceiling(cost, 5, 7, 3)
+end)
+
 test("kit bar: a session's bar reads each scene once, and scans each thing once", "dm", function()
   gm.mark("Adventure/Campaign/Act I/Scene 1", "started")
   gm.mark("Adventure/Campaign/Act I/Scene 1", "finished")

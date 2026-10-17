@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Kit"
 description: "Session tracking and fog-of-war publishing for tabletop RPG campaigns. Keeps play state out of your adventure pages so the adventure stays publishable."
 author: "Steven Storie"
-version: "3.9.1"
+version: "3.10.0"
 ---
 
 # GM Kit
@@ -93,6 +93,10 @@ An item is an adventure page in an `Items/` folder. Marking it found records the
 That page's bar gets a row for the item, "Quiver: six arrows here", with *Mark found*. Found there, its uses start at that count for the party of the moment, and its rows and its own bar show what is left, "●●●●○○ 4 of 6 arrows left", with *Use an arrow* and *Refund an arrow*. Each has *Undo*. Marked found from its own page, an item takes the count of the page that hands it out, and asks where when several do. An item that nothing hands out is found without uses. *Unmark found* takes the find back, uses and all, so finding it again counts them afresh.
 
 **Rules in a scene.** A page that shows an item's rules with `![[World/Items/Quiver#Rules]]` gets a row for it too, so wherever the rules are, the uses are.
+
+**On D&D Beyond.** An item whose frontmatter has a web address under `ddb`, its page on D&D Beyond, gets a *D&D Beyond ↗* link on its bar and on every row for it, opening in a tab of its own. Anything else there is flagged on the bar instead of linked: an item's page on D&D Beyond needs its name in the address, so its id alone won't do. The players' copies never carry it, since publishing keeps only `type` and `tags`.
+
+**A thing the party chooses from.** An item whose page links items in a folder of its own name, such as `World/Items/Weapon Rack/Spear` from `World/Items/Weapon Rack`, is one the party takes some of. Its bar, and its row on any page that hands it out or shows its rules, get a row under it for each, in the order its page links them, so you mark found the ones taken, each with its own link. A page in that folder the item never links is not one of them, nor is one a level further down.
 
 ## Characters
 
@@ -329,6 +333,14 @@ A link in a players' copy to an adventure page they won't have, hidden, private,
 
 An embed of a page they won't have, or of a section of one they don't get, `![[World/People/The Warden#What They Want]]`, is left out of the copy, and the report names it. Links in code and in `${...}` stay as they are.
 
+## Changes in 3.10
+
+**An item links its page on D&D Beyond.** An item with a web address under `ddb` gets a *D&D Beyond ↗* link on its bar and on its rows. See *Items*.
+
+**An item the party chooses from shows its choices.** The items its page links in a folder of its name get rows under it, on its own bar and wherever it has a row, so each is marked found on its own. See *Items*.
+
+New functions: `gm.ddbLink` and `gm.choicesOf`; and the setting `ddbKey`.
+
 ## Changes in 3.9.1
 
 **A character's bar shows in a tab that opens straight onto the page.** It asked the client's list of pages whether the page and its record were there, and a tab that has only just opened draws its bar before that list has loaded: the bar showed nothing, or a character hurt at the table as whole, until you went to another page and back. It asks the space itself now.
@@ -458,7 +470,7 @@ Buttons: the GM bar, the header buttons, pickers, and *Undo*. Marking someone me
 gm = gm or {}
 -- The version this code is, as the page's frontmatter says: gm.stale()
 -- holds it to the copies of GM Kit the space has.
-gm.version = "3.9.1"
+gm.version = "3.10.0"
 
 gm.config = {
   sessionPage     = "Session Table",
@@ -498,6 +510,9 @@ gm.config = {
   -- tagged. The rest is the DM's: an NPC's role or faction, a page's draft
   -- status, its place in the book.
   publishKeys     = { "type", "tags" },
+  -- The frontmatter key holding an item's page on D&D Beyond, its web
+  -- address, which the item's bar and rows link to.
+  ddbKey          = "ddb",
   -- What marking a page met or visited reveals of it: the sections its
   -- frontmatter names under this key, or `all` for the whole page...
   revealFirstKey  = "reveal_first",
@@ -2770,6 +2785,46 @@ function gm.handoutsOf(item)
           out[#out + 1] = h
           break
         end
+      end
+    end
+  end
+  return out
+end
+
+-- An item's page on D&D Beyond, from the web address in its ddb. Anything
+-- else there is no link, and the second value is what was there, for the
+-- bar to flag: an item's page there needs its name in the address, so an
+-- id alone won't do.
+function gm.ddbLink(page)
+  if not gm.exists(page) then return nil end
+  local ddb = gm.frontmatter(space.readPage(page))[gm.config.ddbKey]
+  if ddb == nil or ddb == "" then return nil end
+  local trimmed = ddb:match("^%s*(.-)%s*$")
+  if trimmed:lower():match("^https?://%S+$") then return trimmed end
+  return nil, ddb
+end
+
+-- What the party chooses from an item: the items its page links to in a
+-- folder of its name, one level down, in the order it links them. A bag of
+-- tools is one page that lists them, each linked to a page of its own. The
+-- links are found by the folder and name in them, however they are
+-- written, so no scan of the index is needed.
+function gm.choicesOf(item)
+  local out, seen = {}, {}
+  if not gm.exists(item) then return out end
+  local text = (space.readPage(item):gsub("%%20", " "))
+  local stem = gm.name(item) .. "/"
+  local at = 1
+  while true do
+    local s, e = text:find(stem, at, true)
+    if not s then break end
+    at = e + 1
+    local name, after = text:sub(e + 1, e + 200):match("^([^/%]>)|#\n]+)(.?)")
+    if name and after ~= "/" then
+      local choice = item .. "/" .. name
+      if not seen[choice] then
+        seen[choice] = true
+        if gm.kind(choice) == "Items" and gm.exists(choice) then out[#out + 1] = choice end
       end
     end
   end
@@ -6384,6 +6439,20 @@ local function usesParts(item, state, add, note)
   end
 end
 
+-- An item's link to its page on D&D Beyond, added to a bar, opening in a
+-- tab of its own. A ddb that is no web address is flagged instead.
+local function ddbParts(item, add)
+  local url, unlinked = gm.ddbLink(item)
+  if url then
+    add(dom.a { class = "gmkit-bar-note gmkit-ddb", href = url, target = "_blank",
+                rel = "noopener", __rawText = "D&D Beyond ↗" })
+  elseif unlinked then
+    add(dom.span { class = "gmkit-bar-note",
+                   __rawText = "⚠ Not linked: " .. gm.config.ddbKey .. " is " .. unlinked ..
+                               ", not a web address" })
+  end
+end
+
 -- How the players' copy of a page has fallen behind since it was
 -- published, by the record publishing keeps: parts revealed since, the
 -- whole page revealed since, or the page saved since, or parts taken back,
@@ -6518,10 +6587,12 @@ local function scenePlayParts(page, state, add, note)
 end
 
 -- A row on a page's bar for an item the page hands out or shows: found or
--- not, the uses left, and whether the players can see the item's page.
-function gm.itemRow(item, from, handout)
+-- not, the uses left, whether the players can see the item's page, and its
+-- page on D&D Beyond. A choice, one of the things an item is chosen from,
+-- sits indented under it.
+function gm.itemRow(item, from, handout, choice)
   local state = gm.readState(item)
-  local spec = { class = "gmkit-item" }
+  local spec = { class = choice and "gmkit-item gmkit-choice" or "gmkit-item" }
   local function add(x) spec[#spec + 1] = x end
   local function note(text) add(dom.span { class = "gmkit-bar-note", text }) end
   note("**[[" .. item .. "|" .. gm.name(item) .. "]]**")
@@ -6534,7 +6605,23 @@ function gm.itemRow(item, from, handout)
     if handout then note(handout.text .. " here") end
     add(gm.button("Mark found", function() gm.markFound(item, from) end))
   end
+  ddbParts(item, add)
   return dom.div(spec)
+end
+
+-- The rows for an item and the things it is chosen from, on `page`'s bar,
+-- each item once: `drawn` holds those it has already.
+local function itemRows(add, item, page, handout, drawn)
+  if not drawn[item] then
+    drawn[item] = true
+    add(gm.itemRow(item, page, handout))
+  end
+  for _, c in ipairs(gm.choicesOf(item)) do
+    if not drawn[c] then
+      drawn[c] = true
+      add(gm.itemRow(c, page, nil, true))
+    end
+  end
 end
 
 -- Previous, current and next scene, for the top of a session's own notes:
@@ -6631,10 +6718,14 @@ function gm.bar(page)
   for _, mark in ipairs(recorded) do
     add(gm.button("Unmark " .. mark, function() gm.unmark(page, mark) end))
   end
+  if can.found then ddbParts(page, add) end
   local statePage, stated = gm.stateFor(page)
   if stated then note("[[" .. statePage .. "|Play state]]") end
+  -- an item's own choices first, then what the page hands out or shows
+  local drawn = { [page] = true }
+  if can.found then itemRows(add, page, page, nil, drawn) end
   local items, given = gm.itemsOn(page)
-  for _, item in ipairs(items) do add(gm.itemRow(item, page, given[item])) end
+  for _, item in ipairs(items) do itemRows(add, item, page, given[item], drawn) end
   local checks = gm.checks(page)
   if #checks > 0 then add(gm.rollRow(page, checks, state)) end
   return widget.new { display = "block", html = dom.div(spec) }
@@ -6988,6 +7079,12 @@ event.listen {
   gap: 6px 10px;
   padding-top: 6px;
   border-top: 1px solid var(--editor-widget-background-color);
+}
+
+/* One of the things an item is chosen from, under the item's own row. */
+.gmkit-item.gmkit-choice {
+  padding-left: 1.5em;
+  border-top-style: dashed;
 }
 
 /* The widget's own Copy and Reload overlay would cover the bar's buttons. */

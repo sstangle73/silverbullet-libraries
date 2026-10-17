@@ -707,6 +707,64 @@ test("a find recorded by mistake comes off again", async () => {
   expect(pages.get(RECORD)).not.toContain("not found after all");
 }, 60000);
 
+test("an item links its page on D&D Beyond, and an item chosen from has rows for its choices", async () => {
+  const { env, run, pages, notes, printed } = await setup(ROOT);
+  const RACK = "Adventure/World/Items/Rack";
+  const item = (name: string, ddb?: string) =>
+    "---\ntype: item\n" + (ddb ? "ddb: " + ddb + "\n" : "") + "---\n\n# " + name + "\n";
+  pages.set(LANTERN, pages.get(LANTERN)!.replace(/^---\n/, "---\nddb: https://www.dndbeyond.com/magic-items/1-lantern\n"));
+  pages.set(RACK, "---\ntype: item\n---\n\n# Rack\n\n- [A spear](<Rack/Spear>), [its head](<Rack/Spear/Head>)\n" +
+    "- [[World/Items/Rack/Axe#Rules|An axe]]\n- [A big club](World/Items/Rack/Big%20Club)\n- [A bow](<Rack/Bow>)\n");
+  pages.set(RACK + "/Spear", item("Spear"));
+  pages.set(RACK + "/Spear/Head", item("Head"));
+  pages.set(RACK + "/Axe", item("Axe", "https://www.dndbeyond.com/magic-items/2-axe"));
+  pages.set(RACK + "/Big Club", item("Big Club", "12345"));
+  await run(`
+    local function links(node, out)
+      if type(node) ~= "table" then return out end
+      if node.tag == "a" then out[#out + 1] = node.spec.href .. " " .. node.spec.target .. " " .. node.spec.__rawText end
+      for _, c in ipairs(node.spec) do links(c, out) end
+      return out
+    end
+    local function rows(node, out)
+      if type(node) ~= "table" then return out end
+      local class = node.spec.class or ""
+      if node.tag == "div" and class:find("gmkit-item", 1, true) then
+        out[#out + 1] = class .. ": " .. __text(node.spec[1]) .. " " .. table.concat(links(node, {}), ",")
+      end
+      for _, c in ipairs(node.spec) do rows(c, out) end
+      return out
+    end
+    __choices = table.concat(gm.choicesOf("${RACK}"), " | ")
+    __lantern = table.concat(links(gm.bar("${LANTERN}").html, {}), " | ")
+    __scene = table.concat(rows(gm.bar("${SCENE2}").html, {}), " | ")
+    local rack = gm.bar("${RACK}").html
+    __rack = table.concat(rows(rack, {}), " | ")
+    __flag = __text(rack)
+    for _, c in ipairs(rack.spec) do
+      if type(c) == "table" and (c.spec.class or ""):find("gmkit-choice", 1, true)
+          and __text(c.spec[1]):find("|Axe]]", 1, true) then
+        __click(c, "Mark found")
+      end
+    end
+  `);
+  expect(env.get("__choices")).toBe(`${RACK}/Spear | ${RACK}/Axe | ${RACK}/Big Club`);
+  expect(env.get("__lantern")).toBe("https://www.dndbeyond.com/magic-items/1-lantern _blank D&D Beyond ↗");
+  expect(env.get("__scene")).toBe(
+    "gmkit-item: **[[" + LANTERN + "|Lantern]]** https://www.dndbeyond.com/magic-items/1-lantern _blank D&D Beyond ↗",
+  );
+  expect(env.get("__rack")).toBe(
+    "gmkit-item gmkit-choice: **[[" + RACK + "/Spear|Spear]]**  | " +
+      "gmkit-item gmkit-choice: **[[" + RACK + "/Axe|Axe]]** https://www.dndbeyond.com/magic-items/2-axe _blank D&D Beyond ↗ | " +
+      "gmkit-item gmkit-choice: **[[" + RACK + "/Big Club|Big Club]]** ",
+  );
+  expect(env.get("__flag")).toContain("⚠ Not linked: ddb is 12345, not a web address");
+  expect(pages.get("State/Items/Axe")).toContain("found: true\n");
+  expect(pages.get("State/Items/Rack")).toBeUndefined();
+  expect(notes.filter((n) => n.message.startsWith("GM Kit:"))).toEqual([]);
+  expect(printed).toEqual([]);
+}, 60000);
+
 test("a second mark keeps the first, whatever space.pageExists says", async () => {
   const { env, run, pages, freeze } = await setup(ROOT);
   // the list pageExists reads stays as it was before the first mark, the way
