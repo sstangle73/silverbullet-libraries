@@ -3,7 +3,7 @@ tags: meta/library
 name: "Library/Storie/GM Book"
 description: "Compile a campaign space into a single manuscript in DM and player editions, transformed for Homebrewery so it renders as a WotC-style 5e book."
 author: "Steven Storie"
-version: "1.14.0"
+version: "1.14.1"
 ---
 
 # GM Book
@@ -148,6 +148,14 @@ The layout comes from measurements of Homebrewery's 5ePHB theme on US Letter, ta
 
 **Raw HTML** is Homebrewery's own to lay out, so the builder leaves it out of the count — except where the element says how tall it is, with a `height` in px and `display: block`. Then it is measured at that height and spaced as the paragraph Homebrewery wraps it in, which is how [GM Maps](<GM Maps>) gets a drawn map onto a page without overflowing it.
 
+What counts as raw HTML is what Homebrewery's Markdown makes an HTML block of, by [CommonMark's rules](https://spec.commonmark.org/0.31.2/#html-blocks): a line that opens with a block-level tag such as `<div>` or `<table>`, with a comment, with `<pre>`, `<script>`, `<style>` or `<textarea>`, or that holds one tag and nothing else. A comment, and `<pre>` and its kin, run to the line that closes them, blank lines and all; the others to a blank line. Any other line that starts with `<` is a paragraph, and is measured as one, its tags taking no room. So a quote's credit set small under its box is counted like any line of text:
+
+    > "Mind the third stone."
+
+    <small>— *The Tin Crown*, ch. 2</small>
+
+Homebrewery's 5ePHB theme sets `<small>` at the body's own size, so a credit in `<small>` takes the room the same words would without it.
+
 **A drawing wider than a column** gets a page to itself: a page break before it, unless it already starts one, and a page break after it. That is a drawing that also says how wide it is, with a `width` in px wider than a column, set in a block that spans both columns, the way [GM Sheets](<GM Sheets>) prints a character's sheet:
 
     <div style="column-span:all">
@@ -192,6 +200,10 @@ The script that prints it can say what it printed in a JSON file beside it, `Bui
 
 **Pandoc with a 5e LaTeX template**: for a fully local, reproducible build.
 
+## Changes in 1.14.1
+
+**A line that opens with inline HTML is a paragraph.** A credit in `<small>` under a boxed quote, or a paragraph that opens with a `<span>`, was taken for raw HTML and measured at nothing, so a page full of them ran past its foot. Raw HTML is now only what Homebrewery's Markdown makes an HTML block of; everything else that starts with `<` is measured as the paragraph it is, its tags taking no room. A comment, or `<pre>`, ends at the line that closes it rather than at the next blank line, and a line of words under it is measured too. An image or other element among a paragraph's words is named after a build, as it was when the paragraph was taken for raw HTML. See *Page breaks*.
+
 ## Changes in 1.14
 
 **A tab behind its libraries builds nothing.** A tab left open while `Library: Update` brings a new GM Book, or a new release of a library the book prints with, would build with the old code over the new pages. The build is refused, and the notification and the bar name each library, with a *Reload* button: see *Buttons*.
@@ -223,7 +235,7 @@ The script that prints it can say what it printed in a JSON file beside it, `Bui
 gmbook = gmbook or {}
 -- The version this tab's Lua is, the same as this page's frontmatter: a tab
 -- left open over a Library: Update runs the old one (see gmbook.stale).
-gmbook.version = "1.14.0"
+gmbook.version = "1.14.1"
 
 gmbook.config = {
   outputFolder = "Build/",
@@ -2657,6 +2669,30 @@ local function family(kind)
   return {r = f.body, b = f.bold, s = 1, add = 0, bump = BUMP, code = CODE_BUMP}
 end
 
+-- A line's words as Homebrewery shows them: inline tags and comments take no
+-- room, and an autolink, <https://…>, shows its address. The 5ePHB theme
+-- sets <small> at the body's own size (12.85px, measured in its renderer),
+-- so a credit in <small> takes the room the same words do without it.
+-- Inline code shows a tag as it is written.
+local function inlineText(text)
+  if not text:find("<", 1, true) then return text end
+  local out, p = {}, 1
+  while true do
+    local s, e = text:find("`[^`]*`", p)
+    local words = text:sub(p, (s or #text + 1) - 1)
+    words = words:gsub("<!%-%-.-%-%->", "")
+    words = words:gsub("<(/?%a[%w%-]*)([^>]*)>", function(name, rest)
+      if rest == "" or rest:match("^[%s/]") then return "" end
+      return name .. rest
+    end)
+    out[#out + 1] = words
+    if not s then break end
+    out[#out + 1] = text:sub(s, e)
+    p = e + 1
+  end
+  return table.concat(out)
+end
+
 -- Inline Markdown as unbreakable pieces with their widths. Each piece has
 -- the space before it (0 where a line breaks without one, after a hyphen or
 -- dash) and how much taller it makes its line: bold, italic and code come
@@ -2666,7 +2702,7 @@ end
 local function pieces(text, fam, dropCap)
   text = text:gsub("!%[[^%]]*%]%([^%)]*%)", "")
   text = text:gsub("%[([^%]]*)%]%([^%)]*%)", "%1")
-  text = text:gsub("<[^>]*>", "")
+  text = inlineText(text)
   text = text:gsub("&nbsp;", " ")
   text = text:gsub("&amp;", "&")
   local caps = dropCap and fonts().caps
@@ -2799,10 +2835,148 @@ local function isItem(l)
   return l:match("^%s*[-*+]%s+%S") or l:match("^%s*%d+[.)]%s+%S")
 end
 
-local function opensBlock(l)
+-- Raw HTML as Homebrewery's Markdown reads it, which is CommonMark's
+-- (https://spec.commonmark.org/0.31.2/#html-blocks): a line that starts
+-- with "<" opens an HTML block only by one of seven start conditions, and
+-- any other, such as <small>— a credit</small> or <span>words</span> and
+-- more words, is a paragraph that holds inline HTML, and takes room as one.
+local HTML_RAW = { script = true, pre = true, style = true, textarea = true }
+-- The sixth kind's tag names: CommonMark's, and meta, which Homebrewery's
+-- Markdown (marked) counts too.
+local HTML_BLOCK = {
+  address = true, article = true, aside = true, base = true, basefont = true, blockquote = true,
+  body = true, caption = true, center = true, col = true, colgroup = true, dd = true,
+  details = true, dialog = true, dir = true, div = true, dl = true, dt = true, fieldset = true,
+  figcaption = true, figure = true, footer = true, form = true, frame = true, frameset = true,
+  h1 = true, h2 = true, h3 = true, h4 = true, h5 = true, h6 = true, head = true, header = true,
+  hr = true, html = true, iframe = true, legend = true, li = true, link = true, main = true,
+  menu = true, menuitem = true, meta = true, nav = true, noframes = true, ol = true,
+  optgroup = true, option = true, p = true, param = true, search = true, section = true,
+  summary = true, table = true, tbody = true, td = true, tfoot = true, th = true, thead = true,
+  title = true, tr = true, track = true, ul = true,
+}
+
+-- A whole tag and nothing after it but space, <name attr="value" …> or
+-- </name>, as the seventh kind of HTML block opens.
+local function wholeTag(l)
+  local rest = l:match("^</%a[%w%-]*(.*)$")
+  if rest then return rest:match("^%s*>%s*$") ~= nil end
+  rest = l:match("^<%a[%w%-]*(.*)$")
+  if not rest then return false end
+  while true do
+    local after = rest:match("^%s+[%a_:][%w_.:%-]*(.*)$")
+    if not after then break end
+    rest = after:match('^%s*=%s*"[^"]*"(.*)$') or after:match("^%s*=%s*'[^']*'(.*)$")
+      or after:match("^%s*=%s*[^%s\"'=<>`]+(.*)$") or after
+  end
+  return rest:match("^%s*/?>%s*$") ~= nil
+end
+
+-- Which of CommonMark's seven kinds of HTML block a line opens, or nil for
+-- none: 1 <pre>, <script>, <style> or <textarea>; 2 a comment; 3 <?…; 4
+-- <!X…; 5 <![CDATA[…; 6 a block-level tag; 7 any other whole tag alone.
+local function htmlStart(l)
+  if l:sub(1, 1) ~= "<" then return nil end
+  local low = l:lower()
+  local name = low:match("^<(%a+)")
+  if name and HTML_RAW[name] and (low == "<" .. name or low:match("^<%a+[%s>]")) then return 1 end
+  if low:sub(1, 4) == "<!--" then return 2 end
+  if low:sub(1, 2) == "<?" then return 3 end
+  if l:sub(1, 9) == "<![CDATA[" then return 5 end
+  if low:match("^<!%a") then return 4 end
+  name = low:match("^</?(%a%w*)")
+  local rest = low:match("^</?%a%w*(.*)$")
+  if name and HTML_BLOCK[name] and (rest == "" or rest:match("^[ \t>]") or rest:sub(1, 2) == "/>") then
+    return 6
+  end
+  if wholeTag(l) then return 7 end
+  return nil
+end
+
+-- The last line of an HTML block of kind k that opens at line i: the first
+-- five end at the line that closes them, the others at a blank line. One
+-- never closed runs to the end of the text.
+local HTML_END = { "", "-->", "?>", ">", "]]>" }
+local function htmlEnd(lines, i, k)
+  local n = #lines
+  if k <= 5 then
+    for j = i, n do
+      local l = lines[j]
+      local from = j == i and 3 or 1
+      if k == 1 then
+        local low = l:lower()
+        for name in pairs(HTML_RAW) do
+          if low:find("</" .. name .. ">", 1, true) then return j end
+        end
+      elseif l:find(HTML_END[k], from, true) then
+        return j
+      end
+    end
+    return n
+  end
+  local j = i
+  while j < n and not lines[j + 1]:match("^%s*$") do j = j + 1 end
+  return j
+end
+
+-- The height raw HTML declares in px, and its width, where the element is
+-- displayed as a block too: an inline SVG map does both, so it can be
+-- measured exactly. nil where it doesn't.
+local function declared(html)
+  local h, w, blocked = nil, nil, false
+  for _, line in ipairs(html) do
+    local lh = tonumber(line:match('^<%a+[^>]-%sheight="(%d+%.?%d*)"'))
+    if lh and not h then
+      h = lh
+      w = tonumber(line:match('^<%a+[^>]-%swidth="(%d+%.?%d*)"'))
+    end
+    if line:find("display:%s*block") then blocked = true end
+  end
+  if h and blocked then return h, w end
+  return nil
+end
+
+-- Lines i on, up to a blank line.
+local function untilBlank(lines, i)
+  local run = {}
+  while i <= #lines and not lines[i]:match("^%s*$") do
+    run[#run + 1] = lines[i]
+    i = i + 1
+  end
+  return run
+end
+
+-- Raw HTML opening at line i, as { last, html, h, w }: its last line, its
+-- lines, and for a drawing the height and width it declares. A drawing runs
+-- to a blank line whatever kind of block Markdown makes of it, since it
+-- measures the same as the paragraph Homebrewery wraps it in. nil where the
+-- line opens a paragraph instead.
+local function rawHtml(lines, i)
+  local run = untilBlank(lines, i)
+  local h, w = declared(run)
+  if h then return { last = i + #run - 1, html = run, h = h, w = w } end
+  local k = htmlStart(lines[i])
+  if not k then return nil end
+  local last = htmlEnd(lines, i, k)
+  local html = {}
+  for j = i, last do html[#html + 1] = lines[j] end
+  return { last = last, html = html }
+end
+
+-- Whether line i ends the paragraph above it. Of HTML, only a block-level
+-- tag, a comment, or <pre>, <script>, <style> or <textarea> does in
+-- Homebrewery's Markdown (CommonMark lets <?, <!X and <![CDATA[ too; marked
+-- doesn't, and Homebrewery runs marked), and a drawing, which is measured on
+-- its own either way.
+local function opensBlock(lines, i)
+  local l = lines[i]
+  if l:match("^<") then
+    local k = htmlStart(l)
+    return k == 1 or k == 2 or k == 6 or (declared(untilBlank(lines, i))) ~= nil
+  end
   return l:match("^%s*$") or l:match("^#+%s") or l:match("^{{") or l:match("^|")
     or l:match("^>") or isItem(l) or l:match("^\\") or l:match("^%`%`%`")
-    or l:match("^~~~") or l:match("^<") or isBreak(l)
+    or l:match("^~~~") or isBreak(l)
 end
 
 -- A line Homebrewery breaks the page at: \page or \pagebreak, alone or with
@@ -2839,13 +3013,37 @@ local function unmeasured(html)
   return nil
 end
 
--- Whether any of lines a to b holds a Markdown image, ![alt](url), which
--- the model measures as nothing.
+-- The elements among a line's words, by tag name in lower case, inline code
+-- aside.
+local function tagsIn(l)
+  local tags = {}
+  if not l:find("<", 1, true) then return tags end
+  local words = (l:gsub("`[^`]*`", ""))
+  for tag in words:lower():gmatch("<(%a[%w%-]*)") do tags[tag] = true end
+  return tags
+end
+
+-- Whether any of lines a to b holds an image, ![alt](url) or an <img> among
+-- the words, which the model measures as nothing.
 local function imageIn(lines, a, b)
   for k = a, b do
-    if lines[k]:find("!%[[^%]]*%]%(") then return true end
+    local tags = tagsIn(lines[k])
+    if lines[k]:find("!%[[^%]]*%]%(") or tags.img or tags.picture then return true end
   end
   return false
+end
+
+-- Why any other element among the words of lines a to b matters, such as a
+-- <video>, which takes room the model can't measure; nil for none.
+local function mediaIn(lines, a, b)
+  for k = a, b do
+    for tag in pairs(tagsIn(lines[k])) do
+      if MEDIA_TAGS[tag] and tag ~= "img" and tag ~= "picture" then
+        return "raw HTML without a declared height"
+      end
+    end
+  end
+  return nil
 end
 
 local function parse(text)
@@ -2856,6 +3054,8 @@ local function parse(text)
   while i <= n do
     local l = lines[i]
     local b = {first = i}
+    -- no branch above the raw HTML one takes a line that starts with "<"
+    local raw = l:match("^<") and rawHtml(lines, i) or nil
     if l:match("^%s*$") then
       b = nil
       i = i + 1
@@ -2922,6 +3122,7 @@ local function parse(text)
       if last and last.kind == "li" and b.at >= last.content then
         -- a nested item lives inside its parent's box, and they never part
         if imageIn(lines, b.first, i - 1) then last.image = true end
+        last.unmeasured = last.unmeasured or mediaIn(lines, b.first, i - 1)
         last.subs = last.subs or {}
         local above = last.subs[#last.subs]
         if not above then b.level = 1
@@ -2948,43 +3149,30 @@ local function parse(text)
         i = i + 1
       end
       i = i + 1
-    elseif l:match("^<") then
-      b.kind = "html"
-      local html = { l }
-      i = i + 1
-      while i <= n and not lines[i]:match("^%s*$") do
-        html[#html + 1] = lines[i]
-        i = i + 1
-      end
+    elseif raw then
       -- Raw HTML is Homebrewery's to lay out and can't be measured, except
-      -- where the element declares its own height in px and is displayed as
-      -- a block: an inline SVG map does both, so it can be measured exactly.
-      local h, w, blocked = nil, nil, false
-      for _, line in ipairs(html) do
-        local lh = tonumber(line:match('^<%a+[^>]-%sheight="(%d+%.?%d*)"'))
-        if lh and not h then
-          h = lh
-          w = tonumber(line:match('^<%a+[^>]-%swidth="(%d+%.?%d*)"'))
-        end
-        if line:find("display:%s*block") then blocked = true end
-      end
-      if h and blocked then
+      -- a drawing that declares its own height (see rawHtml)
+      i = raw.last + 1
+      if raw.h then
         -- one wider than a column spans both, and gets a page to itself
-        b.kind, b.h, b.wide = "drawn", h, w ~= nil and w > W1 + 0.5
+        b.kind, b.h, b.wide = "drawn", raw.h, raw.w ~= nil and raw.w > W1 + 0.5
       else
-        b.unmeasured = unmeasured(html)
+        b.kind = "html"
+        b.unmeasured = unmeasured(raw.html)
       end
     else
+      -- a paragraph, which may open with inline HTML: <small>, <span>, <a>
       b.kind, b.text = "p", l
       i = i + 1
-      while i <= n and not opensBlock(lines[i]) do
+      while i <= n and not opensBlock(lines, i) do
         b.text = b.text .. " " .. lines[i]
         i = i + 1
       end
     end
     if b then
-      if b.kind ~= "code" and b.kind ~= "html" and b.kind ~= "drawn" and imageIn(lines, b.first, i - 1) then
-        b.image = true
+      if b.kind ~= "code" and b.kind ~= "html" and b.kind ~= "drawn" then
+        if imageIn(lines, b.first, i - 1) then b.image = true end
+        b.unmeasured = mediaIn(lines, b.first, i - 1)
       end
       out[#out + 1] = b
       blank = false
@@ -3134,7 +3322,9 @@ end
 
 -- The drop cap is the opening letter at 3.5cm, with any punctuation ahead
 -- of it; markup between the two (a quote, then bold) leaves the letter out.
+-- An inline tag round the letter, such as <small>, leaves it in.
 local function dropWidth(text)
+  text = inlineText(text)
   local p = 1
   while text:sub(p, p):match("[%*_`%[]") do p = p + 1 end
   local c, w = text:sub(p, p), 0
@@ -3191,7 +3381,7 @@ local function measure(b, ctx, prev)
 end
 
 local function keepsWithNext(b)
-  return b.kind:match("^h[2-6]$") ~= nil or (b.kind == "p" and b.text:match(":%s*$") ~= nil)
+  return b.kind:match("^h[2-6]$") ~= nil or (b.kind == "p" and inlineText(b.text):match(":%s*$") ~= nil)
 end
 
 -- A block no page can hold, by its kind, as a build names it: it spills

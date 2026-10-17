@@ -823,6 +823,34 @@ __bad = table.concat(__bad, " | ")`);
   expect(env.get("__bad")).toBe("");
 }, 60000);
 
+// Inline HTML and HTML blocks in the page model, in SilverBullet's own Lua:
+// the cases tests/book_html.lua runs in plain Lua, read from that file.
+test("the page model reads raw HTML as Homebrewery does, and measures <small> as its words", async () => {
+  const { env, run } = await setup(ROOT);
+  const src = readFileSync(join(ROOT, "test", "tests", "book_html.lua"), "utf-8");
+  const from = src.indexOf("local HTML_CASES = {");
+  const cases = src.slice(from + "local ".length, src.indexOf("\n}\n", from) + 2);
+  await run(cases + `
+local function layout(text)
+  local trace = {}
+  local _, _, info = gmbook.paginate(text, trace)
+  local out = {}
+  for _, t in ipairs(trace) do out[#out + 1] = t.kind .. "@" .. t.line .. "=" .. string.format("%.2f", t.h) end
+  for _, n in ipairs(info.notes) do out[#out + 1] = "!" .. n.line .. ":" .. n.what end
+  return table.concat(out, " ")
+end
+__bad = {}
+for _, c in ipairs(HTML_CASES) do
+  local got = layout(c[2])
+  if got ~= c[3] then __bad[#__bad + 1] = c[1] .. ": [" .. got .. "]" end
+end
+local words = "A long credit that runs on for several lines, so that the model has to wrap it as Homebrewery does."
+if layout("<small>" .. words .. "</small>") ~= layout(words) then __bad[#__bad + 1] = "small wraps as its words" end
+__bad = table.concat(__bad, " | ")`);
+  expect(env.get("HTML_CASES").length).toBeGreaterThan(10);
+  expect(env.get("__bad")).toBe("");
+}, 60000);
+
 test("DM-only text: publishing and both editions leave it where it belongs", async () => {
   const { run, pages } = await setup(ROOT);
   const crypt = [
